@@ -18,13 +18,23 @@ interface Member {
   cards: Card[];
 }
 
+interface Question {
+  id: string;
+  text?: string;
+  question?: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export default function AdminMembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingMember, setDeletingMember] = useState<Member | null>(null);
+  const [deletingQuestion, setDeletingQuestion] = useState<Question | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
   const [view, setView] = useState<'members' | 'questions'>('members');
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const router = useRouter();
 
   const fetchMembers = async () => {
@@ -88,6 +98,29 @@ export default function AdminMembersPage() {
       alert("Грешка при изтриване на член.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteQuestion = async () => {
+    if (!deletingQuestion) return;
+
+    setIsDeletingQuestion(true);
+    try {
+      const response = await fetch(`/api/admin/questions/${deletingQuestion.id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setQuestions(questions.filter((q) => q.id !== deletingQuestion.id));
+        setDeletingQuestion(null);
+      } else {
+        alert("Грешка при изтриване на въпрос.");
+      }
+    } catch (err) {
+      console.error("Error deleting question:", err);
+      alert("Грешка при изтриване на въпрос.");
+    } finally {
+      setIsDeletingQuestion(false);
     }
   };
 
@@ -297,11 +330,26 @@ export default function AdminMembersPage() {
             <div key={question.id || index} className="card">
               <div className="mb-4">
                 <h3 className="text-gold mb-2" style={{ fontSize: '1rem', fontWeight: '600' }}>
-                  Въпрос #{index + 1}
+                  Въпрос #{questions.length - index}
                 </h3>
                 <p className="text-muted" style={{ fontSize: '0.8rem' }}>
                   {new Date(question.createdAt).toLocaleDateString('bg-BG')}
                 </p>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '8px',
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: question.isActive ? '#bbf7d0' : '#fecaca',
+                    background: question.isActive ? 'rgba(22, 101, 52, 0.45)' : 'rgba(127, 29, 29, 0.45)',
+                    border: `1px solid ${question.isActive ? 'rgba(34, 197, 94, 0.55)' : 'rgba(239, 68, 68, 0.55)'}`,
+                  }}
+                >
+                  {question.isActive ? 'Активен' : 'Неактивен'}
+                </span>
               </div>
               
               <div style={{
@@ -325,11 +373,7 @@ export default function AdminMembersPage() {
                   Edit
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm('Сигурни ли сте, че искате да изтриете този въпрос?')) {
-                      // TODO: Implement delete question
-                    }
-                  }}
+                  onClick={() => setDeletingQuestion(question)}
                   className="btn btn-error w-full"
                 >
                   Изтрий
@@ -380,6 +424,40 @@ export default function AdminMembersPage() {
           </div>
         </div>
       )}
+
+      {deletingQuestion && (
+        <div className="modal-overlay">
+          <div className="modal-content fade-in">
+            <h3 className="text-gold mb-4">Потвърждение</h3>
+            <p className="mb-6">
+              Сигурни ли сте, че искате да изтриете този въпрос?
+              <br />
+              <strong>{deletingQuestion.text || deletingQuestion.question || "Въпрос"}</strong>
+              <br />
+              <span className="text-error" style={{ fontSize: "0.85rem" }}>
+                Това действие е необратимо.
+              </span>
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setDeletingQuestion(null)}
+                className="btn btn-secondary px-6"
+                disabled={isDeletingQuestion}
+              >
+                Отказ
+              </button>
+              <button
+                onClick={handleDeleteQuestion}
+                className="btn btn-error px-6"
+                disabled={isDeletingQuestion}
+              >
+                {isDeletingQuestion ? "Изтриване..." : "Изтрий"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
