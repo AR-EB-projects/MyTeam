@@ -220,7 +220,7 @@ export default function MemberPage({ params }: { params: Promise<{ cardCode: str
           </div>
         )}
 
-        {questions.length > 0 && (
+        {!isAdmin && questions.length > 0 && (
           <div className="mb-6">
             <h3 style={{ 
               fontSize: '1rem', 
