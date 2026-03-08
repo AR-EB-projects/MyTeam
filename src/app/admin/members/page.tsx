@@ -504,42 +504,57 @@ export default function AdminMembersPage() {
 
       {selectedQuestionAnswers && (
         <div className="modal-overlay">
-          <div className="modal-content fade-in" style={{ maxWidth: "700px", width: "90%" }}>
-            <h3 className="text-gold mb-4">
-              Отговори за въпрос
-            </h3>
-            <p className="mb-4">
-              <strong>{selectedQuestionAnswers.text || selectedQuestionAnswers.question || "Въпрос"}</strong>
-            </p>
-
-            <div
-              style={{
-                maxHeight: "45vh",
-                overflowY: "auto",
-                border: "1px solid var(--border-color)",
-                borderRadius: "10px",
-                padding: "12px",
-                background: "var(--bg-secondary)",
-              }}
-            >
-              {isLoadingAnswers && <p>Зареждане...</p>}
-              {!isLoadingAnswers && questionAnswers.length === 0 && (
-                <p className="text-muted">Няма отговори.</p>
-              )}
-              {!isLoadingAnswers &&
-                questionAnswers.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      padding: "10px 0",
-                      borderBottom: "1px solid var(--border-color)",
-                    }}
-                  >
-                    <strong>{item.member.firstName}</strong> <strong>{item.member?.secondName}</strong>: {item.answer}
-                  </div>
-                ))}
+          <div className="modal-content fade-in" style={{ maxWidth: '600px', maxHeight: '80vh', overflow: 'auto' }}>
+            <h3 className="text-gold mb-4">Отговори за въпрос</h3>
+            <div className="mb-4" style={{ 
+              background: 'var(--bg-secondary)', 
+              padding: '16px', 
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)'
+            }}>
+              <p style={{ fontSize: '16px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
+                {selectedQuestionAnswers.text || selectedQuestionAnswers.question || "Въпрос"}
+              </p>
             </div>
-
+            
+            <div className="mb-6">
+              <h4 style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
+                {questionAnswers.length} отговора:
+              </h4>
+              
+              {questionAnswers.length === 0 ? (
+                <div className="alert alert-warning">
+                  Все още няма отговори за този въпрос.
+                </div>
+              ) : (
+                <div style={{ 
+                  maxHeight: '300px', 
+                  overflow: 'auto',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  background: 'var(--bg-secondary)'
+                }}>
+                  {questionAnswers.map((item: any, index: number) => (
+                    <div key={item.id} style={{ 
+                      padding: '12px 16px',
+                      borderBottom: index < questionAnswers.length - 1 ? '1px solid var(--border-color)' : 'none',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word'
+                    }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--accent-gold)' }}>
+                        {item.member.firstName && item.member.secondName 
+                          ? `${item.member.firstName} ${item.member.secondName}` 
+                          : item.member.firstName || item.member.secondName}
+                      </div>
+                      <div style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{item.answer}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <div className="flex justify-center mt-4">
               <button
                 onClick={() => setSelectedQuestionAnswers(null)}
