@@ -19,6 +19,7 @@ export default function MemberPage({ params }: { params: Promise<{ cardCode: str
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
+  const [questions, setQuestions] = useState<string[]>([])
   const router = useRouter()
 
   const fetchMember = async (cardCode: string, shouldSetLoading = false) => {
@@ -56,6 +57,13 @@ export default function MemberPage({ params }: { params: Promise<{ cardCode: str
         const sessionRes = await fetch('/api/admin/check-session')
         const sessionData = await sessionRes.json()
         setIsAdmin(sessionData.isAdmin)
+
+        // Fetch questions
+        const questionsRes = await fetch('/api/admin/questions')
+        if (questionsRes.ok) {
+          const questionsData = await questionsRes.json()
+          setQuestions(questionsData.map((q: any) => q.text))
+        }
       } catch (err) {
         console.error('Error fetching data:', err)
       }
@@ -208,6 +216,38 @@ export default function MemberPage({ params }: { params: Promise<{ cardCode: str
                 {remaining}
               </span>
               <div className="visit-label">Остават</div>
+            </div>
+          </div>
+        )}
+
+        {questions.length > 0 && (
+          <div className="mb-6">
+            <h3 style={{ 
+              fontSize: '1rem', 
+              fontWeight: '600', 
+              marginBottom: '12px', 
+              color: 'var(--accent-gold)' 
+            }}>
+              Въпроси:
+            </h3>
+            <div style={{ 
+              background: 'var(--bg-secondary)', 
+              borderRadius: '8px', 
+              padding: '16px',
+              border: '1px solid var(--border-color)'
+            }}>
+              {questions.map((question, index) => (
+                <div key={index} style={{ 
+                  marginBottom: index < questions.length - 1 ? '12px' : '0',
+                  paddingBottom: index < questions.length - 1 ? '12px' : '0',
+                  borderBottom: index < questions.length - 1 ? '1px solid var(--border-color)' : 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px',
+                  lineHeight: '1.4'
+                }}>
+                  {question}
+                </div>
+              ))}
             </div>
           </div>
         )}
