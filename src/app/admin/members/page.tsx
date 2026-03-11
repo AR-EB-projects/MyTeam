@@ -251,7 +251,7 @@ export default function AdminMembersPage() {
             background: 'none',
             border: 'none',
             color: view === 'members' ? 'var(--accent-gold)' : 'var(--text-secondary)',
-            borderBottom: view === 'members' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+            borderBottom: view === 'members' ? '3px solid var(--accent-gold-color)' : '3px solid transparent',
             fontSize: '18px',
             fontWeight: '700',
             cursor: 'pointer',
@@ -274,7 +274,7 @@ export default function AdminMembersPage() {
           Членове
         </button>
         <span style={{ 
-          color: 'var(--accent-gold)', 
+          color: 'var(--accent-gold-color)', 
           fontSize: '22px', 
           fontWeight: '700', 
           margin: '0 8px',
@@ -288,7 +288,7 @@ export default function AdminMembersPage() {
             background: 'none',
             border: 'none',
             color: view === 'questions' ? 'var(--accent-gold)' : 'var(--text-secondary)',
-            borderBottom: view === 'questions' ? '3px solid var(--accent-gold)' : '3px solid transparent',
+            borderBottom: view === 'questions' ? '3px solid var(--accent-gold-color)' : '3px solid transparent',
             fontSize: '18px',
             fontWeight: '700',
             cursor: 'pointer',
@@ -652,7 +652,7 @@ export default function AdminMembersPage() {
                       wordWrap: 'break-word',
                       overflowWrap: 'break-word'
                     }}>
-                      <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--accent-gold)' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--accent-gold-color)' }}>
                         {item.member.firstName && item.member.secondName 
                           ? `${item.member.firstName} ${item.member.secondName}` 
                           : item.member.firstName || item.member.secondName}

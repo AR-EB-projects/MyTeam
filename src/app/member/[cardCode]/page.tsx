@@ -357,7 +357,7 @@ export default function MemberPage({ params }: { params: Promise<{ cardCode: str
               fontSize: '1rem',
               fontWeight: '600',
               marginBottom: '12px',
-              color: 'var(--accent-gold)'
+              color: 'var(--accent-gold-color)'
             }}>
               Въпроси:
             </h3>

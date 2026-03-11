@@ -361,7 +361,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
     minWidth: "26px",
     height: "26px",
     borderRadius: "50%",
-    background: "#c9a84c",
+    background: "linear-gradient(135deg, rgb(201, 168, 76), rgb(232, 201, 109), rgb(201, 168, 76))",
     color: "#1a1a1a",
     display: "flex",
     alignItems: "center",
@@ -421,7 +421,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
               justifyContent: "center",
               gap: "10px",
               padding: "14px 20px",
-              background: "linear-gradient(135deg, #c9a84c, #e8c96d, #c9a84c)",
+              background: "linear-gradient(135deg, rgb(201, 168, 76), rgb(232, 201, 109), rgb(201, 168, 76))",
               border: "none",
               borderRadius: "10px",
               color: "#1a1a1a",
@@ -441,7 +441,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
               style={{
                 marginTop: "8px",
                 background: "#1e1e1e",
-                border: "1px solid #c9a84c",
+                border: "1px solid rgb(201, 168, 76)",
                 borderRadius: "12px",
                 padding: "18px 16px",
                 position: "relative",
@@ -457,7 +457,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
                   right: "12px",
                   background: "none",
                   border: "none",
-                  color: "#c9a84c",
+                  color: "rgb(201, 168, 76)",
                   fontSize: "20px",
                   cursor: "pointer",
                   lineHeight: 1,
@@ -469,7 +469,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
 
               <p
                 style={{
-                  color: "#c9a84c",
+                  color: "rgb(201, 168, 76)",
                   fontWeight: "600",
                   marginBottom: "14px",
                   marginTop: 0,
@@ -491,8 +491,8 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
                 <span style={stepCircleStyle}>1</span>
                 <span style={{ color: "#e0e0e0", fontSize: "14px", lineHeight: "1.5" }}>
                   Натиснете бутона{" "}
-                  <ShareIcon color="#c9a84c" size={16} />{" "}
-                  <strong style={{ color: "#c9a84c" }}>Share</strong> в долната лента на Safari
+                  <ShareIcon color="rgb(201, 168, 76)" size={16} />{" "}
+                  <strong style={{ color: "rgb(201, 168, 76)" }}>Share</strong> в долната лента на Safari
                 </span>
               </div>
 
@@ -508,7 +508,9 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
                 <span style={stepCircleStyle}>2</span>
                 <span style={{ color: "#e0e0e0", fontSize: "14px", lineHeight: "1.5" }}>
                   Превъртете надолу и изберете{" "}
-                  <strong style={{ color: "#c9a84c" }}>+ "Добавяне към начален екран"</strong>
+                  <strong style={{ color: "rgb(201, 168, 76)" }}>
+                    "+ Добавяне към начален екран"
+                  </strong>
                 </span>
               </div>
 
@@ -523,7 +525,9 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
                 <span style={stepCircleStyle}>3</span>
                 <span style={{ color: "#e0e0e0", fontSize: "14px", lineHeight: "1.5" }}>
                   Отворете приложението от началния екран и натиснете{" "}
-                  <strong style={{ color: "#c9a84c" }}>"Активиране на известия"</strong>
+                  <strong style={{ color: "rgb(201, 168, 76)" }}>
+                    "Активиране на известия"
+                  </strong>
                 </span>
               </div>
 
