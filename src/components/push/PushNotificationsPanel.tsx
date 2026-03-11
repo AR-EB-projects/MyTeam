@@ -12,7 +12,7 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
     output[i] = rawData.charCodeAt(i);
   }
 
-  return output.buffer;
+  return output.buffer as ArrayBuffer;
 }
 
 function detectIPhoneSafari() {
@@ -136,12 +136,26 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
       }
 
       const { publicKey } = (await publicKeyResponse.json()) as { publicKey: string };
-      const subscription =
-        existingSubscription ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }));
+      let subscription = existingSubscription;
+
+      if (!subscription) {
+        try {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+        } catch (subscribeError) {
+          if (
+            subscribeError instanceof DOMException &&
+            subscribeError.name === "AbortError"
+          ) {
+            throw new Error(
+              "Push subscription failed at browser push service. Disable ad blockers/privacy extensions for this site, avoid Incognito/Guest mode, and allow access to fcm.googleapis.com, then retry."
+            );
+          }
+          throw subscribeError;
+        }
+      }
 
       const saveResponse = await fetch(
         `/api/members/${encodeURIComponent(cardCode)}/push-subscriptions`,
