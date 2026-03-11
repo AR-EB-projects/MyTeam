@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
+import { PushNotificationsPanel } from '@/components/push/PushNotificationsPanel'
 
 interface Member {
   id: string
@@ -329,6 +330,10 @@ export default function MemberPage({ params }: { params: Promise<{ cardCode: str
               <div className="visit-label">Остават</div>
             </div>
           </div>
+        )}
+
+        {member && !isAdmin && (
+          <PushNotificationsPanel cardCode={resolvedParams.cardCode} />
         )}
 
         {!isAdmin && questions.length > 0 && (
