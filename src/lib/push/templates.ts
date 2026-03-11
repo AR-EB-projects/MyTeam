@@ -55,10 +55,10 @@ export function buildNotificationPayload(
     }
     case "trainer_message":
       return {
-        title: "Съобщение от треньор",
+        title: "Съобщение",
         body:
           input.trainerMessage?.trim() ||
-          `${memberPrefix}Имате ново съобщение от треньор.`,
+          `${memberPrefix}Имате ново съобщение.`,
         url,
         icon: DEFAULT_ICON,
         badge: DEFAULT_ICON,

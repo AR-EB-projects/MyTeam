@@ -380,10 +380,6 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
         border: "1px solid var(--border-color)",
       }}
     >
-      <h3 className="text-gold mb-2" style={{ fontSize: "1rem" }}>
-        Browser Notifications
-      </h3>
-
       {!isSupported && (
         <div className="alert alert-warning" style={{ marginTop: "8px" }}>
           Този браузър не поддържа push известия. Нужни са HTTPS, Service Worker и Push API.

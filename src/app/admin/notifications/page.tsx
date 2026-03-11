@@ -152,9 +152,9 @@ export default function AdminNotificationsPage() {
   };
 
   return (
-    <div className="container p-6 fade-in">
-      <div className="flex justify-between items-center mb-6" style={{ gap: "12px", flexWrap: "wrap" }}>
-        <h1 className="text-gold" style={{ fontSize: "2rem", fontWeight: 600 }}>
+    <div className="container p-4 fade-in">
+      <div className="flex-col flex items-center text-center mb-8">
+        <h1 className="text-gold mb-2" style={{ fontSize: "2rem", fontWeight: "600" }}>
           Ръчни известия
         </h1>
         <button type="button" className="btn btn-secondary" onClick={() => router.push("/admin/members")}>
@@ -162,9 +162,9 @@ export default function AdminNotificationsPage() {
         </button>
       </div>
 
-      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: "720px", margin: "0 auto" }}>
+      <form className="card" onSubmit={handleSubmit} style={{ maxWidth: "600px", margin: "0 auto" }}>
         <div className="mb-4">
-          <label htmlFor="notificationType" className="text-secondary" style={{ display: "block", marginBottom: "8px" }}>
+          <label htmlFor="notificationType" className="text-secondary" style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
             Тип на известието
           </label>
           <select
@@ -172,46 +172,73 @@ export default function AdminNotificationsPage() {
             className="input w-full"
             value={type}
             onChange={(event) => setType(event.target.value as NotificationType)}
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--accent-gold-color)",
+              borderRadius: "8px",
+              padding: "12px",
+              color: "var(--text-primary)",
+              fontSize: "16px"
+            }}
           >
-            <option value="trainer_message">Съобщение от треньор</option>
+            <option value="trainer_message">Съобщение</option>
             <option value="training_reminder">Напомняне за тренировка</option>
           </select>
         </div>
 
         <div className="mb-4">
-          <label className="text-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-            <input type="checkbox" checked={broadcast} onChange={(event) => setBroadcast(event.target.checked)} />
-            Изпрати до всички
+          <label className="text-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+            <input 
+              type="checkbox" 
+              checked={broadcast} 
+              onChange={(event) => setBroadcast(event.target.checked)}
+              style={{ 
+                width: "18px", 
+                height: "18px", 
+                accentColor: "var(--accent-gold-color)",
+                cursor: "pointer"
+              }} 
+            />
+            <span style={{ fontWeight: "600" }}>Изпрати до всички</span>
           </label>
         </div>
 
         {!broadcast && (
           <div className="mb-4">
-            <label htmlFor="memberSearch" className="text-secondary" style={{ display: "block", marginBottom: "8px" }}>
-              Член
+            <label htmlFor="memberSearch" className="text-secondary" style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+              Изберете член
             </label>
             <input
               id="memberSearch"
               className="input w-full"
-              placeholder="Търси по име или ID"
+              placeholder="Търси по име или ID..."
               value={memberQuery}
               onChange={(event) => setMemberQuery(event.target.value)}
               disabled={isLoadingMembers}
+              style={{
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--accent-gold-color)",
+                borderRadius: "8px",
+                padding: "12px",
+                color: "var(--text-primary)",
+                fontSize: "16px"
+              }}
             />
 
             <div
               style={{
                 marginTop: "8px",
-                border: "1px solid var(--border-color)",
-                borderRadius: "8px",
-                maxHeight: "220px",
+                border: "1px solid var(--accent-gold-color)",
+                borderRadius: "12px",
+                maxHeight: "240px",
                 overflowY: "auto",
                 background: "var(--bg-secondary)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)"
               }}
             >
               {filteredMembers.length === 0 && (
-                  <div style={{ padding: "10px 12px", color: "var(--text-secondary)" }}>
-                  Няма намерени членове.
+                <div style={{ padding: "16px", color: "var(--text-secondary)", textAlign: "center" }}>
+                  {isLoadingMembers ? "Зареждане..." : "Няма намерени членове."}
                 </div>
               )}
               {filteredMembers.map((member, index) => {
@@ -227,16 +254,32 @@ export default function AdminNotificationsPage() {
                     style={{
                       width: "100%",
                       textAlign: "left",
-                      padding: "10px 12px",
+                      padding: "12px 16px",
                       border: "none",
                       borderBottom:
                         index < filteredMembers.length - 1 ? "1px solid var(--border-color)" : "none",
                       cursor: "pointer",
-                      background: isSelected ? "rgba(212, 175, 55, 0.16)" : "transparent",
-                      color: "var(--text-primary)",
+                      background: isSelected 
+                        ? "linear-gradient(135deg, rgba(201, 168, 76, 0.2), rgba(232, 201, 109, 0.1))" 
+                        : "transparent",
+                      color: isSelected ? "var(--accent-gold-color)" : "var(--text-primary)",
+                      transition: "all 0.2s ease",
+                      fontSize: "14px"
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.background = "rgba(201, 168, 76, 0.1)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.background = "transparent";
+                      }
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>{formatMemberLabel(member)}</div>
+                    <div style={{ fontWeight: 600, marginBottom: "2px" }}>
+                      {formatMemberLabel(member)}
+                    </div>
                   </button>
                 );
               })}
@@ -246,7 +289,7 @@ export default function AdminNotificationsPage() {
 
         {isTrainingReminder && (
           <div className="mb-4">
-            <label htmlFor="trainingDate" className="text-secondary" style={{ display: "block", marginBottom: "8px" }}>
+            <label htmlFor="trainingDate" className="text-secondary" style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
               Ден и час на тренировката
             </label>
             <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
@@ -254,7 +297,15 @@ export default function AdminNotificationsPage() {
                 id="trainingDate"
                 type="date"
                 className="input"
-                style={{ flex: "1 1 220px" }}
+                style={{ 
+                  flex: "1 1 60px",
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--accent-gold-color)",
+                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  color: "var(--text-primary)",
+                  fontSize: "14px"
+                }}
                 value={trainingDate}
                 onChange={(event) => setTrainingDate(event.target.value)}
               />
@@ -262,7 +313,15 @@ export default function AdminNotificationsPage() {
                 id="trainingTime"
                 type="time"
                 className="input"
-                style={{ flex: "1 1 160px" }}
+                style={{ 
+                  flex: "1 1 60px",
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--accent-gold-color)",
+                  borderRadius: "8px",
+                  padding: "10px 12px",
+                  color: "var(--text-primary)",
+                  fontSize: "14px"
+                }}
                 step={60}
                 value={trainingTime}
                 onChange={(event) => setTrainingTime(event.target.value)}
@@ -273,35 +332,96 @@ export default function AdminNotificationsPage() {
 
         {isTrainerMessage && (
           <div className="mb-4">
-            <label htmlFor="trainerMessage" className="text-secondary" style={{ display: "block", marginBottom: "8px" }}>
+            <label htmlFor="trainerMessage" className="text-secondary" style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
               Съобщение
             </label>
             <textarea
               id="trainerMessage"
               className="input w-full"
-              style={{ minHeight: "120px", resize: "vertical" }}
+              style={{ 
+                width: "100%",
+                maxWidth: "100%",
+                minHeight: "150px", 
+                resize: "vertical",
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--accent-gold-color)",
+                borderRadius: "8px",
+                padding: "12px",
+                color: "var(--text-primary)",
+                fontSize: "16px",
+                fontFamily: "inherit",
+                boxSizing: "border-box"
+              }}
               value={trainerMessage}
               onChange={(event) => setTrainerMessage(event.target.value)}
+              placeholder="Въведете вашето съобщение..."
             />
           </div>
         )}
 
-        {successMessage && <div className="alert alert-success mb-4">{successMessage}</div>}
-        {errorMessage && <div className="alert alert-error mb-4">{errorMessage}</div>}
+        {successMessage && (
+          <div className="alert alert-success mb-4" style={{ 
+            background: "rgba(76, 175, 80, 0.1)",
+            border: "1px solid var(--success)",
+            color: "var(--success)",
+            borderRadius: "8px",
+            padding: "16px"
+          }}>
+            {successMessage}
+          </div>
+        )}
+        
+        {errorMessage && (
+          <div className="alert alert-error mb-4" style={{ 
+            background: "rgba(244, 67, 54, 0.1)",
+            border: "1px solid var(--error)",
+            color: "var(--error)",
+            borderRadius: "8px",
+            padding: "16px"
+          }}>
+            {errorMessage}
+          </div>
+        )}
 
-        <div className="flex gap-3" style={{ flexWrap: "wrap" }}>
-          <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+        <div className="flex gap-3" style={{ flexWrap: "wrap", justifyContent: "center" }}>
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            disabled={!canSubmit}
+            style={{
+              opacity: canSubmit ? 1 : 0.6,
+              cursor: canSubmit ? "pointer" : "not-allowed",
+              minWidth: "160px"
+            }}
+          >
             {isSending ? "Изпращане..." : "Изпрати известие"}
           </button>
         </div>
       </form>
 
       {rawResponse && (
-        <div className="card mt-6" style={{ maxWidth: "720px", margin: "24px auto 0" }}>
-          <h3 className="text-gold mb-3" style={{ fontSize: "1rem" }}>
+        <div className="card mt-6" style={{ 
+          maxWidth: "600px", 
+          margin: "24px auto 0",
+          background: "var(--bg-card)",
+          border: "1px solid var(--accent-gold-color)"
+        }}>
+          <h3 className="text-gold mb-3" style={{ fontSize: "1rem", fontWeight: "600" }}>
             API отговор
           </h3>
-          <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0 }}>{rawResponse}</pre>
+          <pre style={{ 
+            whiteSpace: "pre-wrap", 
+            wordBreak: "break-word", 
+            margin: 0,
+            background: "var(--bg-secondary)",
+            padding: "16px",
+            borderRadius: "8px",
+            fontSize: "12px",
+            color: "var(--text-secondary)",
+            border: "1px solid var(--border-color)"
+          }}>
+            {rawResponse}
+          </pre>
         </div>
       )}
     </div>
