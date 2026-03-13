@@ -1,45 +1,33 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ cardCode: string }> }
+    _req: Request,
+    { params }: { params: Promise<{ cardCode: string }> }
 ) {
   const { cardCode } = await params;
-  const encodedCardCode = encodeURIComponent(cardCode);
-  const memberPath = `/member/${encodedCardCode}`;
 
-  const manifest = {
+  return NextResponse.json({
+    id: "/app",
     name: "Dalida Dance",
     short_name: "Dalida Dance",
-    description: "NFC member profile and attendance tracking with browser notifications.",
-    id: memberPath,
-    start_url: memberPath,
+    start_url: `/member/${cardCode}`,
     scope: "/",
     display: "standalone",
     background_color: "#000000",
     theme_color: "#000000",
     icons: [
       {
-        src: "/logo.png",
+        src: "/icon-192.png",
         sizes: "192x192",
         type: "image/png",
+        purpose: "any maskable",
       },
       {
-        src: "/logo.png",
+        src: "/icon-512.png",
         sizes: "512x512",
         type: "image/png",
+        purpose: "any maskable",
       },
     ],
-  };
-
-  return new NextResponse(JSON.stringify(manifest), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/manifest+json; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
   });
 }

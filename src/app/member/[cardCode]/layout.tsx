@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ cardCode: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata(
+    { params }: { params: Promise<{ cardCode: string }> }
+): Promise<Metadata> {
   const { cardCode } = await params;
-  const encodedCardCode = encodeURIComponent(cardCode);
 
   return {
-    manifest: `/api/manifest/${encodedCardCode}`,
+    manifest: `/api/manifest/${cardCode}`,
     appleWebApp: {
       title: "Dalida Dance",
     },
@@ -17,8 +14,8 @@ export async function generateMetadata({
 }
 
 export default function MemberLayout({
-  children,
-}: {
+                                       children,
+                                     }: {
   children: React.ReactNode;
 }) {
   return children;
