@@ -560,6 +560,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
 
       {isSupported && (
         <div className="flex items-center justify-center gap-3 mt-4" style={{ flexWrap: "wrap" }}>
+          {!isSubscribed && (
           <button
             type="button"
             onClick={handleEnableNotifications}
@@ -618,6 +619,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
               }
             `}</style>
           </button>
+        )}
 
           {isSubscribed && (
             <button
