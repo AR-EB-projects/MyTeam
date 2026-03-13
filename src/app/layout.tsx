@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PwaClientBootstrap } from "@/components/pwa/PwaClientBootstrap";
 
 export const metadata: Metadata = {
   applicationName: "Dalida Dance",
@@ -7,8 +8,12 @@ export const metadata: Metadata = {
   description: "NFC member management and attendance tracking.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/logo.png",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/logo-black.png",
+    shortcut: "/icon-192.png",
   },
   appleWebApp: {
     capable: true,
@@ -34,7 +39,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="192x192" href="/logo-black.png" />
         <link rel="apple-touch-icon" sizes="512x512" href="/logo-black.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        <PwaClientBootstrap />
+        {children}
+      </body>
     </html>
   );
 }
