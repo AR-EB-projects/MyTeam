@@ -51,7 +51,7 @@ model Player {
 model PaymentLog {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   playerId   String   @map("player_id") @db.Uuid
-  paidFor    String   @map("paid_for")
+  paidFor    DateTime @map("paid_for") @db.Timestamptz(6)
   paidAt     DateTime @default(now()) @map("paid_at") @db.Timestamptz(6)
   recordedBy String   @default("admin") @map("recorded_by")
   player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
