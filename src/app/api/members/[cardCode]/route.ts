@@ -82,6 +82,16 @@ export async function GET(
       }
     }
 
+    const paymentLogs = await prisma.paymentLog.findMany({
+      where: { playerId: card.player.id },
+      orderBy: { paidAt: "desc" },
+      select: {
+        id: true,
+        paidFor: true,
+        paidAt: true,
+      },
+    });
+
     return NextResponse.json(
       {
         id: card.player.id,
@@ -103,6 +113,11 @@ export async function GET(
         birthDate: card.player.birthDate,
         status: card.player.status,
         last_payment_date: card.player.lastPaymentDate,
+        paymentLogs: paymentLogs.map((item) => ({
+          id: item.id,
+          paidFor: item.paidFor,
+          paidAt: item.paidAt,
+        })),
         notifications: notifications.map((item) => ({
           id: item.id,
           type: item.type,

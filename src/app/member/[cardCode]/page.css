@@ -731,6 +731,26 @@
   box-shadow: 0 0 12px rgba(50,205,50,0.2);
 }
 
+/* Future unpaid - selectable for advance payment */
+.pm-month-btn--available {
+  background: rgba(50,205,50,0.06);
+  border-color: rgba(50,205,50,0.2);
+  color: #7fbf7f;
+}
+
+.pm-month-btn--available:hover {
+  background: rgba(50,205,50,0.12);
+  border-color: rgba(50,205,50,0.35);
+  box-shadow: 0 0 10px rgba(50,205,50,0.12);
+}
+
+/* Range from next unpaid up to selected advanced month */
+.pm-month-btn--range {
+  background: rgba(50,205,50,0.18);
+  border-color: rgba(50,205,50,0.45);
+  color: #b8f7b8;
+}
+
 /* Selected */
 .pm-month-btn--selected {
   background: linear-gradient(135deg, #32cd32, #28a428);

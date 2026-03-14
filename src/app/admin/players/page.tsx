@@ -118,6 +118,7 @@ interface ClubRow {
 
 interface ReportPaymentLog {
   id: string;
+  paidFor: string;
   paidAt: string;
 }
 
@@ -174,22 +175,23 @@ function ReportsDialog({ onClose }: { onClose: () => void }) {
   const selectedYear = Number(year);
 
   const getPaymentDateForPeriod = (player: ReportPlayer): string | null => {
-    let latestDate: Date | null = null;
+    let latestPaidAt: Date | null = null;
 
     for (const log of player.paymentLogs ?? []) {
+      const paidForDate = new Date(log.paidFor);
       const paidAtDate = new Date(log.paidAt);
-      if (Number.isNaN(paidAtDate.getTime())) {
+      if (Number.isNaN(paidForDate.getTime()) || Number.isNaN(paidAtDate.getTime())) {
         continue;
       }
-      if (paidAtDate.getMonth() !== selectedMonthIdx || paidAtDate.getFullYear() !== selectedYear) {
+      if (paidForDate.getMonth() !== selectedMonthIdx || paidForDate.getFullYear() !== selectedYear) {
         continue;
       }
-      if (!latestDate || paidAtDate > latestDate) {
-        latestDate = paidAtDate;
+      if (!latestPaidAt || paidAtDate > latestPaidAt) {
+        latestPaidAt = paidAtDate;
       }
     }
 
-    return latestDate ? latestDate.toLocaleDateString("bg-BG") : null;
+    return latestPaidAt ? latestPaidAt.toLocaleDateString("bg-BG") : null;
   };
 
   const groupFiltered = players.filter((player) => {

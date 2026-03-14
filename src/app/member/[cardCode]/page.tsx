@@ -170,14 +170,15 @@ export default function MemberCardPage({
   };
 
   // Month state
-  type MonthState = "paid" | "selected" | "next" | "disabled";
+  type MonthState = "paid" | "selected" | "next" | "available" | "disabled";
   const getMonthState = (ym: { year: number; month: number }): MonthState => {
     const key = `${ym.year}-${ym.month}`;
     if (paidSet.has(key)) return "paid";
+    if (cmpYM(ym, firstUnpaidYM) < 0) return "disabled";
     const isNext = key === `${firstUnpaidYM.year}-${firstUnpaidYM.month}`;
     if (selectedYM && `${selectedYM.year}-${selectedYM.month}` === key) return "selected";
     if (isNext) return "next";
-    return "disabled";
+    return "available";
   };
 
   const handleMonthClick = (ym: { year: number; month: number }) => {
@@ -187,6 +188,8 @@ export default function MemberCardPage({
     if (key !== `${firstUnpaidYM.year}-${firstUnpaidYM.month}`) return;
     setSelectedYM(ym);
   };
+
+  void handleMonthClick;
 
   // Fetch member
   useEffect(() => {
@@ -218,7 +221,7 @@ export default function MemberCardPage({
     setPaymentLoading(true);
     setPaymentError(null);
     try {
-      const response = await fetch(`/api/admin/members/${member.id}/payment`, {
+      const response = await fetch(`/api/members/${cardCode}/payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paidFor: toISOMonth(selectedYM) }),
@@ -408,7 +411,7 @@ export default function MemberCardPage({
         {/* Payment history accordion */}
         <div className="accordion" style={{ marginTop: "14px" }}>
           <button className="accordion-btn" onClick={() => setAccordionOpen((v) => !v)}>
-            <span>История на плащания<span className="acc-count"> ({member.notifications?.length ?? 0})</span></span>
+            <span>История на плащания<span className="acc-count"> ({member.paymentLogs?.length ?? 0})</span></span>
             <svg className={`chevron${accordionOpen ? " open" : ""}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m6 9 6 6 6-6" />
             </svg>
@@ -417,12 +420,17 @@ export default function MemberCardPage({
             <div className="acc-inner">
               <div className="acc-scroll">
                 <div className="payment-list">
-                  {member.notifications && member.notifications.length > 0 ? (
-                    member.notifications.map((item) => (
+                  {member.paymentLogs && member.paymentLogs.length > 0 ? (
+                    member.paymentLogs.map((item) => (
                       <div className="payment-row" key={item.id}>
                         <div className="payment-info">
-                          <p className="p-month">{item.title}</p>
-                          <p className="p-date">{new Date(item.sentAt).toLocaleDateString("bg-BG")}</p>
+                          <p className="p-month">
+                            {new Date(item.paidFor).toLocaleDateString("bg-BG", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                          <p className="p-date">{new Date(item.paidAt).toLocaleDateString("bg-BG")}</p>
                         </div>
                       </div>
                     ))
@@ -481,11 +489,21 @@ export default function MemberCardPage({
                 {MONTH_NAMES_BG.map((name, i) => {
                   const ym = { year: calendarYear, month: i };
                   const state = getMonthState(ym);
+                  const inAdvanceRange =
+                    !!selectedYM &&
+                    cmpYM(ym, firstUnpaidYM) >= 0 &&
+                    cmpYM(ym, selectedYM) <= 0 &&
+                    state !== "paid" &&
+                    state !== "selected";
                   return (
                     <button
                       key={i}
-                      className={`pm-month-btn pm-month-btn--${state}`}
-                      onClick={() => handleMonthClick(ym)}
+                      className={`pm-month-btn pm-month-btn--${state}${inAdvanceRange ? " pm-month-btn--range" : ""}`}
+                      onClick={() => {
+                        const state = getMonthState(ym);
+                        if (state === "paid" || state === "disabled") return;
+                        setSelectedYM(ym);
+                      }}
                       disabled={state === "paid" || state === "disabled"}
                       title={
                         state === "disabled"

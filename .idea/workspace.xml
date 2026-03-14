@@ -4,16 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Add backend connection to the frontend">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/prisma/schema.prisma" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/members/add/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/members/add/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/members/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/members/page.tsx" afterDir="false" />
+    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Add cloudinary integration, support for avatar upload and image transformations">
       <change beforePath="$PROJECT_DIR$/src/app/admin/players/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/players/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/clubs/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/clubs/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/members/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/members/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/member/[cardCode]/page.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/member/[cardCode]/page.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/member/[cardCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/member/[cardCode]/page.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -159,7 +154,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773495243127</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Add cloudinary integration, support for avatar upload and image transformations">
+      <option name="closed" value="true" />
+      <created>1773502988895</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1773502988895</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -171,6 +174,7 @@
     <MESSAGE value="Changed admin/members page" />
     <MESSAGE value="Fix /member/cardCode page" />
     <MESSAGE value="Add backend connection to the frontend" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add backend connection to the frontend" />
+    <MESSAGE value="Add cloudinary integration, support for avatar upload and image transformations" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add cloudinary integration, support for avatar upload and image transformations" />
   </component>
 </project>
