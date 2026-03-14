@@ -8,6 +8,7 @@ interface MemberProfile {
   id: string;
   cardCode: string;
   name: string;
+  avatarUrl?: string | null;
   jerseyNumber?: string | null;
   birthDate?: string | null;
   isActive?: boolean;
@@ -315,9 +316,17 @@ export default function MemberCardPage({
             <div className="central">
               <div className="photo-wrap">
                 <div className="photo-inner">
-                  <span className="photo-letter">
-                    {(member.name?.trim()?.charAt(0) || "?").toUpperCase()}
-                  </span>
+                  {member.avatarUrl ? (
+                    <img
+                      src={member.avatarUrl}
+                      alt={member.name}
+                      className="photo-img"
+                    />
+                  ) : (
+                    <span className="photo-letter">
+                      {(member.name?.trim()?.charAt(0) || "?").toUpperCase()}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="divider divider--short" />

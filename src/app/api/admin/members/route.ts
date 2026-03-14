@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { randomBytes } from "crypto";
+import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +49,15 @@ export async function POST(request: NextRequest) {
     const status = rawStatus === "warning" || rawStatus === "overdue" ? rawStatus : "paid";
 
     const jerseyNumber = body.jerseyNumber ? String(body.jerseyNumber).trim() : null;
-    const avatarUrl = body.avatarUrl ? String(body.avatarUrl).trim() : null;
+    const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : null;
+    const imagePublicId = body.imagePublicId ? String(body.imagePublicId).trim() : null;
+    const avatarUrlInput = body.avatarUrl ? String(body.avatarUrl).trim() : null;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const avatarUrlFromPath =
+      imageUrl && cloudName
+        ? buildCloudinaryUrlFromUploadPath(imageUrl, cloudName)
+        : null;
+    const avatarUrl = avatarUrlInput || avatarUrlFromPath;
 
     const parseDate = (value: unknown): Date | null => {
       if (value === null || value === undefined || value === "") {
@@ -93,6 +102,8 @@ export async function POST(request: NextRequest) {
             teamGroup,
             lastPaymentDate,
             avatarUrl,
+            imageUrl,
+            imagePublicId,
             cards: {
               create: {
                 cardCode,
@@ -182,7 +193,18 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(players);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const normalizedPlayers = players.map((player) => {
+      if (!player.avatarUrl && player.imageUrl && cloudName) {
+        return {
+          ...player,
+          avatarUrl: buildCloudinaryUrlFromUploadPath(player.imageUrl, cloudName),
+        };
+      }
+      return player;
+    });
+
+    return NextResponse.json(normalizedPlayers);
   } catch (error) {
     console.error("Players fetch error:", error);
     return NextResponse.json(

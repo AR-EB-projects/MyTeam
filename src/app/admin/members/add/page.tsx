@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { uploadImage } from "@/lib/uploadImage";
+import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
 import "./page.css";
 
 export default function AddMemberPage() {
@@ -14,6 +16,7 @@ export default function AddMemberPage() {
   const [teamGroup, setTeamGroup] = useState("");
   const [lastPaymentDate, setLastPaymentDate] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -24,6 +27,20 @@ export default function AddMemberPage() {
     setError("");
 
     try {
+      let resolvedAvatarUrl = avatarUrl.trim();
+      let resolvedImagePublicId = "";
+      let resolvedImagePath = "";
+      if (avatarFile) {
+        const uploaded = await uploadImage(
+          avatarFile,
+          "player",
+          fullName.trim() || avatarFile.name,
+        );
+        resolvedAvatarUrl = uploaded.secure_url;
+        resolvedImagePublicId = uploaded.public_id;
+        resolvedImagePath = extractUploadPathFromCloudinaryUrl(uploaded.secure_url);
+      }
+
       const payload: Record<string, string> = {
         fullName: fullName.trim(),
         status,
@@ -34,7 +51,9 @@ export default function AddMemberPage() {
       if (birthDate.trim()) payload.birthDate = birthDate.trim();
       if (teamGroup.trim()) payload.teamGroup = teamGroup.trim();
       if (lastPaymentDate.trim()) payload.lastPaymentDate = lastPaymentDate.trim();
-      if (avatarUrl.trim()) payload.avatarUrl = avatarUrl.trim();
+      if (resolvedAvatarUrl) payload.avatarUrl = resolvedAvatarUrl;
+      if (resolvedImagePath) payload.imageUrl = resolvedImagePath;
+      if (resolvedImagePublicId) payload.imagePublicId = resolvedImagePublicId;
 
       const response = await fetch("/api/admin/members", {
         method: "POST",
@@ -162,10 +181,11 @@ export default function AddMemberPage() {
             <div className="add-member-field">
               <label className="add-member-label">Набор</label>
               <input
-                type="number"
-                min="1"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={teamGroup}
-                onChange={(e) => setTeamGroup(e.target.value)}
+                onChange={(e) => setTeamGroup(e.target.value.replace(/\D/g, ""))}
                 className="add-member-input"
                 placeholder="По желание"
               />
@@ -174,11 +194,18 @@ export default function AddMemberPage() {
             <div className="add-member-field">
               <label className="add-member-label">Снимка на играч</label>
               <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                className="add-member-input"
+              />
+              <input
                 type="url"
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
                 className="add-member-input"
-                placeholder="https://..."
+                placeholder="https://... (или оставете празно при качване)"
+                style={{ marginTop: "8px" }}
               />
             </div>
 

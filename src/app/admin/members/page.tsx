@@ -262,7 +262,7 @@ export default function AdminMembersPage() {
               status: item.status ?? "paid",
               teamGroup: item.teamGroup ?? null,
               jerseyNumber: item.jerseyNumber ?? null,
-              avatarUrl: item.avatarUrl ?? null,
+              avatarUrl: item.avatarUrl ?? item.imageUrl ?? null,
               lastPaymentDate: item.lastPaymentDate ?? null,
               club: item.club ?? undefined,
               paymentLogs,

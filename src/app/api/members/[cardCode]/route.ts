@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,6 +87,14 @@ export async function GET(
         id: card.player.id,
         cardCode: card.cardCode,
         name: card.player.fullName,
+        avatarUrl:
+          card.player.avatarUrl ||
+          (card.player.imageUrl && process.env.CLOUDINARY_CLOUD_NAME
+            ? buildCloudinaryUrlFromUploadPath(
+                card.player.imageUrl,
+                process.env.CLOUDINARY_CLOUD_NAME,
+              )
+            : null),
         visits_total: 0,
         visits_used: 0,
         isActive: card.isActive,

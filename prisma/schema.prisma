@@ -21,6 +21,8 @@ model Club {
   slug      String   @unique
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   emblemUrl String?  @map("emblem_url")
+  imageUrl String?   @map("image_url")
+  imagePublicId String? @map("image_public_id")
   players   Player[]
 
   @@map("clubs")
@@ -39,6 +41,8 @@ model Player {
   teamGroup          Int?                 @map("team_group")
   lastPaymentDate    DateTime?            @map("last_payment_date") @db.Timestamptz(6)
   avatarUrl          String?              @map("avatar_url")
+  imageUrl           String?              @map("image_url")
+  imagePublicId      String?              @map("image_public_id")
   club               Club                 @relation(fields: [clubId], references: [id], onDelete: Cascade)
   paymentLogs        PaymentLog[]
   pushSubscriptions  PushSubscription[]
@@ -62,7 +66,7 @@ model PaymentLog {
 
 model PushSubscription {
   id        String   @id @default(uuid())
-  playerId  String
+  playerId  String   @db.Uuid
   endpoint  String   @unique
   p256dh    String
   auth      String
@@ -79,7 +83,7 @@ model PushSubscription {
 
 model PlayerNotification {
   id       String    @id @default(uuid())
-  playerId String
+  playerId String    @db.Uuid
   type     String
   title    String
   body     String
@@ -97,7 +101,7 @@ model Card {
   id        String   @id @default(uuid())
   cardCode  String   @unique
   player    Player   @relation(fields: [playerId], references: [id])
-  playerId  String
+  playerId  String   @db.Uuid
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 

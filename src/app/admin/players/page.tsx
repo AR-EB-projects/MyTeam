@@ -112,6 +112,8 @@ interface ClubRow {
   name: string;
   slug: string;
   emblemUrl?: string | null;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
 }
 
 interface ReportPaymentLog {
@@ -423,8 +425,8 @@ export default function AdminPlayersPage() {
               >
                 <div className="mp-team-card-content">
                   <div className="mp-team-logo-wrap">
-                    {club.emblemUrl ? (
-                      <img src={club.emblemUrl} alt={club.name} className="mp-team-logo mp-team-logo--img" />
+                    {club.imageUrl || club.emblemUrl ? (
+                      <img src={club.imageUrl || club.emblemUrl || ""} alt={club.name} className="mp-team-logo mp-team-logo--img" />
                     ) : (
                       <ClubLogo className="mp-team-logo" />
                     )}
