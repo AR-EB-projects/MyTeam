@@ -242,6 +242,28 @@
   gap: 8px;
 }
 
+/* ── Bell (notify) button ── */
+.bell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  height: 36px;
+  background-color: rgba(255,255,255,0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.bell-btn:hover { background-color: rgba(255,255,255,0.2); }
+
 /* ── Add to home button ── */
 .add-btn {
   display: inline-flex;
