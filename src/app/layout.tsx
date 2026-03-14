@@ -3,8 +3,8 @@ import "./globals.css";
 import { PwaClientBootstrap } from "@/components/pwa/PwaClientBootstrap";
 
 export const metadata: Metadata = {
-  applicationName: "Dalida Dance",
-  title: "Dalida Dance",
+  applicationName: "My Team",
+  title: "My Team",
   description: "NFC member management and attendance tracking.",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Dalida Dance",
+    title: "My Team",
     statusBarStyle: "black-translucent",
   },
 };

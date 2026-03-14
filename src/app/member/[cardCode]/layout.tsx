@@ -8,7 +8,7 @@ export async function generateMetadata(
   return {
     manifest: `/api/manifest/${cardCode}`,
     appleWebApp: {
-      title: "Dalida Dance",
+      title: "My Team",
     },
   };
 }

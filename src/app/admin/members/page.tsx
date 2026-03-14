@@ -350,7 +350,7 @@ export default function AdminMembersPage() {
         {/* ── Nav row ── */}
         <div className="amp-nav-row">
           <div className="amp-nav-left">
-            <button className="amp-back-btn" onClick={() => router.back()}>
+            <button className="amp-back-btn" onClick={() => router.push("/admin/players")}>
               <ArrowLeftIcon/>
               Назад към отбори
             </button>

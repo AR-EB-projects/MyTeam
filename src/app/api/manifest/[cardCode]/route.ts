@@ -8,8 +8,8 @@ export async function GET(
 
   return NextResponse.json({
     id: "/app",
-    name: "Dalida Dance",
-    short_name: "Dalida Dance",
+    name: "My Team",
+    short_name: "My Team",
     start_url: `/member/${cardCode}`,
     scope: "/",
     display: "standalone",
