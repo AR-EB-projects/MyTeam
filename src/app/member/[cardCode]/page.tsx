@@ -19,9 +19,24 @@ interface MemberProfile {
     title: string;
     sentAt: string;
   }>;
+  paymentLogs?: Array<{
+    id: string;
+    paidFor: string;
+    paidAt: string;
+  }>;
 }
 
 const SPEED_LINES = [8, 16, 24, 33, 42, 54, 65, 76, 85, 93];
+
+const MONTH_NAMES_BG = [
+  "Яну", "Фев", "Мар", "Апр", "Май", "Юни",
+  "Юли", "Авг", "Сеп", "Окт", "Ное", "Дек",
+];
+
+const MONTH_NAMES_BG_FULL = [
+  "Януари", "Февруари", "Март", "Април", "Май", "Юни",
+  "Юли", "Август", "Септември", "Октомври", "Ноември", "Декември",
+];
 
 const ClubLogo = () => (
   <svg viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
@@ -78,6 +93,32 @@ const XIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+const ChevronIcon = ({ direction }: { direction: "left" | "right" }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    {direction === "left" ? <path d="m15 18-6-6 6-6" /> : <path d="m9 18 6-6-6-6" />}
+  </svg>
+);
+
+// ── Helpers ──────────────────────────────────────────────
+function parseYearMonth(dateStr: string): { year: number; month: number } {
+  const d = new Date(dateStr);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
+}
+
+function cmpYM(a: { year: number; month: number }, b: { year: number; month: number }) {
+  return a.year !== b.year ? a.year - b.year : a.month - b.month;
+}
+
+function addMonths(ym: { year: number; month: number }, n: number) {
+  const d = new Date(ym.year, ym.month + n, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function toISOMonth(ym: { year: number; month: number }) {
+  const mm = String(ym.month + 1).padStart(2, "0");
+  return `${ym.year}-${mm}-01T00:00:00.000Z`;
+}
+
 export default function MemberCardPage({
   params,
 }: {
@@ -92,14 +133,67 @@ export default function MemberCardPage({
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState(false);
 
+  // Payment modal
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [selectedYM, setSelectedYM] = useState<{ year: number; month: number } | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // ── Derived: paid months set ─────────────────────────
+  const paidSet = new Set<string>(
+    (member?.paymentLogs ?? []).map(({ paidFor }) => {
+      const { year, month } = parseYearMonth(paidFor);
+      return `${year}-${month}`;
+    })
+  );
+
+  // Last paid month
+  const lastPaidYM: { year: number; month: number } | null = (() => {
+    if (!member?.paymentLogs?.length) return null;
+    return [...member.paymentLogs]
+      .map(({ paidFor }) => parseYearMonth(paidFor))
+      .sort((a, b) => cmpYM(b, a))[0];
+  })();
+
+  // Next unpaid = month after last paid, or current month if never paid
+  const firstUnpaidYM = lastPaidYM
+    ? addMonths(lastPaidYM, 1)
+    : { year: new Date().getFullYear(), month: new Date().getMonth() };
+
+  const openPaymentModal = () => {
+    setCalendarYear(firstUnpaidYM.year);
+    setSelectedYM(firstUnpaidYM);
+    setPaymentError(null);
+    setPaymentModalOpen(true);
+  };
+
+  // Month state
+  type MonthState = "paid" | "selected" | "next" | "disabled";
+  const getMonthState = (ym: { year: number; month: number }): MonthState => {
+    const key = `${ym.year}-${ym.month}`;
+    if (paidSet.has(key)) return "paid";
+    const isNext = key === `${firstUnpaidYM.year}-${firstUnpaidYM.month}`;
+    if (selectedYM && `${selectedYM.year}-${selectedYM.month}` === key) return "selected";
+    if (isNext) return "next";
+    return "disabled";
+  };
+
+  const handleMonthClick = (ym: { year: number; month: number }) => {
+    const key = `${ym.year}-${ym.month}`;
+    if (paidSet.has(key)) return;
+    // Only allow selecting the exact next unpaid month — no skipping
+    if (key !== `${firstUnpaidYM.year}-${firstUnpaidYM.month}`) return;
+    setSelectedYM(ym);
+  };
+
+  // Fetch member
   useEffect(() => {
     const fetchMember = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/members/${cardCode}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(`/api/members/${cardCode}`, { cache: "no-store" });
         if (!response.ok) {
           setMember(null);
           setError("Профилът не е намерен.");
@@ -114,9 +208,33 @@ export default function MemberCardPage({
         setLoading(false);
       }
     };
-
     void fetchMember();
   }, [cardCode]);
+
+  // Submit payment
+  const handlePayment = async () => {
+    if (!selectedYM || !member) return;
+    setPaymentLoading(true);
+    setPaymentError(null);
+    try {
+      const response = await fetch(`/api/admin/members/${member.id}/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paidFor: toISOMonth(selectedYM) }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Грешка при плащане");
+      }
+      const refreshed = await fetch(`/api/members/${cardCode}`, { cache: "no-store" });
+      if (refreshed.ok) setMember(await refreshed.json());
+      setPaymentModalOpen(false);
+    } catch (e) {
+      setPaymentError(e instanceof Error ? e.message : "Възникна грешка");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   const statusKey = member?.status ?? "paid";
   const status = STATUS_MAP[statusKey];
@@ -148,9 +266,7 @@ export default function MemberCardPage({
           <div className="card-shell">
             <div className="card-body" style={{ gap: "12px" }}>
               <p style={{ color: "#e03535", textAlign: "center", margin: 0 }}>{error ?? "Профилът не е намерен."}</p>
-              <button className="add-btn" onClick={() => router.push("/admin/members")}>
-                Назад
-              </button>
+              <button className="add-btn" onClick={() => router.push("/admin/members")}>Назад</button>
             </div>
           </div>
         </div>
@@ -161,25 +277,22 @@ export default function MemberCardPage({
   return (
     <main className="page-bg">
       <div className="page-inner">
+
+        {/* Member card */}
         <div className="card-shell">
           <div className="speed-lines-layer" aria-hidden="true">
             {SPEED_LINES.map((left, i) => (
-              <div
-                key={i}
-                className="speed-line"
-                style={{
-                  left: `${left}%`,
-                  width: i % 3 === 0 ? "3px" : "2px",
-                  opacity: 0.06 + (i % 3) * 0.03,
-                  filter: `blur(${i % 2 === 0 ? 1 : 3}px)`,
-                }}
-              />
+              <div key={i} className="speed-line" style={{
+                left: `${left}%`,
+                width: i % 3 === 0 ? "3px" : "2px",
+                opacity: 0.06 + (i % 3) * 0.03,
+                filter: `blur(${i % 2 === 0 ? 1 : 3}px)`,
+              }} />
             ))}
             <div className="speed-line speed-line--wide" style={{ left: "18%" }} />
             <div className="speed-line speed-line--wide2" style={{ left: "70%" }} />
           </div>
           <div className="vignette" aria-hidden="true" />
-
           <div className="card-body">
             <div className="header">
               <div className="header-logo"><ClubLogo /></div>
@@ -236,7 +349,13 @@ export default function MemberCardPage({
           </div>
         </div>
 
+        {/* Below card buttons */}
         <div className="below-card">
+          <button className="pay-btn" onClick={openPaymentModal}>
+            <PlusIcon />
+            Плати
+          </button>
+
           <button className="bell-btn">
             <BellIcon size={16} />
             Активиране на известия
@@ -277,6 +396,7 @@ export default function MemberCardPage({
 
         <p className="push-hint">Получавайте push известия дори когато браузърът е затворен.</p>
 
+        {/* Payment history accordion */}
         <div className="accordion" style={{ marginTop: "14px" }}>
           <button className="accordion-btn" onClick={() => setAccordionOpen((v) => !v)}>
             <span>История на плащания<span className="acc-count"> ({member.notifications?.length ?? 0})</span></span>
@@ -284,7 +404,6 @@ export default function MemberCardPage({
               <path d="m6 9 6 6 6-6" />
             </svg>
           </button>
-
           <div className={`acc-body${accordionOpen ? " acc-body--open" : ""}`}>
             <div className="acc-inner">
               <div className="acc-scroll">
@@ -310,6 +429,103 @@ export default function MemberCardPage({
             </div>
           </div>
         </div>
+
+        {/* ══ PAYMENT MODAL ══ */}
+        {paymentModalOpen && (
+          <div className="pm-overlay" onClick={() => setPaymentModalOpen(false)}>
+            <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
+
+              <button className="pm-close" onClick={() => setPaymentModalOpen(false)}>
+                <XIcon size={16} />
+              </button>
+
+              <div className="pm-header">
+                <div className="pm-title-icon">⚽</div>
+                <div>
+                  <h2 className="pm-title">Плащане</h2>
+                  <p className="pm-name">{member.name}</p>
+                </div>
+              </div>
+
+              <div className="pm-divider" />
+
+              <div className="pm-info-row">
+                <span className="pm-info-lbl">Следващ дължим месец:</span>
+                <span className="pm-info-val">
+                  {MONTH_NAMES_BG_FULL[firstUnpaidYM.month]} {firstUnpaidYM.year}
+                </span>
+              </div>
+
+              {/* Year nav */}
+              <div className="pm-year-nav">
+                <button className="pm-year-btn" onClick={() => setCalendarYear((y) => y - 1)}>
+                  <ChevronIcon direction="left" />
+                </button>
+                <span className="pm-year-label">{calendarYear}</span>
+                <button className="pm-year-btn" onClick={() => setCalendarYear((y) => y + 1)}>
+                  <ChevronIcon direction="right" />
+                </button>
+              </div>
+
+              {/* Month grid */}
+              <div className="pm-months-grid">
+                {MONTH_NAMES_BG.map((name, i) => {
+                  const ym = { year: calendarYear, month: i };
+                  const state = getMonthState(ym);
+                  return (
+                    <button
+                      key={i}
+                      className={`pm-month-btn pm-month-btn--${state}`}
+                      onClick={() => handleMonthClick(ym)}
+                      disabled={state === "paid" || state === "disabled"}
+                      title={
+                        state === "disabled"
+                          ? "Платете първо предишните месеци"
+                          : state === "paid"
+                          ? "Вече платено"
+                          : undefined
+                      }
+                    >
+                      {name}
+                      {state === "paid" && <span className="pm-paid-dot" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected summary */}
+              {selectedYM && (
+                <div className="pm-selected-summary">
+                  <span className="pm-selected-lbl">Избрано:</span>
+                  <span className="pm-selected-val">
+                    {MONTH_NAMES_BG_FULL[selectedYM.month]} {selectedYM.year}
+                  </span>
+                </div>
+              )}
+
+              {paymentError && (
+                <div className="pm-error">{paymentError}</div>
+              )}
+
+              <div className="pm-divider" />
+
+              <div className="pm-actions">
+                <button className="pm-btn pm-btn--cancel" onClick={() => setPaymentModalOpen(false)}>
+                  Отказ
+                </button>
+                <button
+                  className="pm-btn pm-btn--submit"
+                  onClick={handlePayment}
+                  disabled={!selectedYM || paymentLoading}
+                >
+                  {paymentLoading ? "Обработка..." : "Потвърди плащане"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   );
