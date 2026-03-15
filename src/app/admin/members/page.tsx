@@ -30,6 +30,7 @@ interface Member {
   teamGroup: number | null;
   jerseyNumber: string | null;
   avatarUrl: string | null;
+  birthDate: string | null;
   lastPaymentDate: string | null;
   club?: MemberClub;
   paymentLogs: PaymentLog[];
@@ -127,10 +128,12 @@ function MemberDetailModal({
   member,
   onClose,
   onRequestDelete,
+  onRequestEdit,
 }: {
   member: Member;
   onClose: () => void;
   onRequestDelete: (member: Member) => void;
+  onRequestEdit: (member: Member) => void;
 }) {
   const s = getStatusMeta(member.status);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -235,6 +238,12 @@ function MemberDetailModal({
           </div>
 
           <div className="amp-modal-actions amp-modal-actions--end">
+            <button
+              className="amp-btn amp-btn--ghost"
+              onClick={() => onRequestEdit(member)}
+            >
+              Редактирай
+            </button>
             <button
               className="amp-btn amp-btn--danger"
               onClick={() => onRequestDelete(member)}
@@ -367,9 +376,19 @@ function AdminMembersPageContent() {
   const [searchTerm, setSearchTerm]             = useState("");
   const [selectedGroup, setSelectedGroup]       = useState("all");
   const [selectedMember, setSelectedMember]     = useState<Member | null>(null);
+  const [memberToEdit, setMemberToEdit]         = useState<Member | null>(null);
   const [memberToDelete, setMemberToDelete]     = useState<Member | null>(null);
   const [deleteError, setDeleteError]           = useState("");
   const [isDeletingMember, setIsDeletingMember] = useState(false);
+  const [editError, setEditError]               = useState("");
+  const [isSavingEdit, setIsSavingEdit]         = useState(false);
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    teamGroup: "",
+    jerseyNumber: "",
+    birthDate: "",
+    avatarUrl: "",
+  });
   const [clubName, setClubName]                 = useState("Всички отбори");
 
   const handleDeleteMember = async () => {
@@ -404,6 +423,95 @@ function AdminMembersPageContent() {
       setDeleteError("Възникна грешка при изтриване на играч.");
     } finally {
       setIsDeletingMember(false);
+    }
+  };
+
+  const openEditMember = (member: Member) => {
+    setEditError("");
+    setMemberToEdit(member);
+    setEditForm({
+      fullName: member.fullName,
+      teamGroup: member.teamGroup !== null ? String(member.teamGroup) : "",
+      jerseyNumber: member.jerseyNumber ?? "",
+      birthDate: member.birthDate ? new Date(member.birthDate).toISOString().slice(0, 10) : "",
+      avatarUrl: member.avatarUrl ?? "",
+    });
+  };
+
+  const handleSaveMemberEdit = async () => {
+    if (!memberToEdit || isSavingEdit) return;
+    const fullName = editForm.fullName.trim();
+    if (!fullName) {
+      setEditError("Името е задължително.");
+      return;
+    }
+
+    const teamGroupValue = editForm.teamGroup.trim();
+    const parsedTeamGroup = teamGroupValue === "" ? null : Number.parseInt(teamGroupValue, 10);
+    if (parsedTeamGroup !== null && Number.isNaN(parsedTeamGroup)) {
+      setEditError("Наборът трябва да е число.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError("");
+    try {
+      const response = await fetch(`/api/admin/members/${memberToEdit.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          teamGroup: parsedTeamGroup,
+          jerseyNumber: editForm.jerseyNumber.trim() || null,
+          birthDate: editForm.birthDate.trim() || null,
+          avatarUrl: editForm.avatarUrl.trim() || null,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message =
+          typeof data?.error === "string" && data.error.trim()
+            ? data.error.trim()
+            : "Неуспешно редактиране на играч.";
+        setEditError(message);
+        return;
+      }
+
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === memberToEdit.id
+            ? {
+                ...m,
+                fullName,
+                teamGroup: parsedTeamGroup,
+                jerseyNumber: editForm.jerseyNumber.trim() || null,
+                birthDate: editForm.birthDate.trim() || null,
+                avatarUrl: editForm.avatarUrl.trim() || null,
+              }
+            : m
+        )
+      );
+
+      setSelectedMember((prev) =>
+        prev?.id === memberToEdit.id
+          ? {
+              ...prev,
+              fullName,
+              teamGroup: parsedTeamGroup,
+              jerseyNumber: editForm.jerseyNumber.trim() || null,
+              birthDate: editForm.birthDate.trim() || null,
+              avatarUrl: editForm.avatarUrl.trim() || null,
+            }
+          : prev
+      );
+
+      setMemberToEdit(null);
+    } catch (error) {
+      console.error("Error updating member:", error);
+      setEditError("Възникна грешка при редактиране.");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -452,6 +560,7 @@ function AdminMembersPageContent() {
               teamGroup: typeof item.teamGroup === "number" ? item.teamGroup : null,
               jerseyNumber: item.jerseyNumber ? String(item.jerseyNumber) : null,
               avatarUrl: item.avatarUrl ? String(item.avatarUrl) : item.imageUrl ? String(item.imageUrl) : null,
+              birthDate: item.birthDate ? String(item.birthDate) : null,
               lastPaymentDate: item.lastPaymentDate ? String(item.lastPaymentDate) : null,
               club: item.club
                 ? {
@@ -622,11 +731,101 @@ function AdminMembersPageContent() {
         <MemberDetailModal
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
+          onRequestEdit={openEditMember}
           onRequestDelete={(member) => {
             setDeleteError("");
             setMemberToDelete(member);
           }}
         />
+      )}
+      {memberToEdit && (
+        <div className="amp-overlay" onClick={isSavingEdit ? undefined : () => setMemberToEdit(null)}>
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="amp-modal-tint" aria-hidden="true"/>
+            <h2 className="amp-modal-title">
+              <span className="amp-modal-title-gradient">Редактиране на играч</span>
+              <button
+                className="amp-modal-close"
+                onClick={() => setMemberToEdit(null)}
+                aria-label="Затвори"
+                disabled={isSavingEdit}
+              >
+                <XIcon/>
+              </button>
+            </h2>
+
+            <div className="amp-modal-body">
+              <div className="amp-edit-grid">
+                <label className="amp-edit-field">
+                  <span className="amp-lbl">Име и фамилия</span>
+                  <input
+                    className="amp-edit-input"
+                    value={editForm.fullName}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                  />
+                </label>
+                <label className="amp-edit-field">
+                  <span className="amp-lbl">Номер в отбора</span>
+                  <input
+                    className="amp-edit-input"
+                    value={editForm.jerseyNumber}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, jerseyNumber: e.target.value }))}
+                  />
+                </label>
+                <label className="amp-edit-field">
+                  <span className="amp-lbl">Набор</span>
+                  <input
+                    className="amp-edit-input"
+                    inputMode="numeric"
+                    value={editForm.teamGroup}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        teamGroup: e.target.value.replace(/\D/g, ""),
+                      }))
+                    }
+                  />
+                </label>
+                <label className="amp-edit-field">
+                  <span className="amp-lbl">Дата на раждане</span>
+                  <input
+                    className="amp-edit-input"
+                    type="date"
+                    value={editForm.birthDate}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, birthDate: e.target.value }))}
+                  />
+                </label>
+                <label className="amp-edit-field amp-edit-field--full">
+                  <span className="amp-lbl">Снимка (URL)</span>
+                  <input
+                    className="amp-edit-input"
+                    value={editForm.avatarUrl}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, avatarUrl: e.target.value }))}
+                  />
+                </label>
+              </div>
+
+              {editError && <p className="amp-confirm-error">{editError}</p>}
+
+              <div className="amp-modal-actions">
+                <button
+                  className="amp-btn amp-btn--ghost"
+                  onClick={() => setMemberToEdit(null)}
+                  disabled={isSavingEdit}
+                >
+                  Отказ
+                </button>
+                <button
+                  className="amp-btn amp-btn--primary"
+                  onClick={handleSaveMemberEdit}
+                  disabled={isSavingEdit}
+                >
+                  {isSavingEdit ? "Запазване..." : "Запази"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       {memberToDelete && (
         <ConfirmDeleteModal
