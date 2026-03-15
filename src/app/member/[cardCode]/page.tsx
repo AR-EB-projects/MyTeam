@@ -80,6 +80,14 @@ const BellIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+const BellOffIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 8.21 3.342" />
+    <path d="m2 2 20 20" />
+  </svg>
+);
+
 const PlusIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12h14" />
@@ -144,11 +152,16 @@ export default function MemberCardPage({
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [pushStatusMessage, setPushStatusMessage] = useState("");
+  const [pushStatusTone, setPushStatusTone] = useState<"success" | "danger">("success");
   const [pushErrorMessage, setPushErrorMessage] = useState("");
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState(false);
+  const [isIPhoneDevice, setIsIPhoneDevice] = useState(false);
+  const [isStandaloneMode, setIsStandaloneMode] = useState(false);
 
   // Payment modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -231,8 +244,73 @@ export default function MemberCardPage({
     void fetchMember();
   }, [cardCode]);
 
+  useEffect(() => {
+    const checkAdminSession = async () => {
+      try {
+        const response = await fetch("/api/admin/check-session", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+        if (!response.ok) {
+          setIsAdmin(false);
+          return;
+        }
+        const payload = (await response.json()) as { isAdmin?: boolean };
+        setIsAdmin(Boolean(payload.isAdmin));
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+
+    void checkAdminSession();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const ua = window.navigator.userAgent || "";
+    setIsIPhoneDevice(/iPhone/i.test(ua));
+    const standaloneByDisplayMode = window.matchMedia?.("(display-mode: standalone)")?.matches ?? false;
+    const standaloneByNavigator = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setIsStandaloneMode(standaloneByDisplayMode || standaloneByNavigator);
+  }, []);
+
+  useEffect(() => {
+    const detectExistingPushSubscription = async () => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      const supportsPush =
+        window.isSecureContext &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window &&
+        "Notification" in window;
+
+      if (!supportsPush) {
+        setIsPushEnabled(false);
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        await navigator.serviceWorker.ready;
+        const existingSubscription = await registration.pushManager.getSubscription();
+        setIsPushEnabled(Boolean(existingSubscription));
+      } catch (subscriptionError) {
+        console.error("Detect push subscription error:", subscriptionError);
+        setIsPushEnabled(false);
+      }
+    };
+
+    void detectExistingPushSubscription();
+  }, []);
+
   const handleEnablePushNotifications = async () => {
     setPushStatusMessage("");
+    setPushStatusTone("success");
     setPushErrorMessage("");
 
     if (typeof window === "undefined") {
@@ -302,11 +380,81 @@ export default function MemberCardPage({
         );
       }
 
-      setPushStatusMessage("Notifications are enabled.");
+      setIsPushEnabled(true);
+      setPushStatusMessage("");
+      setPushStatusTone("success");
     } catch (pushError) {
       console.error("Enable push error:", pushError);
       setPushErrorMessage(
         pushError instanceof Error ? pushError.message : "Unexpected push setup error."
+      );
+      setIsPushEnabled(false);
+    } finally {
+      setIsEnablingPush(false);
+    }
+  };
+
+  const handleDisablePushNotifications = async () => {
+    setPushStatusMessage("");
+    setPushStatusTone("danger");
+    setPushErrorMessage("");
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const supportsPush =
+      window.isSecureContext &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window;
+
+    if (!supportsPush) {
+      setPushErrorMessage("Push is not supported on this device or HTTPS is missing.");
+      return;
+    }
+
+    setIsEnablingPush(true);
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (!existingSubscription) {
+        setIsPushEnabled(false);
+        setPushStatusMessage("Известията вече са изключени.");
+        setPushStatusTone("danger");
+        return;
+      }
+
+      const endpoint = existingSubscription.endpoint;
+      await existingSubscription.unsubscribe();
+
+      const deleteResponse = await fetch(
+        `/api/members/${encodeURIComponent(cardCode)}/push-subscriptions`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint }),
+        }
+      );
+
+      if (!deleteResponse.ok) {
+        const payload = await deleteResponse.json().catch(() => ({}));
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : "Failed to disable push notifications."
+        );
+      }
+
+      setIsPushEnabled(false);
+      setPushStatusMessage("Известията са изключени.");
+      setPushStatusTone("danger");
+    } catch (pushError) {
+      console.error("Disable push error:", pushError);
+      setPushErrorMessage(
+        pushError instanceof Error ? pushError.message : "Unexpected push disable error."
       );
     } finally {
       setIsEnablingPush(false);
@@ -461,16 +609,36 @@ export default function MemberCardPage({
 
         {/* Below card buttons */}
         <div className="below-card">
-          <button className="pay-btn" onClick={openPaymentModal}>
-            <PlusIcon />
-            Плати
-          </button>
+          {isAdmin && (
+            <button className="pay-btn" onClick={openPaymentModal}>
+              <PlusIcon />
+              Плати
+            </button>
+          )}
 
-          <button className="bell-btn" onClick={handleEnablePushNotifications} disabled={isEnablingPush}>
-            <BellIcon size={16} />
-            Активиране на известия
-          </button>
+          {isPushEnabled && (
+              <div className="push-enabled-banner">
+                <span className="push-enabled-check" aria-hidden="true">✓</span>
+                <span>Известията са активирани</span>
+              </div>
+          )}
 
+          {(!isIPhoneDevice || isStandaloneMode) && (
+            isPushEnabled ? (
+              <button className="bell-btn bell-btn--disable" onClick={handleDisablePushNotifications} disabled={isEnablingPush}>
+                <BellOffIcon size={16} />
+                Изключване на известия
+              </button>
+            ) : (
+              <button className="bell-btn" onClick={handleEnablePushNotifications} disabled={isEnablingPush}>
+                <BellIcon size={16} />
+                Активиране на известия
+              </button>
+            )
+          )}
+
+          {isIPhoneDevice && !isStandaloneMode && (
+            <>
           <button className="add-btn" onClick={() => setInstructionsOpen((v) => !v)}>
             <ShareIcon size={16} />
             Добавете към начален екран
@@ -502,12 +670,16 @@ export default function MemberCardPage({
               </ol>
             </div>
           )}
+            </>
+          )}
         </div>
 
-        <p className="push-hint">Получавайте push известия дори когато браузърът е затворен.</p>
+        {!isPushEnabled && (
+          <p className="push-hint">Получавайте push известия дори когато браузърът е затворен.</p>
+        )}
 
         {pushStatusMessage && (
-          <p className="push-hint" style={{ color: "#32cd32", marginTop: "6px" }}>
+          <p className="push-hint" style={{ color: pushStatusTone === "danger" ? "#ff8f8f" : "#32cd32", marginTop: "6px" }}>
             {pushStatusMessage}
           </p>
         )}
@@ -634,7 +806,9 @@ export default function MemberCardPage({
                 <div className="pm-selected-summary">
                   <span className="pm-selected-lbl">Избрано:</span>
                   <span className="pm-selected-val">
-                    {MONTH_NAMES_BG_FULL[selectedYM.month]} {selectedYM.year}
+                    {cmpYM(selectedYM, firstUnpaidYM) > 0
+                      ? `${MONTH_NAMES_BG_FULL[firstUnpaidYM.month]} ${firstUnpaidYM.year} - ${MONTH_NAMES_BG_FULL[selectedYM.month]} ${selectedYM.year}`
+                      : `${MONTH_NAMES_BG_FULL[selectedYM.month]} ${selectedYM.year}`}
                   </span>
                 </div>
               )}

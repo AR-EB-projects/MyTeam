@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Add deletion of players">
+    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Add push notifications for player payment">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/members/[id]/payment/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/members/[id]/payment/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/payment/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/payment/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/member/[cardCode]/page.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/member/[cardCode]/page.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app/member/[cardCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/member/[cardCode]/page.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -113,7 +112,7 @@
       <updated>1773479673061</updated>
       <workItem from="1773479674529" duration="795000" />
       <workItem from="1773480504147" duration="4927000" />
-      <workItem from="1773578420614" duration="5157000" />
+      <workItem from="1773578420614" duration="8472000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <option name="closed" value="true" />
@@ -187,7 +186,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773580815386</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Add push notifications for player payment">
+      <option name="closed" value="true" />
+      <created>1773584028857</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1773584028857</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -203,6 +210,7 @@
     <MESSAGE value="Fixed payment logic" />
     <MESSAGE value="Fixes" />
     <MESSAGE value="Add deletion of players" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add deletion of players" />
+    <MESSAGE value="Add push notifications for player payment" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add push notifications for player payment" />
   </component>
 </project>

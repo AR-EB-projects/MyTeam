@@ -292,6 +292,16 @@
 
 .bell-btn:hover { background-color: rgba(255,255,255,0.2); }
 
+.bell-btn--disable {
+  background-color: rgba(224,53,53,0.15);
+  color: #ff8f8f;
+  border: 1px solid rgba(224,53,53,0.35);
+}
+
+.bell-btn--disable:hover {
+  background-color: rgba(224,53,53,0.24);
+}
+
 /* ── Add to home button ── */
 .add-btn {
   display: inline-flex;
@@ -321,6 +331,28 @@
   text-align: center;
   line-height: 1.5;
   margin: 0;
+}
+
+.push-enabled-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  margin-top: 2px;
+  border-radius: 9px;
+  border: 1px solid rgba(0, 120, 20, 0.6);
+  background: linear-gradient(180deg, rgba(0, 45, 10, 0.95) 0%, rgba(0, 35, 8, 0.95) 100%);
+  color: #17a534;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.push-enabled-check {
+  color: #16a531;
 }
 
 /* ── Instructions ── */
