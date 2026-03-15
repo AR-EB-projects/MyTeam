@@ -667,6 +667,15 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.amp-edit-input option {
+  background: #141414;
+  color: #ffffff;
+}
+
+.amp-edit-input[type="date"] {
+  color-scheme: dark;
+}
+
 .amp-edit-input:focus {
   border-color: rgba(50,205,50,0.5);
   box-shadow: 0 0 12px rgba(50,205,50,0.18);

@@ -74,6 +74,7 @@ export async function PUT(
   try {
     const body = await request.json();
     const fullName = String(body.fullName ?? "").trim();
+    const clubIdRaw = body.clubId;
     const jerseyNumberRaw = body.jerseyNumber;
     const teamGroupRaw = body.teamGroup;
     const statusRaw = String(body.status ?? "").trim();
@@ -85,6 +86,21 @@ export async function PUT(
         { error: "fullName is required" },
         { status: 400 }
       );
+    }
+
+    const clubId =
+      clubIdRaw === null || clubIdRaw === undefined || String(clubIdRaw).trim() === ""
+        ? undefined
+        : String(clubIdRaw).trim();
+
+    if (clubId) {
+      const clubExists = await prisma.club.findUnique({
+        where: { id: clubId },
+        select: { id: true },
+      });
+      if (!clubExists) {
+        return NextResponse.json({ error: "Club not found" }, { status: 404 });
+      }
     }
 
     const status =
@@ -111,6 +127,7 @@ export async function PUT(
       where: { id },
       data: {
         fullName,
+        ...(clubId ? { clubId } : {}),
         jerseyNumber:
           jerseyNumberRaw === null || jerseyNumberRaw === undefined || jerseyNumberRaw === ""
             ? null
@@ -123,7 +140,10 @@ export async function PUT(
             : String(avatarUrlRaw),
         ...(status ? { status } : {}),
       },
-      include: { cards: { orderBy: { createdAt: "desc" } } },
+      include: {
+        cards: { orderBy: { createdAt: "desc" } },
+        club: true,
+      },
     });
 
     return NextResponse.json(updatedPlayer);

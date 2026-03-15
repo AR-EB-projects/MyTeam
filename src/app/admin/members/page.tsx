@@ -22,6 +22,11 @@ interface MemberClub {
   name: string;
 }
 
+interface ClubOption {
+  id: string;
+  name: string;
+}
+
 interface Member {
   id: string;
   fullName: string;
@@ -382,8 +387,10 @@ function AdminMembersPageContent() {
   const [isDeletingMember, setIsDeletingMember] = useState(false);
   const [editError, setEditError]               = useState("");
   const [isSavingEdit, setIsSavingEdit]         = useState(false);
+  const [clubs, setClubs]                       = useState<ClubOption[]>([]);
   const [editForm, setEditForm] = useState({
     fullName: "",
+    clubId: "",
     teamGroup: "",
     jerseyNumber: "",
     birthDate: "",
@@ -426,11 +433,37 @@ function AdminMembersPageContent() {
     }
   };
 
-  const openEditMember = (member: Member) => {
+  const openEditMember = async (member: Member) => {
     setEditError("");
+    if (clubs.length === 0) {
+      try {
+        const response = await fetch("/api/admin/clubs", { cache: "no-store" });
+        if (response.ok) {
+          const clubsPayload: unknown = await response.json();
+          const normalizedClubs: ClubOption[] = Array.isArray(clubsPayload)
+            ? clubsPayload
+                .map((club) => {
+                  const item =
+                    typeof club === "object" && club !== null
+                      ? (club as { id?: unknown; name?: unknown })
+                      : {};
+                  return {
+                    id: String(item.id ?? ""),
+                    name: String(item.name ?? ""),
+                  };
+                })
+                .filter((club) => club.id && club.name)
+            : [];
+          setClubs(normalizedClubs);
+        }
+      } catch (error) {
+        console.error("Error loading clubs for edit:", error);
+      }
+    }
     setMemberToEdit(member);
     setEditForm({
       fullName: member.fullName,
+      clubId: member.club?.id ?? "",
       teamGroup: member.teamGroup !== null ? String(member.teamGroup) : "",
       jerseyNumber: member.jerseyNumber ?? "",
       birthDate: member.birthDate ? new Date(member.birthDate).toISOString().slice(0, 10) : "",
@@ -443,6 +476,10 @@ function AdminMembersPageContent() {
     const fullName = editForm.fullName.trim();
     if (!fullName) {
       setEditError("Името е задължително.");
+      return;
+    }
+    if (!editForm.clubId) {
+      setEditError("Изберете отбор.");
       return;
     }
 
@@ -461,6 +498,7 @@ function AdminMembersPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
+          clubId: editForm.clubId,
           teamGroup: parsedTeamGroup,
           jerseyNumber: editForm.jerseyNumber.trim() || null,
           birthDate: editForm.birthDate.trim() || null,
@@ -478,12 +516,16 @@ function AdminMembersPageContent() {
         return;
       }
 
+      const selectedClub = clubs.find((club) => club.id === editForm.clubId);
       setMembers((prev) =>
         prev.map((m) =>
           m.id === memberToEdit.id
             ? {
                 ...m,
                 fullName,
+                club: selectedClub
+                  ? { id: selectedClub.id, name: selectedClub.name }
+                  : m.club,
                 teamGroup: parsedTeamGroup,
                 jerseyNumber: editForm.jerseyNumber.trim() || null,
                 birthDate: editForm.birthDate.trim() || null,
@@ -498,6 +540,9 @@ function AdminMembersPageContent() {
           ? {
               ...prev,
               fullName,
+              club: selectedClub
+                ? { id: selectedClub.id, name: selectedClub.name }
+                : prev.club,
               teamGroup: parsedTeamGroup,
               jerseyNumber: editForm.jerseyNumber.trim() || null,
               birthDate: editForm.birthDate.trim() || null,
@@ -763,6 +808,23 @@ function AdminMembersPageContent() {
                     value={editForm.fullName}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, fullName: e.target.value }))}
                   />
+                </label>
+                <label className="amp-edit-field">
+                  <span className="amp-lbl">Club</span>
+                  <select
+                    className="amp-edit-input"
+                    value={editForm.clubId}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, clubId: e.target.value }))}
+                  >
+                    <option value="" disabled>
+                      Изберете отбор
+                    </option>
+                    {clubs.map((club) => (
+                      <option key={club.id} value={club.id}>
+                        {club.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label className="amp-edit-field">
                   <span className="amp-lbl">Номер в отбора</span>
