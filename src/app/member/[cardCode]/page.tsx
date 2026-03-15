@@ -95,6 +95,24 @@ const SpinnerIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
+const FileTextIcon = ({ size = 12 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+    <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+    <path d="M10 9H8" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
+  </svg>
+);
+
+const PrinterIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" />
+    <rect x="6" y="14" width="12" height="8" rx="1" />
+  </svg>
+);
+
 const PlusIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12h14" />
@@ -176,6 +194,11 @@ export default function MemberCardPage({
   const [selectedYM, setSelectedYM] = useState<{ year: number; month: number } | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    id: string;
+    paidFor: string;
+    paidAt: string;
+  } | null>(null);
 
   // ── Derived: paid months set ─────────────────────────
   const paidSet = new Set<string>(
@@ -493,6 +516,101 @@ export default function MemberCardPage({
     }
   };
 
+  const formatReceiptPeriod = (value: string) => {
+    const text = new Date(value).toLocaleDateString("bg-BG", {
+      month: "long",
+      year: "numeric",
+    });
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const handlePrintReceipt = () => {
+    if (!selectedReceipt || !member || typeof window === "undefined" || typeof document === "undefined") return;
+
+    const period = formatReceiptPeriod(selectedReceipt.paidFor);
+    const paidAt = new Date(selectedReceipt.paidAt).toLocaleDateString("bg-BG");
+    const safeMemberName = escapeHtml(member.name);
+    const safePeriod = escapeHtml(period);
+    const safePaidAt = escapeHtml(paidAt);
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    doc.open();
+    doc.write(`<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Разписка - ${safePeriod}</title>
+  <style>
+    body { margin: 0; background: #fff; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .wrap { max-width: 420px; margin: 0 auto; padding: 20px; }
+    .card { border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px; }
+    .head { text-align: center; margin-bottom: 10px; }
+    .title { margin: 0; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+    .sub { margin: 4px 0 0; font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: .14em; }
+    .sep { border: 0; border-top: 1px solid #e5e7eb; margin: 12px 0; }
+    .row { display: flex; justify-content: space-between; gap: 12px; margin: 10px 0; font-size: 14px; }
+    .lbl { color: #6b7280; }
+    .val { font-weight: 700; color: #111827; text-align: right; }
+    .stamp-wrap { display: flex; justify-content: center; margin: 20px 0 8px; }
+    .stamp { width: 96px; height: 96px; border-radius: 999px; border: 3px dashed rgba(50,205,50,.6); color: #26a826; font-size: 13px; font-weight: 900; letter-spacing: .05em; display: flex; align-items: center; justify-content: center; transform: rotate(-12deg); }
+    @page { margin: 12mm; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <h1 class="title">ФК Вихър Войводиново</h1>
+        <p class="sub">Разписка за членски внос</p>
+      </div>
+      <hr class="sep" />
+      <div class="row"><span class="lbl">Играч:</span><span class="val">${safeMemberName}</span></div>
+      <div class="row"><span class="lbl">Период:</span><span class="val">${safePeriod}</span></div>
+      <div class="row"><span class="lbl">Дата на плащане:</span><span class="val">${safePaidAt}</span></div>
+      <hr class="sep" />
+      <div class="stamp-wrap"><div class="stamp">ПЛАТЕНО</div></div>
+    </div>
+  </div>
+</body>
+</html>`);
+    doc.close();
+
+    window.setTimeout(() => {
+      win.focus();
+      win.print();
+      window.setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 100);
+  };
+
   const statusKey = member?.status ?? "paid";
   const status = STATUS_MAP[statusKey];
   const lastPaymentText = member?.last_payment_date
@@ -720,6 +838,10 @@ export default function MemberCardPage({
                           </p>
                           <p className="p-date">{new Date(item.paidAt).toLocaleDateString("bg-BG")}</p>
                         </div>
+                        <button className="receipt-btn" onClick={() => setSelectedReceipt(item)}>
+                          <FileTextIcon size={12} />
+                          Разписка
+                        </button>
                       </div>
                     ))
                   ) : (
@@ -839,6 +961,57 @@ export default function MemberCardPage({
                 </button>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {selectedReceipt && (
+          <div className="receipt-overlay" onClick={() => setSelectedReceipt(null)}>
+            <div className="receipt-dialog" onClick={(e) => e.stopPropagation()}>
+              <button className="receipt-close" onClick={() => setSelectedReceipt(null)} aria-label="Затвори">
+                <XIcon size={14} />
+              </button>
+
+              <div id="receipt-print-area" className="receipt-card">
+                <div className="receipt-head">
+                  <h2 className="receipt-title">ФК Вихър Войводиново</h2>
+                  <p className="receipt-sub">Разписка за членски внос</p>
+                </div>
+
+                <hr className="receipt-sep" />
+
+                <div className="receipt-fields">
+                  <div className="receipt-row">
+                    <span className="receipt-lbl">Играч:</span>
+                    <span className="receipt-val">{member.name}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-lbl">Период:</span>
+                    <span className="receipt-val">{formatReceiptPeriod(selectedReceipt.paidFor)}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-lbl">Дата на плащане:</span>
+                    <span className="receipt-val">{new Date(selectedReceipt.paidAt).toLocaleDateString("bg-BG")}</span>
+                  </div>
+                </div>
+
+                <hr className="receipt-sep" />
+
+                <div className="receipt-stamp-wrap">
+                  <div className="receipt-stamp">ПЛАТЕНО</div>
+                </div>
+
+                <div className="receipt-actions">
+                  <button className="receipt-action-btn" onClick={handlePrintReceipt}>
+                    <PrinterIcon size={14} />
+                    Принтирай / Запази
+                  </button>
+                  <button className="receipt-action-btn" onClick={() => setSelectedReceipt(null)}>
+                    <XIcon size={14} />
+                    Затвори
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

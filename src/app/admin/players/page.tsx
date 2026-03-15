@@ -129,6 +129,8 @@ interface ReportPlayer {
   paymentLogs: ReportPaymentLog[];
 }
 
+type ReportKind = "monthly" | "yearly";
+
 function ReportsDialog({ onClose }: { onClose: () => void }) {
   const now = new Date();
   const [month, setMonth] = useState(MONTHS[now.getMonth()] ?? MONTHS[0]);
@@ -174,7 +176,7 @@ function ReportsDialog({ onClose }: { onClose: () => void }) {
   const selectedMonthIdx = MONTHS.indexOf(month);
   const selectedYear = Number(year);
 
-  const getPaymentDateForPeriod = (player: ReportPlayer): string | null => {
+  const getPaymentDateForMonth = (player: ReportPlayer): string | null => {
     let latestPaidAt: Date | null = null;
 
     for (const log of player.paymentLogs ?? []) {
@@ -194,6 +196,26 @@ function ReportsDialog({ onClose }: { onClose: () => void }) {
     return latestPaidAt ? latestPaidAt.toLocaleDateString("bg-BG") : null;
   };
 
+  const getPaymentDateForYear = (player: ReportPlayer): string | null => {
+    let latestPaidAt: Date | null = null;
+
+    for (const log of player.paymentLogs ?? []) {
+      const paidForDate = new Date(log.paidFor);
+      const paidAtDate = new Date(log.paidAt);
+      if (Number.isNaN(paidForDate.getTime()) || Number.isNaN(paidAtDate.getTime())) {
+        continue;
+      }
+      if (paidForDate.getFullYear() !== selectedYear) {
+        continue;
+      }
+      if (!latestPaidAt || paidAtDate > latestPaidAt) {
+        latestPaidAt = paidAtDate;
+      }
+    }
+
+    return latestPaidAt ? latestPaidAt.toLocaleDateString("bg-BG") : null;
+  };
+
   const groupFiltered = players.filter((player) => {
     if (group === "all") {
       return true;
@@ -202,7 +224,18 @@ function ReportsDialog({ onClose }: { onClose: () => void }) {
   });
 
   const rows = groupFiltered.map((player) => {
-    const paidDate = getPaymentDateForPeriod(player);
+    const paidDate = getPaymentDateForMonth(player);
+    return {
+      id: player.id,
+      name: player.fullName,
+      group: player.teamGroup,
+      date: paidDate ?? "—",
+      paid: Boolean(paidDate),
+    };
+  });
+
+  const rowsYearly = groupFiltered.map((player) => {
+    const paidDate = getPaymentDateForYear(player);
     return {
       id: player.id,
       name: player.fullName,
@@ -222,6 +255,118 @@ function ReportsDialog({ onClose }: { onClose: () => void }) {
     if (statusFilter === "unpaid") return !row.paid;
     return true;
   });
+
+  const filteredYearly = rowsYearly.filter((row) => {
+    if (statusFilter === "paid") return row.paid;
+    if (statusFilter === "unpaid") return !row.paid;
+    return true;
+  });
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const printReport = (kind: ReportKind) => {
+    const baseRows = kind === "monthly" ? rows : rowsYearly;
+    const rowsToPrint = kind === "monthly" ? filtered : filteredYearly;
+    const paid = baseRows.filter((row) => row.paid).length;
+    const totalRows = baseRows.length;
+    const percent = totalRows > 0 ? Math.round((paid / totalRows) * 100) : 0;
+    const unpaid = totalRows - paid;
+    const periodTitle = kind === "monthly" ? `${month} ${year}` : `Year ${year}`;
+
+    if (typeof window === "undefined" || typeof document === "undefined") return;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    const tableRowsHtml = rowsToPrint.length > 0
+      ? rowsToPrint
+          .map((row, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${escapeHtml(row.name)}</td>
+              <td>${row.group ?? "—"}</td>
+              <td>${escapeHtml(row.date)}</td>
+              <td>${row.paid ? "Paid" : "Unpaid"}</td>
+            </tr>
+          `)
+          .join("")
+      : `<tr><td colspan="5" style="text-align:center;color:#6b7280;">No data for selected filters.</td></tr>`;
+
+    doc.open();
+    doc.write(`<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${kind === "monthly" ? "Monthly report" : "Yearly report"}</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111827; }
+    .page { padding: 24px; }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    .sub { margin: 0 0 14px; color: #6b7280; font-size: 13px; }
+    .stats { display: flex; gap: 12px; margin: 0 0 16px; flex-wrap: wrap; }
+    .stat { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; font-size: 13px; min-width: 140px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #e5e7eb; padding: 7px 8px; text-align: left; }
+    th { background: #f9fafb; }
+    @page { margin: 10mm; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>${kind === "monthly" ? "Monthly report" : "Yearly report"}</h1>
+    <p class="sub">Period: ${escapeHtml(periodTitle)}</p>
+    <div class="stats">
+      <div class="stat">Paid: <strong>${paid}</strong> / ${totalRows}</div>
+      <div class="stat">Collection rate: <strong>${percent}%</strong></div>
+      <div class="stat">Unpaid: <strong>${unpaid}</strong></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Group</th>
+          <th>Payment date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>${tableRowsHtml}</tbody>
+    </table>
+  </div>
+</body>
+</html>`);
+    doc.close();
+
+    window.setTimeout(() => {
+      win.focus();
+      win.print();
+      window.setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1000);
+    }, 80);
+  };
 
   return (
     <div className="rd-overlay" onClick={onClose}>
@@ -338,11 +483,11 @@ function ReportsDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="rd-footer">
-          <button className="rd-footer-btn" onClick={() => window.print()}>
+          <button className="rd-footer-btn" onClick={() => printReport("monthly")}>
             <PrinterIcon />
             Генерирай месечен отчет
           </button>
-          <button className="rd-footer-btn" onClick={() => window.print()}>
+          <button className="rd-footer-btn" onClick={() => printReport("yearly")}>
             <CalendarIcon />
             Генерирай годишен отчет
           </button>
