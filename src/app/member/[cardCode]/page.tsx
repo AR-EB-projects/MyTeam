@@ -120,6 +120,12 @@ const PlusIcon = () => (
   </svg>
 );
 
+const ArrowLeftIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+);
+
 const XIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6 6 18" />
@@ -652,6 +658,17 @@ export default function MemberCardPage({
   return (
     <main className="page-bg">
       <div className="page-inner">
+        {isAdmin && (
+          <div className="amp-back-wrap">
+            <button
+              className="amp-back-btn"
+              onClick={() => router.push("/admin/members")}
+            >
+              <ArrowLeftIcon />
+              Назад към играчи
+            </button>
+          </div>
+        )}
 
         {/* Member card */}
         <div className="card-shell">
@@ -734,12 +751,12 @@ export default function MemberCardPage({
 
         {/* Below card buttons */}
         <div className="below-card">
-          {isAdmin && (
+          {isAdmin && (<>
             <button className="pay-btn" onClick={openPaymentModal}>
               <PlusIcon />
               Плати
             </button>
-          )}
+          </>)}
 
           {isPushEnabled && (
               <div className="push-enabled-banner">
