@@ -502,6 +502,7 @@ export default function AdminPlayersPage() {
   const [reportsOpen, setReportsOpen] = useState(false);
   const [clubs, setClubs] = useState<ClubRow[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
+  const [demoSendingType, setDemoSendingType] = useState<"reminder" | "overdue" | null>(null);
 
   useEffect(() => {
     const fetchClubs = async () => {
@@ -526,6 +527,52 @@ export default function AdminPlayersPage() {
     void fetchClubs();
   }, []);
 
+  const sendDemoNotification = async (type: "reminder" | "overdue") => {
+    if (demoSendingType) return;
+
+    setDemoSendingType(type);
+    try {
+      const trainerMessage =
+        type === "reminder"
+          ? "Напомняне: Моля, заплатете членския внос за текущия период."
+          : "Просрочие: Имате неплатен членски внос за периода. Моля, платете възможно най-скоро.";
+
+      const response = await fetch("/api/admin/notifications/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "trainer_message",
+          broadcast: true,
+          trainerMessage,
+          url: "/",
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const errorMessage =
+          typeof payload.error === "string"
+            ? payload.error
+            : "Неуспешно изпращане на известия.";
+        throw new Error(errorMessage);
+      }
+
+      const payload = (await response.json()) as {
+        summary?: { sent?: number; total?: number };
+      };
+      const sent = payload.summary?.sent ?? 0;
+      const total = payload.summary?.total ?? 0;
+      window.alert(`Известия изпратени: ${sent}/${total}`);
+    } catch (error) {
+      console.error("Demo notification send error:", error);
+      window.alert(
+        error instanceof Error ? error.message : "Възникна грешка при изпращане."
+      );
+    } finally {
+      setDemoSendingType(null);
+    }
+  };
+
   return (
     <main className="mp-page">
       <div className="mp-dot-grid" aria-hidden="true" />
@@ -545,11 +592,19 @@ export default function AdminPlayersPage() {
         <div className="mp-demo-box">
           <p className="mp-demo-label">DEMO ACTIONS</p>
           <div className="mp-demo-actions">
-            <button className="mp-demo-btn mp-demo-btn--yellow">
+            <button
+              className="mp-demo-btn mp-demo-btn--yellow"
+              onClick={() => void sendDemoNotification("reminder")}
+              disabled={demoSendingType !== null}
+            >
               <BellIcon />
               Симулирай Напомняне (25-то число)
             </button>
-            <button className="mp-demo-btn mp-demo-btn--red">
+            <button
+              className="mp-demo-btn mp-demo-btn--red"
+              onClick={() => void sendDemoNotification("overdue")}
+              disabled={demoSendingType !== null}
+            >
               <TriangleAlertIcon />
               Симулирай Просрочие (1-во число)
             </button>
