@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { buildNotificationPayload } from "@/lib/push/templates";
+import { saveMemberNotificationHistory } from "@/lib/push/history";
+import { sendPushToMember } from "@/lib/push/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +29,13 @@ function addMonths(ym: YM, count: number): YM {
 
 function ymToDate(ym: YM): Date {
   return new Date(Date.UTC(ym.year, ym.month, 1));
+}
+
+function formatPaidMonthLabel(date: Date): string {
+  return date.toLocaleDateString("bg-BG", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export async function POST(
@@ -119,6 +129,46 @@ export async function POST(
       });
     });
 
+    const player = await prisma.player.findUnique({
+      where: { id: card.playerId },
+      select: {
+        id: true,
+        fullName: true,
+        cards: {
+          where: { isActive: true },
+          select: { cardCode: true },
+          take: 1,
+        },
+      },
+    });
+
+    let pushResult = { total: 0, sent: 0, failed: 0, deactivated: 0 };
+    if (player) {
+      const targetCardCode = player.cards[0]?.cardCode ?? cardCode;
+      const firstPaidDate = monthsToCreate[0];
+      const lastPaidDate = monthsToCreate[monthsToCreate.length - 1];
+      const periodText =
+        monthsToCreate.length > 1
+          ? `периода ${formatPaidMonthLabel(firstPaidDate)} - ${formatPaidMonthLabel(lastPaidDate)}`
+          : `месец ${formatPaidMonthLabel(firstPaidDate)}`;
+      const payload = buildNotificationPayload({
+        type: "trainer_message",
+        memberName: player.fullName.trim(),
+        trainerMessage: `Плащането за ${periodText} е отчетено успешно.`,
+        url: `/member/${targetCardCode}`,
+      });
+
+      try {
+        pushResult = await sendPushToMember(player.id, payload);
+        if (pushResult.sent > 0) {
+          await saveMemberNotificationHistory(player.id, "trainer_message", payload);
+        }
+      } catch (pushError) {
+        // Payment should remain successful even if push delivery fails.
+        console.error("Member payment push send error:", pushError);
+      }
+    }
+
     const createdPayments = await prisma.paymentLog.findMany({
       where: {
         playerId: card.playerId,
@@ -138,6 +188,7 @@ export async function POST(
       success: true,
       createdCount: createdPayments.length,
       payments: createdPayments,
+      push: pushResult,
     });
   } catch (error) {
     console.error("Member payment creation error:", error);

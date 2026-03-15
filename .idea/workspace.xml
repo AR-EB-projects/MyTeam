@@ -4,11 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Fixes">
+    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Add deletion of players">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/members/page.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/members/page.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/members/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/members/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/members/[id]/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/members/[id]/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/admin/members/[id]/payment/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/members/[id]/payment/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/payment/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/payment/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/member/[cardCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/member/[cardCode]/page.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +71,7 @@
   }
 }</component>
   <component name="RecapUselessUpdatesCounter">
-    <option name="suspendCountdown" value="1" />
+    <option name="suspendCountdown" value="0" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -113,7 +113,7 @@
       <updated>1773479673061</updated>
       <workItem from="1773479674529" duration="795000" />
       <workItem from="1773480504147" duration="4927000" />
-      <workItem from="1773578420614" duration="2356000" />
+      <workItem from="1773578420614" duration="5157000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <option name="closed" value="true" />
@@ -179,7 +179,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773505907513</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Add deletion of players">
+      <option name="closed" value="true" />
+      <created>1773580815385</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1773580815386</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -194,6 +202,7 @@
     <MESSAGE value="Add cloudinary integration, support for avatar upload and image transformations" />
     <MESSAGE value="Fixed payment logic" />
     <MESSAGE value="Fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixes" />
+    <MESSAGE value="Add deletion of players" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add deletion of players" />
   </component>
 </project>

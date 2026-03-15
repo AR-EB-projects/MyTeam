@@ -120,6 +120,19 @@ function toISOMonth(ym: { year: number; month: number }) {
   return `${ym.year}-${mm}-01T00:00:00.000Z`;
 }
 
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const normalized = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(normalized);
+  const output = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    output[i] = rawData.charCodeAt(i);
+  }
+
+  return output.buffer as ArrayBuffer;
+}
+
 export default function MemberCardPage({
   params,
 }: {
@@ -131,6 +144,9 @@ export default function MemberCardPage({
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
+  const [pushStatusMessage, setPushStatusMessage] = useState("");
+  const [pushErrorMessage, setPushErrorMessage] = useState("");
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState(false);
 
@@ -214,6 +230,88 @@ export default function MemberCardPage({
     };
     void fetchMember();
   }, [cardCode]);
+
+  const handleEnablePushNotifications = async () => {
+    setPushStatusMessage("");
+    setPushErrorMessage("");
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const supportsPush =
+      window.isSecureContext &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window;
+
+    if (!supportsPush) {
+      setPushErrorMessage("Push is not supported on this device or HTTPS is missing.");
+      return;
+    }
+
+    setIsEnablingPush(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setPushErrorMessage("Notification permission was not granted.");
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+
+      const keyResponse = await fetch("/api/push/public-key", { cache: "no-store" });
+      if (!keyResponse.ok) {
+        const payload = await keyResponse.json().catch(() => ({}));
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : "Missing VAPID server configuration."
+        );
+      }
+
+      const { publicKey } = (await keyResponse.json()) as { publicKey: string };
+
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        // Re-subscribe with current VAPID key pair after key rotation.
+        await existingSubscription.unsubscribe();
+      }
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      const saveResponse = await fetch(
+        `/api/members/${encodeURIComponent(cardCode)}/push-subscriptions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscription: subscription.toJSON() }),
+        }
+      );
+
+      if (!saveResponse.ok) {
+        const payload = await saveResponse.json().catch(() => ({}));
+        throw new Error(
+          typeof payload.error === "string"
+            ? payload.error
+            : "Failed to enable push notifications."
+        );
+      }
+
+      setPushStatusMessage("Notifications are enabled.");
+    } catch (pushError) {
+      console.error("Enable push error:", pushError);
+      setPushErrorMessage(
+        pushError instanceof Error ? pushError.message : "Unexpected push setup error."
+      );
+    } finally {
+      setIsEnablingPush(false);
+    }
+  };
 
   // Submit payment
   const handlePayment = async () => {
@@ -368,7 +466,7 @@ export default function MemberCardPage({
             Плати
           </button>
 
-          <button className="bell-btn">
+          <button className="bell-btn" onClick={handleEnablePushNotifications} disabled={isEnablingPush}>
             <BellIcon size={16} />
             Активиране на известия
           </button>
@@ -407,6 +505,17 @@ export default function MemberCardPage({
         </div>
 
         <p className="push-hint">Получавайте push известия дори когато браузърът е затворен.</p>
+
+        {pushStatusMessage && (
+          <p className="push-hint" style={{ color: "#32cd32", marginTop: "6px" }}>
+            {pushStatusMessage}
+          </p>
+        )}
+        {pushErrorMessage && (
+          <p className="push-hint" style={{ color: "#ff6b6b", marginTop: "6px" }}>
+            {pushErrorMessage}
+          </p>
+        )}
 
         {/* Payment history accordion */}
         <div className="accordion" style={{ marginTop: "14px" }}>

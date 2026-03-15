@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
+import { buildNotificationPayload } from "@/lib/push/templates";
+import { saveMemberNotificationHistory } from "@/lib/push/history";
+import { sendPushToMember } from "@/lib/push/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +46,11 @@ export async function POST(
           orderBy: { paidAt: "desc" },
           take: 1,
         },
+        cards: {
+          where: { isActive: true },
+          select: { cardCode: true },
+          take: 1,
+        },
       },
     });
 
@@ -83,6 +91,32 @@ export async function POST(
       },
     });
 
+    const memberUrl = player.cards[0]?.cardCode
+      ? `/member/${player.cards[0].cardCode}`
+      : "/";
+    const paidForLabel = paidForDate.toLocaleDateString("bg-BG", {
+      month: "long",
+      year: "numeric",
+    });
+
+    const pushPayload = buildNotificationPayload({
+      type: "trainer_message",
+      memberName: player.fullName.trim(),
+      trainerMessage: `Плащането за месец ${paidForLabel} е отчетено успешно.`,
+      url: memberUrl,
+    });
+
+    let pushResult = { total: 0, sent: 0, failed: 0, deactivated: 0 };
+    try {
+      pushResult = await sendPushToMember(player.id, pushPayload);
+      if (pushResult.sent > 0) {
+        await saveMemberNotificationHistory(player.id, "trainer_message", pushPayload);
+      }
+    } catch (pushError) {
+      // Payment should not fail because push delivery failed.
+      console.error("Payment push send error:", pushError);
+    }
+
     return NextResponse.json({
       success: true,
       payment: {
@@ -90,6 +124,7 @@ export async function POST(
         paidFor: paymentLog.paidFor,
         paidAt: paymentLog.paidAt,
       },
+      push: pushResult,
     });
 
   } catch (error) {
