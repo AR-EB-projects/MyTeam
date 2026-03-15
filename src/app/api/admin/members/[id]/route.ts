@@ -2,9 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { randomBytes } from "crypto";
+import { cloudinary } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function getCloudinaryPublicId(player: { imagePublicId: string | null; imageUrl: string | null }): string | null {
+  if (player.imagePublicId) {
+    return player.imagePublicId;
+  }
+
+  if (!player.imageUrl) {
+    return null;
+  }
+
+  const trimmed = player.imageUrl.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const uploadMarker = "/upload/";
+  const uploadIndex = trimmed.indexOf(uploadMarker);
+  const pathWithTransforms = uploadIndex >= 0
+    ? trimmed.slice(uploadIndex + uploadMarker.length)
+    : trimmed;
+
+  const pathWithoutTransforms = pathWithTransforms.replace(/^v\d+\//, "");
+  const pathWithoutExtension = pathWithoutTransforms.replace(/\.[a-z0-9]+$/i, "");
+  return pathWithoutExtension || null;
+}
 
 export async function GET(
   request: NextRequest,
@@ -196,6 +222,34 @@ export async function DELETE(
     }
 
     try {
+        const player = await prisma.player.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                imagePublicId: true,
+                imageUrl: true,
+            },
+        });
+
+        if (!player) {
+            return NextResponse.json({ error: "Player not found" }, { status: 404 });
+        }
+
+        const imagePublicId = getCloudinaryPublicId(player);
+        if (imagePublicId) {
+            try {
+                const result = await cloudinary.uploader.destroy(imagePublicId, {
+                    resource_type: "image",
+                    invalidate: true,
+                });
+                if (result.result !== "ok" && result.result !== "not found") {
+                    console.warn("Unexpected Cloudinary destroy result:", result);
+                }
+            } catch (cloudinaryError) {
+                console.error("Cloudinary deletion error:", cloudinaryError);
+            }
+        }
+
         await prisma.card.deleteMany({
             where: { playerId: id },
         });

@@ -4,22 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Fixed payment logic">
+    <list default="true" id="06619c23-95cc-4928-af2e-0b409c84a947" name="Changes" comment="Fixes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/admin/members/page.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/members/page.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app/admin/members/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/members/page.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app/api/admin/members/[id]/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/members/[id]/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/notifications/send/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/notifications/send/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/questions/[id]/answers/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/questions/[id]/answers/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/questions/[id]/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/questions/[id]/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/admin/questions/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/admin/questions/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/answers/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/answers/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/check-in/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/check-in/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/notifications/read/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/notifications/read/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/push-subscriptions/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/push-subscriptions/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/api/members/[cardCode]/push-test/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/members/[cardCode]/push-test/route.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib/push/history.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/push/history.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib/push/service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/push/service.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,7 +71,7 @@
   }
 }</component>
   <component name="RecapUselessUpdatesCounter">
-    <option name="suspendCountdown" value="2" />
+    <option name="suspendCountdown" value="1" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -124,6 +113,7 @@
       <updated>1773479673061</updated>
       <workItem from="1773479674529" duration="795000" />
       <workItem from="1773480504147" duration="4927000" />
+      <workItem from="1773578420614" duration="2356000" />
     </task>
     <task id="LOCAL-00001" summary="First commit">
       <option name="closed" value="true" />
@@ -181,7 +171,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773504825691</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Fixes">
+      <option name="closed" value="true" />
+      <created>1773505907513</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1773505907513</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -195,6 +193,7 @@
     <MESSAGE value="Add backend connection to the frontend" />
     <MESSAGE value="Add cloudinary integration, support for avatar upload and image transformations" />
     <MESSAGE value="Fixed payment logic" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed payment logic" />
+    <MESSAGE value="Fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixes" />
   </component>
 </project>

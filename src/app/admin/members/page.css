@@ -581,3 +581,82 @@
   font-size: 10px;
   color: rgba(255,255,255,0.3);
 }
+
+.amp-overlay--confirm {
+  z-index: 110;
+}
+
+.amp-modal--confirm {
+  max-width: 460px;
+}
+
+.amp-confirm-text {
+  margin: 0;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.amp-confirm-subtext {
+  margin: 0;
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.amp-confirm-error {
+  margin: 0;
+  color: #ff7d7d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.amp-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.amp-modal-actions--end {
+  margin-top: 0;
+}
+
+.amp-btn {
+  border: none;
+  border-radius: 10px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.amp-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.amp-btn--ghost {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #ffffff;
+}
+
+.amp-btn--ghost:hover:not(:disabled) {
+  background: rgba(255,255,255,0.1);
+}
+
+.amp-btn--danger {
+  background: rgba(255,77,77,0.18);
+  border: 1px solid rgba(255,77,77,0.5);
+  color: #ff9d9d;
+}
+
+.amp-btn--danger:hover:not(:disabled) {
+  background: rgba(255,77,77,0.25);
+  box-shadow: 0 0 20px rgba(255,77,77,0.2);
+  transform: translateY(-1px);
+}

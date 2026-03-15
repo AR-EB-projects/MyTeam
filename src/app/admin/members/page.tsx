@@ -123,7 +123,15 @@ const ReceiptIcon = () => (
 );
 
 /* ── Member Detail Modal ── */
-function MemberDetailModal({ member, onClose }: { member: Member; onClose: () => void }) {
+function MemberDetailModal({
+  member,
+  onClose,
+  onRequestDelete,
+}: {
+  member: Member;
+  onClose: () => void;
+  onRequestDelete: (member: Member) => void;
+}) {
   const s = getStatusMeta(member.status);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -217,6 +225,15 @@ function MemberDetailModal({ member, onClose }: { member: Member; onClose: () =>
             </div>
           </div>
 
+          <div className="amp-modal-actions amp-modal-actions--end">
+            <button
+              className="amp-btn amp-btn--danger"
+              onClick={() => onRequestDelete(member)}
+            >
+              Изтрий играч
+            </button>
+          </div>
+
         </div>
       </div>
     </div>
@@ -224,6 +241,54 @@ function MemberDetailModal({ member, onClose }: { member: Member; onClose: () =>
 }
 
 /* ── Player Card ── */
+function ConfirmDeleteModal({
+  member,
+  onCancel,
+  onConfirm,
+  isDeleting,
+  error,
+}: {
+  member: Member;
+  onCancel: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+  error: string;
+}) {
+  return (
+    <div className="amp-overlay amp-overlay--confirm" onClick={isDeleting ? undefined : onCancel}>
+      <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+        <div className="amp-modal-tint" aria-hidden="true"/>
+        <h2 className="amp-modal-title">
+          <span className="amp-modal-title-gradient">Потвърди изтриване</span>
+          <button className="amp-modal-close" onClick={onCancel} aria-label="Затвори" disabled={isDeleting}>
+            <XIcon/>
+          </button>
+        </h2>
+
+        <div className="amp-modal-body">
+          <p className="amp-confirm-text">
+            Сигурен ли си, че искаш да изтриеш <strong>{member.fullName}</strong>?
+          </p>
+          <p className="amp-confirm-subtext">
+            Tова действие ще изтрие играча перманентно и не може да бъде отменено.
+          </p>
+
+          {error && <p className="amp-confirm-error">{error}</p>}
+
+          <div className="amp-modal-actions">
+            <button className="amp-btn amp-btn--ghost" onClick={onCancel} disabled={isDeleting}>
+              Отказ
+            </button>
+            <button className="amp-btn amp-btn--danger" onClick={onConfirm} disabled={isDeleting}>
+              {isDeleting ? "Изтриване..." : "Изтрий"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerCard({ member, onClick }: { member: Member; onClick: () => void }) {
   const s = getStatusMeta(member.status);
   const initial = member.fullName.trim().charAt(0).toUpperCase() || "?";
@@ -273,7 +338,45 @@ function AdminMembersPageContent() {
   const [searchTerm, setSearchTerm]             = useState("");
   const [selectedGroup, setSelectedGroup]       = useState("all");
   const [selectedMember, setSelectedMember]     = useState<Member | null>(null);
+  const [memberToDelete, setMemberToDelete]     = useState<Member | null>(null);
+  const [deleteError, setDeleteError]           = useState("");
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
   const [clubName, setClubName]                 = useState("Всички отбори");
+
+  const handleDeleteMember = async () => {
+    if (!memberToDelete || isDeletingMember) return;
+
+    setIsDeletingMember(true);
+    setDeleteError("");
+    try {
+      const response = await fetch(`/api/admin/members/${memberToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        let message = "Неуспешно изтриване на играч.";
+        try {
+          const data = await response.json();
+          if (typeof data?.error === "string" && data.error.trim()) {
+            message = data.error.trim();
+          }
+        } catch {
+          // Keep generic message when response body is not JSON.
+        }
+        setDeleteError(message);
+        return;
+      }
+
+      setMembers((prev) => prev.filter((member) => member.id !== memberToDelete.id));
+      setSelectedMember((prev) => (prev?.id === memberToDelete.id ? null : prev));
+      setMemberToDelete(null);
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      setDeleteError("Възникна грешка при изтриване на играч.");
+    } finally {
+      setIsDeletingMember(false);
+    }
+  };
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -490,6 +593,24 @@ function AdminMembersPageContent() {
         <MemberDetailModal
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
+          onRequestDelete={(member) => {
+            setDeleteError("");
+            setMemberToDelete(member);
+          }}
+        />
+      )}
+      {memberToDelete && (
+        <ConfirmDeleteModal
+          member={memberToDelete}
+          onCancel={() => {
+            if (!isDeletingMember) {
+              setDeleteError("");
+              setMemberToDelete(null);
+            }
+          }}
+          onConfirm={handleDeleteMember}
+          isDeleting={isDeletingMember}
+          error={deleteError}
         />
       )}
     </main>
