@@ -107,3 +107,15 @@ model Card {
 
   @@map("cards")
 }
+
+model CronJobRun {
+  id          BigInt    @id @default(autoincrement())
+  jobName     String    @map("job_name")
+  runYear     Int       @map("run_year")
+  runMonth    Int       @map("run_month")
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([jobName, runYear, runMonth])
+  @@map("cron_job_runs")
+}

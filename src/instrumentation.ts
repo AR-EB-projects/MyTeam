@@ -1,5 +1,3 @@
-import { runMonthlyMembershipPaymentReminder } from "@/lib/jobs/monthlyMembershipPaymentReminder";
-
 let schedulerStarted = false;
 
 export async function register() {
@@ -16,14 +14,32 @@ export async function register() {
   }
   schedulerStarted = true;
 
+  const [{ runMonthlyMembershipPaymentReminder }, { runMonthlyOverduePaymentReminder }] =
+    await Promise.all([
+      import("@/lib/jobs/monthlyMembershipPaymentReminder"),
+      import("@/lib/jobs/monthlyOverduePaymentReminder"),
+    ]);
+
   const run = async () => {
     try {
-      const result = await runMonthlyMembershipPaymentReminder();
-      if (!result.skipped) {
-        console.log("Monthly reminder job executed:", result);
+      const [membershipResult, overdueResult] = await Promise.all([
+        runMonthlyMembershipPaymentReminder(),
+        runMonthlyOverduePaymentReminder(),
+      ]);
+
+      if (!membershipResult.skipped) {
+        console.log("Monthly reminder job executed:", membershipResult);
+      } else {
+        console.log("Monthly reminder job skipped:", membershipResult.reason);
+      }
+
+      if (!overdueResult.skipped) {
+        console.log("Monthly overdue reminder job executed:", overdueResult);
+      } else {
+        console.log("Monthly overdue reminder job skipped:", overdueResult.reason);
       }
     } catch (error) {
-      console.error("Local monthly reminder scheduler failed:", error);
+      console.error("Local monthly schedulers failed:", error);
     }
   };
 

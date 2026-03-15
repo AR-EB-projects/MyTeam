@@ -15,7 +15,7 @@ function getDatePartsInTimeZone(date: Date, timeZone: string) {
   }).formatToParts(date);
 
   const get = (type: "year" | "month" | "day") =>
-    Number(parts.find((part) => part.type === type)?.value);
+      Number(parts.find((part) => part.type === type)?.value);
 
   return {
     year: get("year"),
@@ -42,7 +42,7 @@ export interface MonthlyMembershipReminderResult {
 }
 
 export async function runMonthlyMembershipPaymentReminder(
-  now = new Date()
+    now = new Date()
 ): Promise<MonthlyMembershipReminderResult> {
   const timeZone = process.env.CRON_TIMEZONE?.trim() || DEFAULT_TIME_ZONE;
   const nowIso = now.toISOString();
@@ -121,26 +121,38 @@ export async function runMonthlyMembershipPaymentReminder(
     };
   }
 
-  const pushSummary = { total: 0, sent: 0, failed: 0, deactivated: 0 };
-  let historySaved = 0;
+  const results = await Promise.all(
+      targetMembers.map(async (member) => {
+        const url = member.cards[0] ? `/member/${member.cards[0].cardCode}` : "/";
+        const payload = buildNotificationPayload({
+          type: REMINDER_TYPE,
+          url,
+        });
 
-  await Promise.all(
-    targetMembers.map(async (member) => {
-      const url = member.cards[0] ? `/member/${member.cards[0].cardCode}` : "/";
-      const payload = buildNotificationPayload({
-        type: REMINDER_TYPE,
-        url,
-      });
+        await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
+        const pushResult = await sendPushToMember(member.id, payload);
 
-      await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
-      historySaved += 1;
+        return {
+          historySaved: 1,
+          total: pushResult.total,
+          sent: pushResult.sent,
+          failed: pushResult.failed,
+          deactivated: pushResult.deactivated,
+        };
+      })
+  );
 
-      const pushResult = await sendPushToMember(member.id, payload);
-      pushSummary.total += pushResult.total;
-      pushSummary.sent += pushResult.sent;
-      pushSummary.failed += pushResult.failed;
-      pushSummary.deactivated += pushResult.deactivated;
-    })
+  const historySaved = results.reduce((sum, item) => sum + item.historySaved, 0);
+
+  const pushSummary = results.reduce(
+      (acc, item) => {
+        acc.total += item.total;
+        acc.sent += item.sent;
+        acc.failed += item.failed;
+        acc.deactivated += item.deactivated;
+        return acc;
+      },
+      { total: 0, sent: 0, failed: 0, deactivated: 0 }
   );
 
   return {

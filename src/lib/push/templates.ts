@@ -76,6 +76,17 @@ export function buildNotificationPayload(
         tag: "monthly-membership-payment-reminder",
         data: { type: input.type },
       };
+    case "monthly_overdue_payment_reminder":
+      return {
+        title: "Просрочие",
+        body:
+          "Просрочие: Здравейте! Вие просрочихте плащането и вече дължите два месечни членски вноса!",
+        url,
+        icon: DEFAULT_ICON,
+        badge: DEFAULT_ICON,
+        tag: "monthly-overdue-payment-reminder",
+        data: { type: input.type },
+      };
     default:
       return {
         title: "Ново известие",
