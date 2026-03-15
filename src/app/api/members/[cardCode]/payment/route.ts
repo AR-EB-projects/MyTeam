@@ -147,14 +147,14 @@ export async function POST(
       const targetCardCode = player.cards[0]?.cardCode ?? cardCode;
       const firstPaidDate = monthsToCreate[0];
       const lastPaidDate = monthsToCreate[monthsToCreate.length - 1];
-      const periodText =
+      const trainerMessage =
         monthsToCreate.length > 1
-          ? `периода ${formatPaidMonthLabel(firstPaidDate)} - ${formatPaidMonthLabel(lastPaidDate)}`
-          : `месец ${formatPaidMonthLabel(firstPaidDate)}`;
+          ? `Благодарим Ви! Вие успешно заплатихте членския си внос за периода ${formatPaidMonthLabel(firstPaidDate)} - ${formatPaidMonthLabel(lastPaidDate)}.`
+          : `Благодарим Ви! Вие успешно заплатихте месечния си членски внос за ${formatPaidMonthLabel(firstPaidDate)}.`;
       const payload = buildNotificationPayload({
         type: "trainer_message",
         memberName: player.fullName.trim(),
-        trainerMessage: `Плащането за ${periodText} е отчетено успешно.`,
+        trainerMessage,
         url: `/member/${targetCardCode}`,
       });
 
