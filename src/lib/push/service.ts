@@ -151,7 +151,11 @@ export async function sendPushToMember(
           );
         }
 
-        console.error("Push delivery error:", error);
+        console.error('Push delivery error:', {
+          subscriptionId: subscription.id,
+          statusCode: statusCode,
+          error: error
+        });
       }
     })
   );
