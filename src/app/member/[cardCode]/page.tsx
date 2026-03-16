@@ -194,6 +194,20 @@ export default function MemberCardPage({
   const [isIPhoneDevice, setIsIPhoneDevice] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
 
+  // Notifications
+  const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+    url?: string | null;
+    sentAt: string;
+    readAt: string | null;
+  }>>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
   // Payment modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
@@ -255,6 +269,43 @@ export default function MemberCardPage({
   };
 
   void handleMonthClick;
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    setLoadingNotifications(true);
+    try {
+      const response = await fetch(`/api/members/${cardCode}/notifications`, { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const handleNotificationsPanelOpen = async () => {
+    setNotificationsPanelOpen(true);
+    await fetchNotifications();
+
+    // Mark all as read when opening the panel
+    if (unreadCount > 0) {
+      try {
+        const response = await fetch(`/api/members/${cardCode}/notifications/read`, {
+          method: "POST",
+        });
+        if (response.ok) {
+          setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+          setUnreadCount(0);
+        }
+      } catch (error) {
+        console.error("Failed to mark notifications as read:", error);
+      }
+    }
+  };
 
   // Fetch member
   useEffect(() => {
