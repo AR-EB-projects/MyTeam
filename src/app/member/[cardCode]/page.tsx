@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import "./page.css";
 
 interface MemberProfile {
@@ -179,6 +179,7 @@ export default function MemberCardPage({
 }) {
   const { cardCode } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [member, setMember] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,6 +208,7 @@ export default function MemberCardPage({
   }>>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [lastHandledPushOpenTs, setLastHandledPushOpenTs] = useState<string | null>(null);
 
   // Payment modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -346,6 +348,56 @@ export default function MemberCardPage({
     };
     void fetchUnreadCount();
   }, [cardCode]);
+
+  useEffect(() => {
+    const pushOpenTs = searchParams.get("pushOpenTs");
+    const shouldOpenNotificationsFromPush =
+      searchParams.get("fromPush") === "1" &&
+      searchParams.get("openBell") === "1" &&
+      Boolean(pushOpenTs);
+
+    if (!shouldOpenNotificationsFromPush || !pushOpenTs || pushOpenTs === lastHandledPushOpenTs) {
+      return;
+    }
+
+    setLastHandledPushOpenTs(pushOpenTs);
+    setNotificationsPanelOpen(true);
+    void (async () => {
+      setLoadingNotifications(true);
+      try {
+        const response = await fetch(`/api/members/${cardCode}/notifications`, { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      } finally {
+        setLoadingNotifications(false);
+      }
+
+      try {
+        const response = await fetch(`/api/members/${cardCode}/notifications/read`, {
+          method: "POST",
+        });
+        if (response.ok) {
+          setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+          setUnreadCount(0);
+        }
+      } catch (error) {
+        console.error("Failed to mark notifications as read:", error);
+      }
+    })();
+
+    const cleanedParams = new URLSearchParams(searchParams.toString());
+    cleanedParams.delete("fromPush");
+    cleanedParams.delete("openBell");
+    cleanedParams.delete("pushOpenTs");
+    const cleanedQuery = cleanedParams.toString();
+    const cleanPath = `/member/${encodeURIComponent(cardCode)}`;
+    router.replace(cleanedQuery ? `${cleanPath}?${cleanedQuery}` : cleanPath, { scroll: false });
+  }, [cardCode, lastHandledPushOpenTs, router, searchParams]);
 
   useEffect(() => {
     const checkAdminSession = async () => {

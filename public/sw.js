@@ -78,13 +78,16 @@ self.addEventListener("notificationclick", (event) => {
         ? `/member/${encodeURIComponent(cardCode)}`
         : "/"
       : requestedPath;
-  const destination = new URL(targetPath, self.location.origin).toString();
+  const destinationUrl = new URL(targetPath, self.location.origin);
+  destinationUrl.searchParams.set("fromPush", "1");
+  destinationUrl.searchParams.set("openBell", "1");
+  destinationUrl.searchParams.set("pushOpenTs", String(Date.now()));
+  const destination = destinationUrl.toString();
 
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {
-        const destinationUrl = new URL(destination);
         for (const client of clients) {
           const clientUrl = new URL(client.url);
           if (
@@ -92,6 +95,11 @@ self.addEventListener("notificationclick", (event) => {
             client.url.startsWith(`${destination}#`) ||
             clientUrl.pathname === destinationUrl.pathname
           ) {
+            if (typeof client.navigate === "function") {
+              return client
+                .navigate(destination)
+                .then((navigatedClient) => (navigatedClient || client).focus());
+            }
             return client.focus();
           }
         }
