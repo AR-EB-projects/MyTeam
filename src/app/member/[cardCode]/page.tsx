@@ -331,6 +331,22 @@ export default function MemberCardPage({
     void fetchMember();
   }, [cardCode]);
 
+  // Fetch unread notification count on page load
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await fetch(`/api/members/${cardCode}/notifications`, { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadCount(data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+      }
+    };
+    void fetchUnreadCount();
+  }, [cardCode]);
+
   useEffect(() => {
     const checkAdminSession = async () => {
       try {
