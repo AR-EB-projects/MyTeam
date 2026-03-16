@@ -1,9 +1,11 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/db";
 import { getVapidConfig } from "@/lib/push/vapid";
+import { saveMemberNotificationHistory } from "@/lib/push/history";
 import type {
   BrowserPushSubscription,
   PushNotificationPayload,
+  NotificationTemplateType,
 } from "@/lib/push/types";
 
 let isWebPushConfigured = false;
