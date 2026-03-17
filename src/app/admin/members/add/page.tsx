@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { uploadImage } from "@/lib/uploadImage";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
 import "./page.css";
 
-export default function AddMemberPage() {
+function AddMemberPageContent() {
   const searchParams = useSearchParams();
   const clubId = searchParams.get("clubId")?.trim() ?? "";
   const [fullName, setFullName] = useState("");
@@ -284,5 +284,22 @@ export default function AddMemberPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AddMemberPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="add-member-page">
+          <div className="add-member-dot-grid" />
+          <div className="add-member-inner" style={{ minHeight: "60vh", display: "grid", placeItems: "center" }}>
+            <p className="add-member-hint">Зареждане...</p>
+          </div>
+        </div>
+      }
+    >
+      <AddMemberPageContent />
+    </Suspense>
   );
 }
