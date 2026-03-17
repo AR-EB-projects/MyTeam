@@ -174,7 +174,10 @@ export async function GET(request: NextRequest) {
     }
 
     const players = await prisma.player.findMany({
-      where: clubId ? { clubId } : undefined,
+      where: {
+        isActive: true,
+        ...(clubId ? { clubId } : {}),
+      },
       include: {
         club: true,
         cards: {

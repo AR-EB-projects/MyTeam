@@ -314,7 +314,7 @@ function MemberDetailModal({
               className="amp-btn amp-btn--danger"
               onClick={() => onRequestDelete(member)}
             >
-              Изтрий играч
+              Премахни играч
             </button>
           </div>
 
@@ -343,7 +343,7 @@ function ConfirmDeleteModal({
       <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
         <div className="amp-modal-tint" aria-hidden="true"/>
         <h2 className="amp-modal-title">
-          <span className="amp-modal-title-gradient">Потвърди изтриване</span>
+          <span className="amp-modal-title-gradient">Потвърди премахване</span>
           <button className="amp-modal-close" onClick={onCancel} aria-label="Затвори" disabled={isDeleting}>
             <XIcon/>
           </button>
@@ -351,10 +351,10 @@ function ConfirmDeleteModal({
 
         <div className="amp-modal-body">
           <p className="amp-confirm-text">
-            Сигурен ли си, че искаш да изтриеш <strong>{member.fullName}</strong>?
+            Сигурен ли си, че искаш да премахнеш <strong>{member.fullName}</strong>?
           </p>
           <p className="amp-confirm-subtext">
-            Tова действие ще изтрие играча перманентно и не може да бъде отменено.
+            Играчът ще бъде маркиран като неактивен.
           </p>
 
           {error && <p className="amp-confirm-error">{error}</p>}
@@ -364,7 +364,7 @@ function ConfirmDeleteModal({
               Отказ
             </button>
             <button className="amp-btn amp-btn--danger" onClick={onConfirm} disabled={isDeleting}>
-              {isDeleting ? "Изтриване..." : "Изтрий"}
+              {isDeleting ? "Премахване..." : "Премахни"}
             </button>
           </div>
         </div>
@@ -480,7 +480,7 @@ function AdminMembersPageContent() {
       });
 
       if (!response.ok) {
-        let message = "Неуспешно изтриване на играч.";
+        let message = "Неуспешно премахване на играч.";
         try {
           const data = await response.json();
           if (typeof data?.error === "string" && data.error.trim()) {
@@ -497,8 +497,8 @@ function AdminMembersPageContent() {
       setSelectedMember((prev) => (prev?.id === memberToDelete.id ? null : prev));
       setMemberToDelete(null);
     } catch (error) {
-      console.error("Error deleting member:", error);
-      setDeleteError("Възникна грешка при изтриване на играч.");
+      console.error("Error removing member:", error);
+      setDeleteError("Възникна грешка при премахване на играч.");
     } finally {
       setIsDeletingMember(false);
     }

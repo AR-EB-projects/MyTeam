@@ -293,43 +293,27 @@ export async function DELETE(
     try {
         const player = await prisma.player.findUnique({
             where: { id },
-            select: {
-                id: true,
-                imagePublicId: true,
-                imageUrl: true,
-            },
+            select: { id: true },
         });
 
         if (!player) {
             return NextResponse.json({ error: "Player not found" }, { status: 404 });
         }
 
-        const imagePublicId = getCloudinaryPublicId(player);
-        if (imagePublicId) {
-            try {
-                const result = await cloudinary.uploader.destroy(imagePublicId, {
-                    resource_type: "image",
-                    invalidate: true,
-                });
-                if (result.result !== "ok" && result.result !== "not found") {
-                    console.warn("Unexpected Cloudinary destroy result:", result);
-                }
-            } catch (cloudinaryError) {
-                console.error("Cloudinary deletion error:", cloudinaryError);
-            }
-        }
+        await prisma.$transaction([
+            prisma.card.updateMany({
+                where: { playerId: id },
+                data: { isActive: false },
+            }),
+            prisma.player.update({
+                where: { id },
+                data: { isActive: false },
+            }),
+        ]);
 
-        await prisma.card.deleteMany({
-            where: { playerId: id },
-        });
-
-        await prisma.player.delete({
-            where: { id },
-        });
-
-        return NextResponse.json({ message: "Player and associated cards deleted successfully" });
+        return NextResponse.json({ message: "Player removed successfully" });
     } catch (error) {
-        console.error("Member deletion error:", error);
+        console.error("Member remove error:", error);
         return NextResponse.json(
             { error: "Internal Server Error" },
             { status: 500 }
