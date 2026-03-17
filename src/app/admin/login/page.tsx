@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
       });
 
       if (response.ok) {
-        router.push("/admin/members");
+        router.push("/admin/players");
       } else {
         const data = await response.json();
         setError(data.error || "Login failed");
