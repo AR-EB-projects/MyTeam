@@ -20,7 +20,17 @@ export async function GET(
         isActive: true,
       },
       include: {
-        player: true,
+        player: {
+          include: {
+            club: {
+              select: {
+                name: true,
+                imageUrl: true,
+                emblemUrl: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -93,11 +103,23 @@ export async function GET(
       },
     });
 
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const clubImagePath = card.player.club?.imageUrl ?? null;
+    const clubLogoUrl = clubImagePath
+      ? clubImagePath.startsWith("http")
+        ? clubImagePath
+        : cloudName
+          ? buildCloudinaryUrlFromUploadPath(clubImagePath, cloudName)
+          : null
+      : card.player.club?.emblemUrl ?? null;
+
     return NextResponse.json(
       {
         id: card.player.id,
         cardCode: card.cardCode,
         name: card.player.fullName,
+        clubName: card.player.club?.name ?? null,
+        clubLogoUrl,
         avatarUrl:
           card.player.avatarUrl ||
           (card.player.imageUrl && process.env.CLOUDINARY_CLOUD_NAME
