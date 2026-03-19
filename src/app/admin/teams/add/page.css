@@ -1,0 +1,294 @@
+/* Add Team Page Styles */
+.add-team-page {
+  min-height: 100dvh;
+  background: linear-gradient(135deg, #0d0d0d 0%, #0a0a0a 50%, #0d0d0d 100%);
+  padding: 40px 16px;
+  position: relative;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.add-team-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0px);
+  background-size: 40px 40px;
+  z-index: 1;
+}
+
+.add-team-container {
+  max-width: 600px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #1a1a1a, #1f1f1f, #1a1a1a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 10;
+}
+
+.add-team-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.add-team-title {
+  font-size: 36px;
+  font-weight: 900;
+  text-align: center;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: linear-gradient(90deg, #32cd32 0%, #7fff00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.add-team-title-line {
+  height: 2px;
+  width: 96px;
+  background: linear-gradient(to right, #32cd32, transparent);
+  border-radius: 9999px;
+  margin: 16px auto;
+}
+
+.add-team-subtitle {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+  margin: 0 0 24px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: linear-gradient(to right, #1a1a1a, #1f1f1f);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s, background 0.3s;
+  margin-bottom: 24px;
+}
+
+.back-btn:hover {
+  border-color: rgba(50,205,50,0.5);
+  background: linear-gradient(to right, #1f1f1f, #252525);
+  box-shadow: 0 0 20px rgba(50,205,50,0.2);
+  transform: scale(1.05);
+}
+
+.add-team-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.error-message {
+  background: rgba(255, 77, 77, 0.2);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  color: #ff4d4d;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 4px;
+}
+
+.form-input {
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 16px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #32cd32;
+  box-shadow: 0 0 0 2px rgba(50, 205, 50, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.form-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+}
+
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.preview-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.remove-image-btn {
+  padding: 8px 16px;
+  background: rgba(255, 77, 77, 0.2);
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  border-radius: 6px;
+  color: #ff4d4d;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.remove-image-btn:hover {
+  background: rgba(255, 77, 77, 0.3);
+}
+
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-area:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(50, 205, 50, 0.3);
+  box-shadow: 0 0 20px rgba(50, 205, 50, 0.1);
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-placeholder {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.upload-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.upload-placeholder p {
+  font-size: 14px;
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.submit-btn {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #32cd32 0%, #28a428 100%);
+  border: 1px solid rgba(50, 205, 50, 0.3);
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(50, 205, 50, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #28a428 0%, #22c55e 100%);
+  box-shadow: 0 6px 20px rgba(50, 205, 50, 0.4);
+  transform: translateY(-2px);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .add-team-page {
+    padding: 20px 16px;
+  }
+
+  .add-team-container {
+    padding: 32px 24px;
+  }
+
+  .add-team-title {
+    font-size: 28px;
+  }
+
+  .form-input {
+    padding: 10px 14px;
+    font-size: 16px;
+  }
+
+  .upload-area {
+    padding: 32px 24px;
+  }
+
+  .submit-btn {
+    width: 100%;
+  }
+
+  .back-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
