@@ -967,14 +967,27 @@ function AdminMembersPageContent() {
               .map((club) => {
                 const item =
                   typeof club === "object" && club !== null
-                    ? (club as { id?: unknown; name?: unknown })
+                    ? (club as {
+                      id?: unknown;
+                      name?: unknown;
+                      slug?: unknown;
+                      emblemUrl?: unknown;
+                      imageUrl?: unknown;
+                      imagePublicId?: unknown;
+                    })
                     : {};
+                const rawName = String(item.name ?? "").trim();
+                const rawSlug = String(item.slug ?? "").trim();
                 return {
                   id: String(item.id ?? ""),
-                  name: String(item.name ?? ""),
+                  name: rawName,
+                  slug: rawSlug || rawName.toLowerCase().replace(/\s+/g, "-"),
+                  emblemUrl: typeof item.emblemUrl === "string" ? item.emblemUrl : null,
+                  imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
+                  imagePublicId: typeof item.imagePublicId === "string" ? item.imagePublicId : null,
                 };
               })
-              .filter((club) => club.id && club.name)
+              .filter((club) => club.id && club.name && club.slug)
             : [];
           setClubs(normalizedClubs);
         }
