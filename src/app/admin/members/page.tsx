@@ -45,6 +45,10 @@ interface MemberClub {
 interface ClubOption {
   id: string;
   name: string;
+  slug: string;
+  emblemUrl?: string | null;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
 }
 
 interface Member {
@@ -895,12 +899,25 @@ function AdminMembersPageContent() {
   const [clubName, setClubName] = useState("Всички отбори");
   const [clubLogoUrl, setClubLogoUrl] = useState<string | null>(null);
   const [reportsOpen, setReportsOpen] = useState(false);
+  const [editingClub, setEditingClub] = useState<ClubOption | null>(null);
+  const [clubEditForm, setClubEditForm] = useState({
+    name: "",
+    slug: "",
+    emblemUrl: "",
+    imageUrl: "",
+    imagePublicId: "",
+  });
+  const [clubEditImageFile, setClubEditImageFile] = useState<File | null>(null);
+  const [clubEditPreviewUrl, setClubEditPreviewUrl] = useState<string | null>(null);
+  const [isSavingClub, setIsSavingClub] = useState(false);
+  const [clubEditError, setClubEditError] = useState("");
+  const [isNewCardConfirmOpen, setIsNewCardConfirmOpen] = useState(false);
+  const [isAssigningNewCard, setIsAssigningNewCard] = useState(false);
 
   const closeEditModal = () => {
     setMemberToEdit(null);
     setEditAvatarFile(null);
     setEditAvatarPreviewUrl("");
-    setIsNewCardConfirmOpen(false);
   };
 
   const handleDeleteMember = async () => {
