@@ -7,7 +7,6 @@ import "./page.css";
 
 interface TeamForm {
   name: string;
-  slug: string;
   emblemUrl: string | null;
   imageUrl: string | null;
   imagePublicId: string | null;
@@ -17,18 +16,12 @@ export default function AdminAddTeamPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<TeamForm>({
     name: "",
-    slug: "",
     emblemUrl: null,
     imageUrl: null,
     imagePublicId: null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -58,11 +51,9 @@ export default function AdminAddTeamPage() {
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
-    const slug = generateSlug(name);
     setFormData((prev) => ({
       ...prev,
       name,
-      slug,
     }));
   };
 
@@ -74,8 +65,10 @@ export default function AdminAddTeamPage() {
       return;
     }
 
-    if (!formData.slug.trim()) {
-      setErrorMessage("URL адресът е задължително");
+    const slug = generateSlug(formData.name.trim());
+
+    if (!slug) {
+      setErrorMessage("Моля, въведете валидно име на отбор");
       return;
     }
 
@@ -90,7 +83,7 @@ export default function AdminAddTeamPage() {
         },
         body: JSON.stringify({
           name: formData.name.trim(),
-          slug: formData.slug.trim(),
+          slug,
           imageUrl: formData.imageUrl,
           imagePublicId: formData.imagePublicId,
         }),
@@ -117,20 +110,13 @@ export default function AdminAddTeamPage() {
           <h1 className="add-team-title">Добавяне на отбор</h1>
           <div className="add-team-title-line" />
           <p className="add-team-subtitle">Попълнете данните за новия отбор</p>
-          <button
-            className="back-btn"
-            onClick={() => router.push("/admin/players")}
-          >
+          <button className="back-btn" onClick={() => router.push("/admin/players")}>
             ← Назад към отбори
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="add-team-form">
-          {errorMessage && (
-            <div className="error-message">
-              {errorMessage}
-            </div>
-          )}
+          {errorMessage && <div className="error-message">{errorMessage}</div>}
 
           <div className="form-group">
             <label htmlFor="name" className="form-label">
@@ -149,53 +135,29 @@ export default function AdminAddTeamPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="slug" className="form-label">
-              URL адрес *
-            </label>
-            <input
-              type="text"
-              id="slug"
-              name="slug"
-              value={formData.slug}
-              onChange={handleInputChange}
-              className="form-input"
-              placeholder="url-address"
-              required
-            />
-            <small className="form-hint">
-              Автоматично генериран от името на отбора
-            </small>
-          </div>
-
-          <div className="form-group">
             <label htmlFor="image" className="form-label">
               Емблема на отбора
             </label>
             <div className="image-upload">
               {formData.imageUrl ? (
                 <div className="image-preview">
-                  <img
-                    src={formData.imageUrl}
-                    alt="Емблема"
-                    className="preview-image"
-                  />
+                  <img src={formData.imageUrl} alt="Емблема" className="preview-image" />
                   <button
                     type="button"
                     className="remove-image-btn"
-                    onClick={() => setFormData((prev) => ({
-                      ...prev,
-                      imageUrl: null,
-                      imagePublicId: null,
-                    }))}
+                    onClick={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        imageUrl: null,
+                        imagePublicId: null,
+                      }))
+                    }
                   >
                     Премахни
                   </button>
                 </div>
               ) : (
-                <div 
-                  className="upload-area"
-                  onClick={() => document.getElementById('image')?.click()}
-                >
+                <div className="upload-area" onClick={() => document.getElementById("image")?.click()}>
                   <input
                     type="file"
                     id="image"
@@ -213,11 +175,7 @@ export default function AdminAddTeamPage() {
           </div>
 
           <div className="form-actions">
-            <button
-              type="submit"
-              className="submit-btn"
-              disabled={isSubmitting}
-            >
+            <button type="submit" className="submit-btn" disabled={isSubmitting}>
               {isSubmitting ? "Добавяне..." : "Добави отбор"}
             </button>
           </div>
