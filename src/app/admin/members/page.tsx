@@ -1513,14 +1513,16 @@ function AdminMembersPageContent() {
                         memberToEdit.cards[0]?.cardCode ||
                         "Няма активна карта"}
                     </p>
-                    <button
-                      className="amp-btn amp-btn--ghost"
-                      onClick={() => setIsNewCardConfirmOpen(true)}
-                      disabled={isSavingEdit || isAssigningNewCard}
-                      type="button"
-                    >
-                      {isAssigningNewCard ? "Генериране..." : "Нова карта"}
-                    </button>
+                    {isAdmin && (
+                      <button
+                        className="amp-btn amp-btn--ghost"
+                        onClick={() => setIsNewCardConfirmOpen(true)}
+                        disabled={isSavingEdit || isAssigningNewCard}
+                        type="button"
+                      >
+                        {isAssigningNewCard ? "Генериране..." : "Нова карта"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
