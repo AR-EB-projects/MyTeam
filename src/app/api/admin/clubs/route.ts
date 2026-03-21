@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        slug: true,
         emblemUrl: true,
         imageUrl: true,
         imagePublicId: true,

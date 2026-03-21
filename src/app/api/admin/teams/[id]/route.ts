@@ -13,7 +13,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
       select: {
         id: true,
         name: true,
-        slug: true,
         emblemUrl: true,
         imageUrl: true,
         imagePublicId: true,
@@ -50,16 +49,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const name = String(body.name ?? "").trim();
-    const slug = String(body.slug ?? "").trim();
     const imageUrlRaw = body.imageUrl;
     const imagePublicIdRaw = body.imagePublicId;
 
     if (!name) {
       return NextResponse.json({ error: "Team name is required" }, { status: 400 });
-    }
-
-    if (!slug) {
-      return NextResponse.json({ error: "Team slug is required" }, { status: 400 });
     }
 
     const existingTeam = await prisma.club.findUnique({
@@ -69,21 +63,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     if (!existingTeam) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
-    }
-
-    const duplicateSlug = await prisma.club.findFirst({
-      where: {
-        slug,
-        NOT: { id },
-      },
-      select: { id: true },
-    });
-
-    if (duplicateSlug) {
-      return NextResponse.json(
-        { error: "Team with this slug already exists" },
-        { status: 409 },
-      );
     }
 
     const imageUrl =
@@ -101,7 +80,6 @@ export async function PUT(request: NextRequest, { params }: Params) {
       where: { id },
       data: {
         name,
-        slug,
         imageUrl,
         imagePublicId,
       },

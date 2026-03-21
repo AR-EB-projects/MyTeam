@@ -215,9 +215,6 @@
   background-clip: text;
 }
 
-.mp-team-slug { font-size: 14px; color: rgba(255,255,255,0.5); margin: 0; transition: color 0.3s; }
-.mp-team-card:hover .mp-team-slug { color: rgba(255,255,255,0.7); }
-
 .mp-team-card-content > svg:last-child {
   color: rgba(255,255,255,0.4);
   flex-shrink: 0;

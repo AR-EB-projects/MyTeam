@@ -22,7 +22,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, slug, imageUrl, imagePublicId } = body;
+    const { name, imageUrl, imagePublicId } = body;
 
     // Validation
     if (!name || !name.trim()) {
@@ -32,30 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!slug || !slug.trim()) {
-      return NextResponse.json(
-        { error: "Team slug is required" },
-        { status: 400 }
-      );
-    }
-
-    // Check if slug already exists
-    const existingTeam = await prisma.club.findUnique({
-      where: { slug },
-    });
-
-    if (existingTeam) {
-      return NextResponse.json(
-        { error: "Team with this slug already exists" },
-        { status: 409 }
-      );
-    }
-
     // Create new team
     const team = await prisma.club.create({
       data: {
         name: name.trim(),
-        slug: slug.trim(),
         imageUrl: imageUrl || null,
         imagePublicId: imagePublicId || null,
       },

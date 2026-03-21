@@ -81,15 +81,6 @@ export default function AdminEditTeamPage() {
     };
   }, [imageFile]);
 
-  const generateSlug = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim();
-  };
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     setFormData({ name });
@@ -119,12 +110,6 @@ export default function AdminEditTeamPage() {
       return;
     }
 
-    const slug = generateSlug(trimmedName);
-    if (!slug) {
-      setErrorMessage("Моля, въведете валидно име на отбор");
-      return;
-    }
-
     setIsSubmitting(true);
     setErrorMessage("");
 
@@ -146,7 +131,6 @@ export default function AdminEditTeamPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: trimmedName,
-          slug,
           imageUrl: resolvedImageUrl,
           imagePublicId: resolvedImagePublicId,
         }),

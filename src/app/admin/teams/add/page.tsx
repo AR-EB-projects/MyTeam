@@ -34,15 +34,6 @@ export default function AdminAddTeamPage() {
     };
   }, [imageFile]);
 
-  const generateSlug = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim();
-  };
-
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     setFormData((prev) => ({
@@ -57,12 +48,6 @@ export default function AdminAddTeamPage() {
     const trimmedName = formData.name.trim();
     if (!trimmedName) {
       setErrorMessage("Името на отбора е задължително");
-      return;
-    }
-
-    const slug = generateSlug(trimmedName);
-    if (!slug) {
-      setErrorMessage("Моля, въведете валидно име на отбор");
       return;
     }
 
@@ -90,7 +75,6 @@ export default function AdminAddTeamPage() {
         },
         body: JSON.stringify({
           name: trimmedName,
-          slug,
           imageUrl: resolvedImageUrl,
           imagePublicId: resolvedImagePublicId,
         }),

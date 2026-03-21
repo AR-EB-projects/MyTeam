@@ -45,7 +45,6 @@ interface MemberClub {
 interface ClubOption {
   id: string;
   name: string;
-  slug: string;
   emblemUrl?: string | null;
   imageUrl?: string | null;
   imagePublicId?: string | null;
@@ -902,7 +901,6 @@ function AdminMembersPageContent() {
   const [editingClub, setEditingClub] = useState<ClubOption | null>(null);
   const [clubEditForm, setClubEditForm] = useState({
     name: "",
-    slug: "",
     emblemUrl: "",
     imageUrl: "",
     imagePublicId: "",
@@ -970,24 +968,21 @@ function AdminMembersPageContent() {
                     ? (club as {
                       id?: unknown;
                       name?: unknown;
-                      slug?: unknown;
                       emblemUrl?: unknown;
                       imageUrl?: unknown;
                       imagePublicId?: unknown;
                     })
                     : {};
                 const rawName = String(item.name ?? "").trim();
-                const rawSlug = String(item.slug ?? "").trim();
                 return {
                   id: String(item.id ?? ""),
                   name: rawName,
-                  slug: rawSlug || rawName.toLowerCase().replace(/\s+/g, "-"),
                   emblemUrl: typeof item.emblemUrl === "string" ? item.emblemUrl : null,
                   imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
                   imagePublicId: typeof item.imagePublicId === "string" ? item.imagePublicId : null,
                 };
               })
-              .filter((club) => club.id && club.name && club.slug)
+              .filter((club) => club.id && club.name)
             : [];
           setClubs(normalizedClubs);
         }
