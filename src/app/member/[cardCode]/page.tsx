@@ -2,6 +2,8 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { uploadImage } from "@/lib/uploadImage";
+import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
 import "./page.css";
 
 interface MemberProfile {
@@ -169,6 +171,7 @@ export default function MemberCardPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoach, setIsCoach] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
   const [pushStatusMessage, setPushStatusMessage] = useState("");
@@ -178,6 +181,17 @@ export default function MemberCardPage({
   const [accordionOpen, setAccordionOpen] = useState(false);
   const [isIPhoneDevice, setIsIPhoneDevice] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreviewUrl, setEditImagePreviewUrl] = useState("");
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    birthDate: "",
+    teamGroup: "",
+    jerseyNumber: "",
+  });
 
   // Notifications
   const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
@@ -334,6 +348,35 @@ export default function MemberCardPage({
   }, [normalizedCardCode]);
 
   useEffect(() => {
+    if (!member) {
+      return;
+    }
+
+    setEditForm({
+      fullName: member.name ?? "",
+      birthDate: member.birthDate ? new Date(member.birthDate).toISOString().slice(0, 10) : "",
+      teamGroup: member.team_group !== null && member.team_group !== undefined ? String(member.team_group) : "",
+      jerseyNumber: member.jerseyNumber ?? "",
+    });
+    setEditImageFile(null);
+    setEditImagePreviewUrl("");
+  }, [member]);
+
+  useEffect(() => {
+    if (!editImageFile) {
+      setEditImagePreviewUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(editImageFile);
+    setEditImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [editImageFile]);
+
+  useEffect(() => {
     const pushOpenTs = searchParams.get("pushOpenTs");
     const shouldOpenNotificationsFromPush =
       searchParams.get("fromPush") === "1" &&
@@ -393,12 +436,15 @@ export default function MemberCardPage({
         });
         if (!response.ok) {
           setIsAdmin(false);
+          setIsCoach(false);
           return;
         }
-        const payload = (await response.json()) as { isAdmin?: boolean };
+        const payload = (await response.json()) as { isAdmin?: boolean; isCoach?: boolean };
         setIsAdmin(Boolean(payload.isAdmin));
+        setIsCoach(Boolean(payload.isCoach));
       } catch {
         setIsAdmin(false);
+        setIsCoach(false);
       }
     };
 
@@ -625,6 +671,74 @@ export default function MemberCardPage({
     }
   };
 
+  const handleSavePublicEdit = async () => {
+    if (!member || editSaving) return;
+
+    const fullName = editForm.fullName.trim();
+    if (!fullName) {
+      setEditError("Името е задължително.");
+      return;
+    }
+
+    const teamGroup =
+      editForm.teamGroup.trim() === ""
+        ? null
+        : Number.parseInt(editForm.teamGroup.trim(), 10);
+    if (teamGroup !== null && Number.isNaN(teamGroup)) {
+      setEditError("Наборът трябва да е число.");
+      return;
+    }
+
+    setEditSaving(true);
+    setEditError("");
+    try {
+      let uploadedImagePath: string | null = null;
+      if (editImageFile) {
+        const uploaded = await uploadImage(
+          editImageFile,
+          "player",
+          fullName || editImageFile.name,
+        );
+        uploadedImagePath = extractUploadPathFromCloudinaryUrl(uploaded.secure_url);
+      }
+
+      const response = await fetch(`/api/members/${normalizedCardCode}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          birthDate: editForm.birthDate.trim() || null,
+          teamGroup,
+          jerseyNumber: editForm.jerseyNumber.trim() || null,
+          ...(uploadedImagePath ? { imageUrl: uploadedImagePath } : {}),
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setEditError(
+          typeof payload?.error === "string" && payload.error.trim()
+            ? payload.error.trim()
+            : "Възникна грешка при редактиране.",
+        );
+        return;
+      }
+
+      const refreshed = await fetch(`/api/members/${normalizedCardCode}`, { cache: "no-store" });
+      if (refreshed.ok) {
+        setMember((await refreshed.json()) as MemberProfile);
+      }
+      setEditImageFile(null);
+      setEditImagePreviewUrl("");
+      setEditModalOpen(false);
+    } catch (e) {
+      console.error("Public member edit error:", e);
+      setEditError("Възникна грешка при редактиране.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const formatReceiptPeriod = (value: string) => {
     const text = new Date(value).toLocaleDateString("bg-BG", {
       month: "long",
@@ -730,6 +844,8 @@ export default function MemberCardPage({
   const birthDateText = member?.birthDate
     ? new Date(member.birthDate).toLocaleDateString("bg-BG")
     : "-";
+  const canManagePayments = isAdmin || isCoach;
+  const canPublicEdit = !isAdmin && !isCoach;
 
   if (loading) {
     return (
@@ -923,12 +1039,25 @@ export default function MemberCardPage({
 
         {/* Below card buttons */}
         <div className="below-card">
-          {isAdmin && (<>
+          {canManagePayments && (<>
             <button className="pay-btn" onClick={openPaymentModal}>
               <PlusIcon />
               Плати
             </button>
           </>)}
+
+          {canPublicEdit && (
+            <button
+              className="add-btn"
+              onClick={() => {
+                setEditError("");
+                setEditImageFile(null);
+                setEditModalOpen(true);
+              }}
+            >
+              Редактирай профил
+            </button>
+          )}
 
           {isPushEnabled && (
               <div className="push-enabled-banner">
@@ -1045,6 +1174,141 @@ export default function MemberCardPage({
             </div>
           </div>
         </div>
+
+        {editModalOpen && (
+          <div className="pm-overlay" onClick={() => !editSaving && setEditModalOpen(false)}>
+            <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="pm-close" onClick={() => !editSaving && setEditModalOpen(false)}>
+                <XIcon size={16} />
+              </button>
+
+              <div className="pm-header">
+                <div className="pm-title-icon">✎</div>
+                <div>
+                  <h2 className="pm-title">Редактиране на профил</h2>
+                </div>
+              </div>
+
+              <div className="pm-divider" />
+
+              <div style={{ display: "grid", gap: "10px" }}>
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span className="pm-info-lbl">Име и фамилия</span>
+                  <input
+                    value={editForm.fullName}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      color: "#fff",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span className="pm-info-lbl">Дата на раждане</span>
+                  <input
+                    type="date"
+                    value={editForm.birthDate}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, birthDate: e.target.value }))}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      color: "#fff",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span className="pm-info-lbl">Набор</span>
+                  <input
+                    inputMode="numeric"
+                    value={editForm.teamGroup}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, teamGroup: e.target.value.replace(/\D/g, "") }))
+                    }
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      color: "#fff",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span className="pm-info-lbl">Номер в отбора</span>
+                  <input
+                    value={editForm.jerseyNumber}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, jerseyNumber: e.target.value }))}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      color: "#fff",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "grid", gap: "6px" }}>
+                  <span className="pm-info-lbl">Нова снимка</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setEditImageFile(e.target.files?.[0] ?? null)}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.22)",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      color: "#fff",
+                    }}
+                  />
+                </label>
+              </div>
+
+              {editImagePreviewUrl && (
+                <img
+                  src={editImagePreviewUrl}
+                  alt="Image preview"
+                  style={{
+                    width: "100%",
+                    maxHeight: "220px",
+                    objectFit: "cover",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.22)",
+                    marginTop: "6px",
+                  }}
+                />
+              )}
+
+              {editError && (
+                <div className="pm-error" style={{ marginTop: "10px" }}>{editError}</div>
+              )}
+
+              <div className="pm-divider" />
+
+              <div className="pm-actions">
+                <button
+                  className="pm-btn pm-btn--cancel"
+                  onClick={() => setEditModalOpen(false)}
+                  disabled={editSaving}
+                >
+                  Отказ
+                </button>
+                <button
+                  className="pm-btn pm-btn--submit"
+                  onClick={handleSavePublicEdit}
+                  disabled={editSaving}
+                >
+                  {editSaving ? "Запазване..." : "Запази"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ══ PAYMENT MODAL ══ */}
         {paymentModalOpen && (

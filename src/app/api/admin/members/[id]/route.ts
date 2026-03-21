@@ -2,34 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { randomBytes } from "crypto";
-import { cloudinary } from "@/lib/cloudinary";
+import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function getCloudinaryPublicId(player: { imagePublicId: string | null; imageUrl: string | null }): string | null {
-  if (player.imagePublicId) {
-    return player.imagePublicId;
-  }
+type PlayerImageRecord = {
+  imageUrl: string;
+  isAdminView: boolean;
+};
 
-  if (!player.imageUrl) {
+function getPrimaryPlayerImagePath(images: PlayerImageRecord[]): string | null {
+  const adminImage = images.find((image) => image.isAdminView);
+  return adminImage?.imageUrl ?? images[0]?.imageUrl ?? null;
+}
+
+function buildAvatarUrlFromPath(imagePath: string | null, cloudName: string): string | null {
+  if (!imagePath) {
     return null;
   }
-
-  const trimmed = player.imageUrl.trim();
-  if (!trimmed) {
+  if (imagePath.startsWith("http")) {
+    return imagePath;
+  }
+  if (!cloudName) {
     return null;
   }
-
-  const uploadMarker = "/upload/";
-  const uploadIndex = trimmed.indexOf(uploadMarker);
-  const pathWithTransforms = uploadIndex >= 0
-    ? trimmed.slice(uploadIndex + uploadMarker.length)
-    : trimmed;
-
-  const pathWithoutTransforms = pathWithTransforms.replace(/^v\d+\//, "");
-  const pathWithoutExtension = pathWithoutTransforms.replace(/\.[a-z0-9]+$/i, "");
-  return pathWithoutExtension || null;
+  return buildCloudinaryUrlFromUploadPath(imagePath, cloudName);
 }
 
 export async function GET(
@@ -46,14 +44,25 @@ export async function GET(
   try {
     const player = await prisma.player.findUnique({
       where: { id },
-      include: { cards: { orderBy: { createdAt: "desc" } } },
+      include: {
+        cards: { orderBy: { createdAt: "desc" } },
+        images: true,
+      },
     });
 
     if (!player) {
       return NextResponse.json({ error: "Player not found" }, { status: 404 });
     }
 
-    return NextResponse.json(player);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const imagePath = getPrimaryPlayerImagePath(player.images);
+
+    return NextResponse.json({
+      ...player,
+      imageUrl: imagePath,
+      avatarUrl: buildAvatarUrlFromPath(imagePath, cloudName),
+      imagePublicId: null,
+    });
   } catch (error) {
     console.error("Member fetch error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -81,9 +90,7 @@ export async function PUT(
     const birthDateRaw = body.birthDate;
     const avatarUrlRaw = body.avatarUrl;
     const imageUrlRaw = body.imageUrl;
-    const imagePublicIdRaw = body.imagePublicId;
     const hasImageUrl = Object.prototype.hasOwnProperty.call(body, "imageUrl");
-    const hasImagePublicId = Object.prototype.hasOwnProperty.call(body, "imagePublicId");
 
     if (!fullName) {
       return NextResponse.json(
@@ -94,10 +101,13 @@ export async function PUT(
 
     const existingPlayer = await prisma.player.findUnique({
       where: { id },
-      select: {
-        id: true,
-        imagePublicId: true,
-        imageUrl: true,
+      include: {
+        images: {
+          select: {
+            imageUrl: true,
+            isAdminView: true,
+          },
+        },
       },
     });
     if (!existingPlayer) {
@@ -144,17 +154,16 @@ export async function PUT(
         ? null
         : String(imageUrlRaw).trim()
       : undefined;
-    const nextImagePublicId = hasImagePublicId
-      ? imagePublicIdRaw === null || imagePublicIdRaw === undefined || String(imagePublicIdRaw).trim() === ""
+    const fallbackImageUrl =
+      avatarUrlRaw === null || avatarUrlRaw === undefined || String(avatarUrlRaw).trim() === ""
         ? null
-        : String(imagePublicIdRaw).trim()
-      : undefined;
-
-    const previousImagePublicId = getCloudinaryPublicId(existingPlayer);
-    const replacingWithUploadedImage =
-      typeof nextImagePublicId === "string" &&
-      nextImagePublicId.length > 0 &&
-      nextImagePublicId !== previousImagePublicId;
+        : String(avatarUrlRaw).trim();
+    const nextAdminImageUrl = nextImageUrl ?? fallbackImageUrl;
+    const currentAdminImagePath = getPrimaryPlayerImagePath(existingPlayer.images);
+    const shouldSwitchAdminImage =
+      typeof nextAdminImageUrl === "string" &&
+      nextAdminImageUrl.length > 0 &&
+      nextAdminImageUrl !== currentAdminImagePath;
 
     const updatedPlayer = await prisma.player.update({
       where: { id },
@@ -167,35 +176,37 @@ export async function PUT(
             : String(jerseyNumberRaw),
         teamGroup,
         birthDate,
-        avatarUrl:
-          avatarUrlRaw === null || avatarUrlRaw === undefined || avatarUrlRaw === ""
-            ? null
-            : String(avatarUrlRaw),
-        ...(hasImageUrl ? { imageUrl: nextImageUrl } : {}),
-        ...(hasImagePublicId ? { imagePublicId: nextImagePublicId } : {}),
+        ...(shouldSwitchAdminImage
+          ? {
+              images: {
+                updateMany: {
+                  where: { isAdminView: true },
+                  data: { isAdminView: false },
+                },
+                create: {
+                  imageUrl: nextAdminImageUrl,
+                  isAdminView: true,
+                },
+              },
+            }
+          : {}),
         ...(status ? { status } : {}),
       },
       include: {
         cards: { orderBy: { createdAt: "desc" } },
         club: true,
+        images: true,
       },
     });
 
-    if (replacingWithUploadedImage && previousImagePublicId) {
-      try {
-        const result = await cloudinary.uploader.destroy(previousImagePublicId, {
-          resource_type: "image",
-          invalidate: true,
-        });
-        if (result.result !== "ok" && result.result !== "not found") {
-          console.warn("Unexpected Cloudinary destroy result:", result);
-        }
-      } catch (cloudinaryError) {
-        console.error("Cloudinary deletion error during update:", cloudinaryError);
-      }
-    }
-
-    return NextResponse.json(updatedPlayer);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const imagePath = getPrimaryPlayerImagePath(updatedPlayer.images);
+    return NextResponse.json({
+      ...updatedPlayer,
+      imageUrl: imagePath,
+      avatarUrl: buildAvatarUrlFromPath(imagePath, cloudName),
+      imagePublicId: null,
+    });
   } catch (error) {
     console.error("Member update error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

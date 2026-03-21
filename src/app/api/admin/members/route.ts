@@ -7,6 +7,29 @@ import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type PlayerImageRecord = {
+  imageUrl: string;
+  isAdminView: boolean;
+};
+
+function getPrimaryPlayerImagePath(images: PlayerImageRecord[]): string | null {
+  const adminImage = images.find((image) => image.isAdminView);
+  return adminImage?.imageUrl ?? images[0]?.imageUrl ?? null;
+}
+
+function buildAvatarUrlFromPath(imagePath: string | null, cloudName: string): string | null {
+  if (!imagePath) {
+    return null;
+  }
+  if (imagePath.startsWith("http")) {
+    return imagePath;
+  }
+  if (!cloudName) {
+    return null;
+  }
+  return buildCloudinaryUrlFromUploadPath(imagePath, cloudName);
+}
+
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
 
@@ -50,14 +73,8 @@ export async function POST(request: NextRequest) {
 
     const jerseyNumber = body.jerseyNumber ? String(body.jerseyNumber).trim() : null;
     const imageUrl = body.imageUrl ? String(body.imageUrl).trim() : null;
-    const imagePublicId = body.imagePublicId ? String(body.imagePublicId).trim() : null;
     const avatarUrlInput = body.avatarUrl ? String(body.avatarUrl).trim() : null;
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
-    const avatarUrlFromPath =
-      imageUrl && cloudName
-        ? buildCloudinaryUrlFromUploadPath(imageUrl, cloudName)
-        : null;
-    const avatarUrl = avatarUrlInput || avatarUrlFromPath;
+    const adminImagePath = imageUrl || avatarUrlInput || null;
 
     const parseDate = (value: unknown): Date | null => {
       if (value === null || value === undefined || value === "") {
@@ -101,9 +118,16 @@ export async function POST(request: NextRequest) {
             birthDate,
             teamGroup,
             lastPaymentDate,
-            avatarUrl,
-            imageUrl,
-            imagePublicId,
+            ...(adminImagePath
+              ? {
+                  images: {
+                    create: {
+                      imageUrl: adminImagePath,
+                      isAdminView: true,
+                    },
+                  },
+                }
+              : {}),
             cards: {
               create: {
                 cardCode,
@@ -119,6 +143,7 @@ export async function POST(request: NextRequest) {
             paymentLogs: {
               orderBy: { paidAt: "desc" },
             },
+            images: true,
           },
         });
         break;
@@ -138,7 +163,19 @@ export async function POST(request: NextRequest) {
       throw lastError ?? new Error("Failed to generate unique card code");
     }
 
-    return NextResponse.json(createdPlayer, { status: 201 });
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const imagePath = getPrimaryPlayerImagePath(createdPlayer.images);
+    const avatarUrl = buildAvatarUrlFromPath(imagePath, cloudName);
+
+    return NextResponse.json(
+      {
+        ...createdPlayer,
+        imageUrl: imagePath,
+        avatarUrl,
+        imagePublicId: null,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Player creation error:", error);
     return NextResponse.json(
@@ -189,6 +226,7 @@ export async function GET(request: NextRequest) {
             paidAt: "desc",
           },
         },
+        images: true,
       },
       orderBy: {
         fullName: "asc",
@@ -197,13 +235,13 @@ export async function GET(request: NextRequest) {
 
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
     const normalizedPlayers = players.map((player) => {
-      if (!player.avatarUrl && player.imageUrl && cloudName) {
-        return {
-          ...player,
-          avatarUrl: buildCloudinaryUrlFromUploadPath(player.imageUrl, cloudName),
-        };
-      }
-      return player;
+      const imagePath = getPrimaryPlayerImagePath(player.images);
+      return {
+        ...player,
+        imageUrl: imagePath,
+        avatarUrl: buildAvatarUrlFromPath(imagePath, cloudName),
+        imagePublicId: null,
+      };
     });
 
     return NextResponse.json(normalizedPlayers);

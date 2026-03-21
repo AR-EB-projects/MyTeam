@@ -17,6 +17,7 @@ function AddMemberPageContent() {
   const [teamGroup, setTeamGroup] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isClubValidated, setIsClubValidated] = useState(false);
@@ -76,6 +77,20 @@ function AddMemberPageContent() {
       isActive = false;
     };
   }, [clubId, router]);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreviewUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [avatarFile]);
 
   const handleCreateMember = async (e: FormEvent) => {
     e.preventDefault();
@@ -257,6 +272,20 @@ function AddMemberPageContent() {
                 onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
                 className="add-member-input"
               />
+              {avatarPreviewUrl && (
+                <img
+                  src={avatarPreviewUrl}
+                  alt="Preview"
+                  style={{
+                    width: "100%",
+                    maxHeight: "220px",
+                    objectFit: "cover",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    marginTop: "10px",
+                  }}
+                />
+              )}
             </div>
 
             {error && (
