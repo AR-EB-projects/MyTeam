@@ -655,7 +655,7 @@ function MemberDetailModal({
 
         {/* Title */}
         <h2 className="amp-modal-title">
-          <span className="amp-modal-title-gradient">Статистика - {member.fullName}</span>
+          <span className="amp-modal-title-gradient">{member.fullName} - Статистика</span>
           <button className="amp-modal-close" onClick={onClose} aria-label="Затвори">
             <XIcon />
           </button>
