@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
+import {
+  applyCloudinaryTransformToUrl,
+  buildCloudinaryUrlFromUploadPath,
+} from "@/lib/cloudinaryImagePath";
 import { verifyAdminToken } from "@/lib/adminAuth";
+import { cloudinary } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +14,23 @@ type PlayerImageRecord = {
   imageUrl: string;
   isAdminView: boolean;
 };
+
+function getCloudinaryPublicIdFromImagePath(imagePath: string): string | null {
+  const trimmed = imagePath.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const uploadMarker = "/upload/";
+  const uploadIndex = trimmed.indexOf(uploadMarker);
+  const pathWithTransforms = uploadIndex >= 0
+    ? trimmed.slice(uploadIndex + uploadMarker.length)
+    : trimmed;
+
+  const pathWithoutTransforms = pathWithTransforms.replace(/^v\d+\//, "");
+  const pathWithoutExtension = pathWithoutTransforms.replace(/\.[a-z0-9]+$/i, "");
+  return pathWithoutExtension || null;
+}
 
 function getPlayerImagePathByAudience(
   images: PlayerImageRecord[],
@@ -30,16 +51,21 @@ function getPlayerImagePathByAudience(
 }
 
 function buildAvatarUrlFromPath(imagePath: string | null, cloudName: string): string | null {
+  const avatarTransform = "w_320,h_400,c_limit,dpr_auto,f_auto,q_auto:good";
   if (!imagePath) {
     return null;
   }
   if (imagePath.startsWith("http")) {
-    return imagePath;
+    return applyCloudinaryTransformToUrl(imagePath, avatarTransform);
   }
   if (!cloudName) {
     return null;
   }
-  return buildCloudinaryUrlFromUploadPath(imagePath, cloudName);
+  return buildCloudinaryUrlFromUploadPath(
+    imagePath,
+    cloudName,
+    avatarTransform,
+  );
 }
 
 export async function GET(
@@ -154,11 +180,12 @@ export async function GET(
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
     const playerImagePath = getPlayerImagePathByAudience(card.player.images, isPrivilegedViewer);
     const clubImagePath = card.player.club?.imageUrl ?? null;
+    const clubLogoTransform = "w_160,h_160,c_limit,dpr_auto,f_auto,q_auto:good";
     const clubLogoUrl = clubImagePath
       ? clubImagePath.startsWith("http")
-        ? clubImagePath
+        ? applyCloudinaryTransformToUrl(clubImagePath, clubLogoTransform)
         : cloudName
-          ? buildCloudinaryUrlFromUploadPath(clubImagePath, cloudName)
+          ? buildCloudinaryUrlFromUploadPath(clubImagePath, cloudName, clubLogoTransform)
           : null
       : card.player.club?.emblemUrl ?? null;
 
@@ -302,7 +329,9 @@ export async function PUT(
         : String((body as { imageUrl?: unknown }).imageUrl).trim()
       : null;
 
-    await prisma.$transaction(async (tx) => {
+    const oldMemberImageUrlsToDelete = await prisma.$transaction(async (tx) => {
+      const urlsToDelete: string[] = [];
+
       if (Object.keys(data).length > 0) {
         await tx.player.update({
           where: {
@@ -313,23 +342,75 @@ export async function PUT(
       }
 
       if (hasImageUrl && nextImageUrl) {
-        // Keep admin-view image intact; replace only the member-view image.
-        await tx.image.deleteMany({
+        // Keep admin-view image intact; enforce a single member-view image.
+        const memberViewImages = await tx.image.findMany({
           where: {
             playerId: card.playerId,
             isAdminView: false,
           },
-        });
-
-        await tx.image.create({
-          data: {
-            playerId: card.playerId,
-            imageUrl: nextImageUrl,
-            isAdminView: false,
+          select: {
+            id: true,
+            imageUrl: true,
+          },
+          orderBy: {
+            id: "asc",
           },
         });
+
+        if (memberViewImages.length === 0) {
+          await tx.image.create({
+            data: {
+              playerId: card.playerId,
+              imageUrl: nextImageUrl,
+              isAdminView: false,
+            },
+          });
+        } else {
+          const [primaryImage, ...duplicateImages] = memberViewImages;
+          urlsToDelete.push(primaryImage.imageUrl, ...duplicateImages.map((image) => image.imageUrl));
+
+          await tx.image.update({
+            where: {
+              id: primaryImage.id,
+            },
+            data: {
+              imageUrl: nextImageUrl,
+            },
+          });
+
+          if (duplicateImages.length > 0) {
+            await tx.image.deleteMany({
+              where: {
+                id: {
+                  in: duplicateImages.map((image) => image.id),
+                },
+              },
+            });
+          }
+        }
       }
+
+      return urlsToDelete.filter((url) => url.trim() && url !== nextImageUrl);
     });
+
+    for (const oldImageUrl of oldMemberImageUrlsToDelete) {
+      const publicId = getCloudinaryPublicIdFromImagePath(oldImageUrl);
+      if (!publicId) {
+        continue;
+      }
+
+      try {
+        const result = await cloudinary.uploader.destroy(publicId, {
+          resource_type: "image",
+          invalidate: true,
+        });
+        if (result.result !== "ok" && result.result !== "not found") {
+          console.warn("Unexpected Cloudinary destroy result:", result);
+        }
+      } catch (cloudinaryError) {
+        console.error("Cloudinary deletion error during public image update:", cloudinaryError);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

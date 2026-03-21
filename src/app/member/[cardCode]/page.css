@@ -798,12 +798,14 @@
   position: relative;
   width: 100%;
   max-width: 380px;
+  max-height: 88vh;
+  overflow-y: auto;
   background: linear-gradient(135deg, #0d0d0d, #1a1a1a, #0d0d0d);
   border: 1px solid rgba(50,205,50,0.25);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 0 60px rgba(50,205,50,0.1), 0 25px 60px rgba(0,0,0,0.7);
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* Top accent line */

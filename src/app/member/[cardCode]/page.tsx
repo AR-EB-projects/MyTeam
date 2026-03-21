@@ -1274,12 +1274,13 @@ export default function MemberCardPage({
                   src={editImagePreviewUrl}
                   alt="Image preview"
                   style={{
-                    width: "100%",
-                    maxHeight: "220px",
+                    width: "min(160px, 100%)",
+                    aspectRatio: "4 / 5",
                     objectFit: "cover",
                     borderRadius: "10px",
                     border: "1px solid rgba(255,255,255,0.22)",
                     marginTop: "6px",
+                    marginInline: "auto",
                   }}
                 />
               )}

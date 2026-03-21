@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
+import {
+  applyCloudinaryTransformToUrl,
+  buildCloudinaryUrlFromUploadPath,
+} from "@/lib/cloudinaryImagePath";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -24,13 +27,20 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }
 
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const clubLogoTransform = "w_160,h_160,c_limit,dpr_auto,f_auto,q_auto:good";
     const normalizedTeam =
       team.imageUrl && cloudName && !team.imageUrl.startsWith("http")
         ? {
             ...team,
             imagePath: team.imageUrl,
-            imageUrl: buildCloudinaryUrlFromUploadPath(team.imageUrl, cloudName),
+            imageUrl: buildCloudinaryUrlFromUploadPath(team.imageUrl, cloudName, clubLogoTransform),
           }
+        : team.imageUrl && team.imageUrl.startsWith("http")
+          ? {
+              ...team,
+              imagePath: team.imageUrl,
+              imageUrl: applyCloudinaryTransformToUrl(team.imageUrl, clubLogoTransform),
+            }
         : {
             ...team,
             imagePath: team.imageUrl,

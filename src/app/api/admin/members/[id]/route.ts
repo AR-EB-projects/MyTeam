@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { randomBytes } from "crypto";
-import { buildCloudinaryUrlFromUploadPath } from "@/lib/cloudinaryImagePath";
+import {
+  applyCloudinaryTransformToUrl,
+  buildCloudinaryUrlFromUploadPath,
+} from "@/lib/cloudinaryImagePath";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,16 +21,21 @@ function getPrimaryPlayerImagePath(images: PlayerImageRecord[]): string | null {
 }
 
 function buildAvatarUrlFromPath(imagePath: string | null, cloudName: string): string | null {
+  const avatarTransform = "w_320,h_400,c_limit,dpr_auto,f_auto,q_auto:good";
   if (!imagePath) {
     return null;
   }
   if (imagePath.startsWith("http")) {
-    return imagePath;
+    return applyCloudinaryTransformToUrl(imagePath, avatarTransform);
   }
   if (!cloudName) {
     return null;
   }
-  return buildCloudinaryUrlFromUploadPath(imagePath, cloudName);
+  return buildCloudinaryUrlFromUploadPath(
+    imagePath,
+    cloudName,
+    avatarTransform,
+  );
 }
 
 export async function GET(

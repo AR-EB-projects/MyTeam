@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import {
+  applyCloudinaryTransformToUrl,
+  buildCloudinaryUrlFromUploadPath,
+} from "@/lib/cloudinaryImagePath";
 
 export async function GET() {
   try {
@@ -9,7 +13,25 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(teams);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+    const clubLogoTransform = "w_160,h_160,c_limit,dpr_auto,f_auto,q_auto:good";
+    const normalizedTeams = teams.map((team) => {
+      if (team.imageUrl && cloudName && !team.imageUrl.startsWith("http")) {
+        return {
+          ...team,
+          imageUrl: buildCloudinaryUrlFromUploadPath(team.imageUrl, cloudName, clubLogoTransform),
+        };
+      }
+      if (team.imageUrl && team.imageUrl.startsWith("http")) {
+        return {
+          ...team,
+          imageUrl: applyCloudinaryTransformToUrl(team.imageUrl, clubLogoTransform),
+        };
+      }
+      return team;
+    });
+
+    return NextResponse.json(normalizedTeams);
   } catch (error) {
     console.error("Teams fetch error:", error);
     return NextResponse.json(
