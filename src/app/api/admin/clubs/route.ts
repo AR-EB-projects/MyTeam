@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         imagePublicId: true,
       },
       orderBy: {
-        createdAt: "asc",
+        name: "asc",
       },
     });
 

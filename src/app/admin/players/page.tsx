@@ -31,6 +31,13 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
+const SearchIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21 21-4.34-4.34" />
+    <circle cx="11" cy="11" r="8" />
+  </svg>
+);
+
 const XIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6 6 18" />
@@ -51,6 +58,7 @@ interface ClubRow {
 export default function AdminPlayersPage() {
   const router = useRouter();
   const [clubs, setClubs] = useState<ClubRow[]>([]);
+  const [clubsSearch, setClubsSearch] = useState("");
   const [clubsLoading, setClubsLoading] = useState(true);
   const [demoSendingType, setDemoSendingType] = useState<"reminder" | "overdue" | null>(null);
 
@@ -122,6 +130,15 @@ export default function AdminPlayersPage() {
     }
   };
 
+  const normalizedSearch = clubsSearch.trim().toLocaleLowerCase();
+  const visibleClubs = [...clubs]
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+    .filter((club) =>
+      normalizedSearch.length === 0
+        ? true
+        : club.name.toLocaleLowerCase().includes(normalizedSearch),
+    );
+
   return (
     <main className="mp-page">
       <div className="mp-dot-grid" aria-hidden="true" />
@@ -166,13 +183,34 @@ export default function AdminPlayersPage() {
         </div>
 
         <div className="mp-teams-section">
+          <div className="mp-search-wrap">
+            <SearchIcon />
+            <input
+              className="mp-search-input"
+              type="text"
+              value={clubsSearch}
+              onChange={(e) => setClubsSearch(e.target.value)}
+              placeholder="Търси отбор..."
+              aria-label="Търси отбор"
+            />
+            {clubsSearch && (
+              <button
+                type="button"
+                className="mp-search-clear"
+                onClick={() => setClubsSearch("")}
+                aria-label="Изчисти търсенето"
+              >
+                <XIcon />
+              </button>
+            )}
+          </div>
           <h2 className="mp-teams-title">Изберете отбор</h2>
           <div className="mp-teams-grid">
             {clubsLoading && (
               <div className="mp-team-empty">Зареждане на отборите...</div>
             )}
 
-            {!clubsLoading && clubs.map((club) => (
+            {!clubsLoading && visibleClubs.map((club) => (
               <button
                 key={club.id}
                 type="button"
@@ -194,6 +232,9 @@ export default function AdminPlayersPage() {
                 </div>
               </button>
             ))}
+            {!clubsLoading && clubs.length > 0 && visibleClubs.length === 0 && (
+              <div className="mp-team-empty">Няма резултати за това търсене.</div>
+            )}
 
             {!clubsLoading && clubs.length === 0 && (
               <div className="mp-team-empty">Няма добавени отбори.</div>
