@@ -265,6 +265,14 @@ const PrinterIcon = () => (
   </svg>
 );
 
+const DownloadIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v12" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M5 21h14" />
+  </svg>
+);
+
 // Reports Dialog Component
 function ReportsDialog({ onClose, clubId }: { onClose: () => void; clubId: string }) {
   const now = new Date();
@@ -1504,6 +1512,71 @@ function AdminMembersPageContent() {
     );
   });
 
+  const handleDownloadMemberLinks = async () => {
+    if (!isAdmin || typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    const rows = members
+      .filter((member) => member.isActive)
+      .map((member) => {
+        const cardCode =
+          member.cards.find((card) => card.isActive)?.cardCode ||
+          member.cards[0]?.cardCode ||
+          "";
+
+        if (!cardCode) {
+          return null;
+        }
+
+        return {
+          fullName: member.fullName,
+          url: `${window.location.origin}/member/${encodeURIComponent(cardCode)}`,
+        };
+      })
+      .filter((item): item is { fullName: string; url: string } => item !== null)
+      .sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }));
+
+    if (rows.length === 0) {
+      window.alert("Няма активни играчи с карта за export.");
+      return;
+    }
+
+    const header = [
+      `Отбор: ${clubName || "-"}`,
+      `Общо активни играчи: ${rows.length}`,
+      "",
+    ].join("\n");
+    const entries = rows
+      .map(
+        (row, index) =>
+          `${index + 1}. ${row.fullName}\n` +
+          `   ${row.url}`,
+      )
+      .join("\n\n");
+    const content = `${header}${entries}\n`.replace(/\n/g, "\r\n");
+    const safeClub = (clubName || "club")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9_-]/g, "");
+    const defaultBaseName = `${safeClub || "club"}-member-links`;
+    const requestedName = window.prompt("Име на файла:", defaultBaseName) ?? "";
+    const cleanBaseName = (requestedName.trim() || defaultBaseName).replace(/[\\/:*?"<>|]/g, "-");
+    const filename = `${cleanBaseName}.txt`;
+    const blob = new Blob(["\uFEFF", content], { type: "text/plain;charset=utf-8" });
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <main className="amp-page">
       <div className="amp-dot-grid" aria-hidden="true" />
@@ -1582,11 +1655,18 @@ function AdminMembersPageContent() {
           )}
         </div>
 
-        {/* Reports button */}
-        <button className="amp-reports-btn" onClick={() => setReportsOpen(true)}>
-          <ChartColumnIcon />
-          Център за отчети
-        </button>
+        <div className="amp-tools-row">
+          <button className="amp-reports-btn" onClick={() => setReportsOpen(true)}>
+            <ChartColumnIcon />
+            Център за отчети
+          </button>
+          {isAdmin && (
+            <button className="amp-download-links-btn" onClick={() => void handleDownloadMemberLinks()} type="button">
+              <DownloadIcon />
+              Изтегли линкове
+            </button>
+          )}
+        </div>
 
         {/* ── Content ── */}
         <div className="amp-content">
