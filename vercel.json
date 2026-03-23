@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/monthly-overdue-payment-reminder",
-      "schedule": "35 17 23 * *"
+      "schedule": "40 17 23 * *"
     }
   ]
 }
