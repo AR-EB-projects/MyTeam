@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { buildNotificationPayload } from "@/lib/push/templates";
 import { saveMemberNotificationHistory } from "@/lib/push/history";
 import { sendPushToMember } from "@/lib/push/service";
+import { publishMemberUpdated } from "@/lib/memberEvents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -196,6 +197,8 @@ export async function POST(
         paidAt: true,
       },
     });
+
+    publishMemberUpdated(normalizedCardCode, "status-updated");
 
     return NextResponse.json({
       success: true,

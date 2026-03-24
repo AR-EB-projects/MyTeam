@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { randomBytes } from "crypto";
+import { publishMemberUpdated } from "@/lib/memberEvents";
 import {
   applyCloudinaryTransformToUrl,
   buildCloudinaryUrlFromUploadPath,
@@ -209,6 +210,14 @@ export async function PUT(
 
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
     const imagePath = getPrimaryPlayerImagePath(updatedPlayer.images);
+    const activeCardCode =
+      updatedPlayer.cards.find((card) => card.isActive)?.cardCode ??
+      updatedPlayer.cards[0]?.cardCode;
+
+    if (activeCardCode && status) {
+      publishMemberUpdated(activeCardCode, "status-updated");
+    }
+
     return NextResponse.json({
       ...updatedPlayer,
       imageUrl: imagePath,

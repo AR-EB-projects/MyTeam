@@ -331,6 +331,77 @@ export default function MemberCardPage({
     void fetchMember();
   }, [normalizedCardCode]);
 
+  // Live updates via SSE (no polling)
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const source = new EventSource(`/api/members/${normalizedCardCode}/events`);
+
+    source.onmessage = (event) => {
+      let payload: unknown;
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (!payload || typeof payload !== "object") {
+        return;
+      }
+
+      const type = "type" in payload ? String((payload as { type?: unknown }).type ?? "") : "";
+
+      if (type === "ping" || type === "connected") {
+        return;
+      }
+
+      if (type === "status-updated") {
+        void (async () => {
+          try {
+            const response = await fetch(`/api/members/${normalizedCardCode}`, { cache: "no-store" });
+            if (!response.ok) {
+              return;
+            }
+            const data = (await response.json()) as MemberProfile;
+            setMember(data);
+          } catch (error) {
+            console.error("Failed to refresh member after status event:", error);
+          }
+        })();
+      }
+
+      if (type === "notification-created") {
+        void (async () => {
+          try {
+            const response = await fetch(`/api/members/${normalizedCardCode}/notifications`, {
+              cache: "no-store",
+            });
+            if (!response.ok) {
+              return;
+            }
+            const data = await response.json();
+            setUnreadCount(data.unreadCount || 0);
+            if (notificationsPanelOpen) {
+              setNotifications(data.notifications || []);
+            }
+          } catch (error) {
+            console.error("Failed to refresh notifications after event:", error);
+          }
+        })();
+      }
+    };
+
+    source.onerror = () => {
+      // Let browser auto-reconnect.
+    };
+
+    return () => {
+      source.close();
+    };
+  }, [normalizedCardCode, notificationsPanelOpen]);
+
   // Fetch unread notification count on page load
   useEffect(() => {
     const fetchUnreadCount = async () => {

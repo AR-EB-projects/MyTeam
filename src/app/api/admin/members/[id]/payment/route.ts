@@ -4,6 +4,7 @@ import { verifyAdminToken } from "@/lib/adminAuth";
 import { buildNotificationPayload } from "@/lib/push/templates";
 import { saveMemberNotificationHistory } from "@/lib/push/history";
 import { sendPushToMember } from "@/lib/push/service";
+import { publishMemberUpdated } from "@/lib/memberEvents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -151,6 +152,11 @@ export async function POST(
     } catch (pushError) {
       // Payment should not fail because push delivery failed.
       console.error("Payment push send error:", pushError);
+    }
+
+    const targetCardCode = player.cards[0]?.cardCode;
+    if (targetCardCode) {
+      publishMemberUpdated(targetCardCode, "status-updated");
     }
 
     return NextResponse.json({
