@@ -9,6 +9,19 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function isTransientPrismaConnectionError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const maybeError = error as { code?: unknown };
+  const code = typeof maybeError.code === "string" ? maybeError.code : "";
+  return code === "P1001" || code === "P2024";
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
 
@@ -17,18 +30,39 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clubs = await prisma.club.findMany({
-      select: {
-        id: true,
-        name: true,
-        emblemUrl: true,
-        imageUrl: true,
-        imagePublicId: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    let clubs;
+    try {
+      clubs = await prisma.club.findMany({
+        select: {
+          id: true,
+          name: true,
+          emblemUrl: true,
+          imageUrl: true,
+          imagePublicId: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+    } catch (error) {
+      if (!isTransientPrismaConnectionError(error)) {
+        throw error;
+      }
+
+      await sleep(400);
+      clubs = await prisma.club.findMany({
+        select: {
+          id: true,
+          name: true,
+          emblemUrl: true,
+          imageUrl: true,
+          imagePublicId: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+    }
 
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME ?? "";
     const clubLogoTransform = "w_160,h_160,c_limit,dpr_auto,f_auto,q_auto:good";
@@ -51,6 +85,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(normalizedClubs);
   } catch (error) {
     console.error("Clubs fetch error:", error);
+
+    if (isTransientPrismaConnectionError(error)) {
+      return NextResponse.json(
+        { error: "Database temporarily unavailable. Please retry in a few seconds." },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
