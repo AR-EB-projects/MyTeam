@@ -7,7 +7,14 @@ const ADMIN_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 10;
 
 export async function POST(request: NextRequest) {
   try {
-    const { password } = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { password } = (body ?? {}) as { password?: unknown };
     const inputPassword = String(password ?? "");
 
     if (!inputPassword) {
@@ -75,7 +82,8 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error("Admin login error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

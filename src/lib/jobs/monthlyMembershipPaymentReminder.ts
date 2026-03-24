@@ -5,7 +5,8 @@ import { buildNotificationPayload } from "@/lib/push/templates";
 
 const REMINDER_TYPE = "monthly_membership_payment_reminder" as const;
 const DEFAULT_TIME_ZONE = "Europe/Sofia";
-const RUN_DAY = 23;
+const RUN_DAY = 24;
+const RUN_HOUR = 10;
 const MEMBER_PROCESSING_CONCURRENCY = 2;
 
 function getDatePartsInTimeZone(date: Date, timeZone: string) {
@@ -14,15 +15,18 @@ function getDatePartsInTimeZone(date: Date, timeZone: string) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
   }).formatToParts(date);
 
-  const get = (type: "year" | "month" | "day") =>
+  const get = (type: "year" | "month" | "day" | "hour") =>
       Number(parts.find((part) => part.type === type)?.value);
 
   return {
     year: get("year"),
     month: get("month"),
     day: get("day"),
+    hour: get("hour"),
   };
 }
 
@@ -48,9 +52,9 @@ export async function runMonthlyMembershipPaymentReminder(
 ): Promise<MonthlyMembershipReminderResult> {
   const timeZone = process.env.CRON_TIMEZONE?.trim() || DEFAULT_TIME_ZONE;
   const nowIso = now.toISOString();
-  const { year, month, day } = getDatePartsInTimeZone(now, timeZone);
+  const { year, month, day, hour } = getDatePartsInTimeZone(now, timeZone);
 
-  if (!year || !month || !day) {
+  if (!year || !month || !day || hour === undefined || Number.isNaN(hour)) {
     return {
       success: false,
       skipped: true,
@@ -64,11 +68,11 @@ export async function runMonthlyMembershipPaymentReminder(
     };
   }
 
-  if (day !== RUN_DAY) {
+  if (day !== RUN_DAY || hour !== RUN_HOUR) {
     return {
       success: true,
       skipped: true,
-      reason: `Today is day ${day}; monthly reminders run only on day ${RUN_DAY}.`,
+      reason: `Current local time is day ${day}, hour ${hour}; monthly reminders run only on day ${RUN_DAY} at ${RUN_HOUR}:00 (${timeZone}).`,
       timeZone,
       nowIso,
       targetMembers: 0,

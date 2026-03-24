@@ -6,7 +6,9 @@ import { buildNotificationPayload } from "@/lib/push/templates";
 const REMINDER_TYPE = "monthly_overdue_payment_reminder" as const;
 const DEFAULT_TIME_ZONE = "Europe/Sofia";
 const STATUS_ROLLOVER_JOB = "monthly_status_rollover";
-const RUN_DAY = 23;
+const RUN_DAY = 24;
+const RUN_HOUR = 10;
+const DEFAULT_LOCK_TIMEOUT_MINUTES = 180;
 const MEMBER_PROCESSING_CONCURRENCY = 2;
 
 function getDatePartsInTimeZone(date: Date, timeZone: string) {
@@ -15,15 +17,18 @@ function getDatePartsInTimeZone(date: Date, timeZone: string) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
   }).formatToParts(date);
 
-  const get = (type: "year" | "month" | "day") =>
+  const get = (type: "year" | "month" | "day" | "hour") =>
       Number(parts.find((part) => part.type === type)?.value);
 
   return {
     year: get("year"),
     month: get("month"),
     day: get("day"),
+    hour: get("hour"),
   };
 }
 
@@ -52,6 +57,13 @@ export interface MonthlyOverduePaymentReminderResult {
 }
 
 async function acquireMonthlyJobLock(jobName: string, year: number, month: number) {
+  const configuredTimeoutMinutes = Number(process.env.CRON_LOCK_TIMEOUT_MINUTES ?? "");
+  const lockTimeoutMinutes =
+    Number.isFinite(configuredTimeoutMinutes) && configuredTimeoutMinutes > 0
+      ? configuredTimeoutMinutes
+      : DEFAULT_LOCK_TIMEOUT_MINUTES;
+  const lockTimeoutMs = lockTimeoutMinutes * 60 * 1000;
+
   try {
     await prisma.cronJobRun.create({
       data: {
@@ -79,13 +91,37 @@ async function acquireMonthlyJobLock(jobName: string, year: number, month: numbe
       runMonth: month,
     },
     select: {
+      id: true,
       completedAt: true,
+      createdAt: true,
     },
   });
   const completedAt = existingRow?.completedAt ?? null;
 
   if (completedAt) {
     return { acquired: false, alreadyCompleted: true, inProgress: false };
+  }
+
+  if (existingRow) {
+    const ageMs = Date.now() - existingRow.createdAt.getTime();
+    const isStale = ageMs >= lockTimeoutMs;
+
+    if (isStale) {
+      const takeover = await prisma.cronJobRun.updateMany({
+        where: {
+          id: existingRow.id,
+          completedAt: null,
+          createdAt: existingRow.createdAt,
+        },
+        data: {
+          createdAt: new Date(),
+        },
+      });
+
+      if (takeover.count > 0) {
+        return { acquired: true, alreadyCompleted: false, inProgress: false };
+      }
+    }
   }
 
   return { acquired: false, alreadyCompleted: false, inProgress: true };
@@ -225,9 +261,9 @@ export async function runMonthlyOverduePaymentReminder(
 ): Promise<MonthlyOverduePaymentReminderResult> {
   const timeZone = process.env.CRON_TIMEZONE?.trim() || DEFAULT_TIME_ZONE;
   const nowIso = now.toISOString();
-  const { year, month, day } = getDatePartsInTimeZone(now, timeZone);
+  const { year, month, day, hour } = getDatePartsInTimeZone(now, timeZone);
 
-  if (!year || !month || !day) {
+  if (!year || !month || !day || hour === undefined || Number.isNaN(hour)) {
     return {
       success: false,
       skipped: true,
@@ -248,11 +284,11 @@ export async function runMonthlyOverduePaymentReminder(
     };
   }
 
-  if (day !== RUN_DAY) {
+  if (day !== RUN_DAY || hour !== RUN_HOUR) {
     return {
       success: true,
       skipped: true,
-      reason: `Today is day ${day}; overdue reminders run only on day ${RUN_DAY}.`,
+      reason: `Current local time is day ${day}, hour ${hour}; overdue reminders run only on day ${RUN_DAY} at ${RUN_HOUR}:00 (${timeZone}).`,
       timeZone,
       nowIso,
       previousMonthIso: "",

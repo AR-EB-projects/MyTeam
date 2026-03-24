@@ -7,26 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum PlayerStatus {
-  paid
-  warning
-  overdue
-
-  @@map("player_status")
-}
-
-enum UserRole {
-  admin
-  coach
-}
-
 model Club {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name          String
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   emblemUrl     String?  @map("emblem_url")
-  imageUrl      String?  @map("image_url")
   imagePublicId String?  @map("image_public_id")
+  imageUrl      String?  @map("image_url")
   players       Player[]
 
   @@map("clubs")
@@ -46,9 +33,6 @@ model Player {
   id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   clubId             String               @map("club_id") @db.Uuid
   fullName           String               @map("full_name")
-  isActive           Boolean              @default(true) @map("is_active")
-  cards              Card[]
-  images             Image[]
   status             PlayerStatus         @default(paid)
   createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime             @default(now()) @map("updated_at") @db.Timestamptz(6)
@@ -56,10 +40,13 @@ model Player {
   birthDate          DateTime?            @map("birth_date") @db.Date
   teamGroup          Int?                 @map("team_group")
   lastPaymentDate    DateTime?            @map("last_payment_date") @db.Timestamptz(6)
-  club               Club                 @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  isActive           Boolean              @default(true) @map("is_active")
+  cards              Card[]
+  images             Image[]
   paymentLogs        PaymentLog[]
-  pushSubscriptions  PushSubscription[]
   playerNotification PlayerNotification[]
+  club               Club                 @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  pushSubscriptions  PushSubscription[]
 
   @@index([clubId])
   @@map("players")
@@ -79,9 +66,9 @@ model Image {
 model PaymentLog {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   playerId   String   @map("player_id") @db.Uuid
-  paidFor    DateTime @map("paid_for") @db.Timestamptz(6)
   paidAt     DateTime @default(now()) @map("paid_at") @db.Timestamptz(6)
   recordedBy String   @default("admin") @map("recorded_by")
+  paidFor    DateTime @map("paid_for") @db.Timestamptz(6)
   player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId])
@@ -124,10 +111,10 @@ model PlayerNotification {
 model Card {
   id        String   @id @default(uuid())
   cardCode  String   @unique
-  player    Player   @relation(fields: [playerId], references: [id])
   playerId  String   @db.Uuid
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id])
 
   @@map("cards")
 }
@@ -142,4 +129,17 @@ model CronJobRun {
 
   @@unique([jobName, runYear, runMonth])
   @@map("cron_job_runs")
+}
+
+enum PlayerStatus {
+  paid
+  warning
+  overdue
+
+  @@map("player_status")
+}
+
+enum UserRole {
+  admin
+  coach
 }
