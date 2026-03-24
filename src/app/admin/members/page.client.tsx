@@ -49,6 +49,9 @@ interface ClubOption {
   emblemUrl?: string | null;
   imageUrl?: string | null;
   imagePublicId?: string | null;
+  reminderDay?: number;
+  overdueDay?: number;
+  reminderHour?: number;
 }
 
 interface Member {
@@ -949,6 +952,7 @@ function AdminMembersPageContent() {
   const clubId = searchParams.get("clubId") ?? "";
   const [members, setMembers] = useState<Member[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoach, setIsCoach] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
@@ -995,6 +999,15 @@ function AdminMembersPageContent() {
   const [inactiveActionError, setInactiveActionError] = useState("");
   const [isDeletingTeam, setIsDeletingTeam] = useState(false);
   const [isTeamDeleteConfirmOpen, setIsTeamDeleteConfirmOpen] = useState(false);
+  const [schedulerSettingsOpen, setSchedulerSettingsOpen] = useState(false);
+  const [schedulerSettingsLoading, setSchedulerSettingsLoading] = useState(false);
+  const [schedulerSettingsSaving, setSchedulerSettingsSaving] = useState(false);
+  const [schedulerSettingsError, setSchedulerSettingsError] = useState("");
+  const [schedulerForm, setSchedulerForm] = useState({
+    reminderDay: "25",
+    overdueDay: "1",
+    reminderHour: "10",
+  });
 
   useEffect(() => {
     if (!clubId) return;
@@ -1367,13 +1380,20 @@ function AdminMembersPageContent() {
         });
         if (!response.ok) {
           setIsAdmin(false);
+          setIsCoach(false);
           return;
         }
 
-        const payload = (await response.json()) as { isAdmin?: boolean; roles?: string[] };
+        const payload = (await response.json()) as {
+          isAdmin?: boolean;
+          isCoach?: boolean;
+          roles?: string[];
+        };
         setIsAdmin(Boolean(payload.isAdmin) || (Array.isArray(payload.roles) && payload.roles.includes("admin")));
+        setIsCoach(Boolean(payload.isCoach) || (Array.isArray(payload.roles) && payload.roles.includes("coach")));
       } catch {
         setIsAdmin(false);
+        setIsCoach(false);
       }
     };
 
@@ -1584,6 +1604,58 @@ function AdminMembersPageContent() {
     URL.revokeObjectURL(url);
   };
 
+  const openSchedulerSettings = async () => {
+    if (!clubId) return;
+    setSchedulerSettingsError("");
+    setSchedulerSettingsLoading(true);
+    setSchedulerSettingsOpen(true);
+    try {
+      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/scheduler`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || "Неуспешно зареждане на графика.");
+      }
+      const payload = await response.json();
+      setSchedulerForm({
+        reminderDay: String(payload.reminderDay ?? 25),
+        overdueDay: String(payload.overdueDay ?? 1),
+        reminderHour: String(payload.reminderHour ?? 10),
+      });
+    } catch (error) {
+      setSchedulerSettingsError(error instanceof Error ? error.message : "Възникна грешка.");
+    } finally {
+      setSchedulerSettingsLoading(false);
+    }
+  };
+
+  const saveSchedulerSettings = async () => {
+    if (!clubId || schedulerSettingsSaving) return;
+    setSchedulerSettingsSaving(true);
+    setSchedulerSettingsError("");
+    try {
+      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/scheduler`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reminderDay: Number.parseInt(schedulerForm.reminderDay, 10),
+          overdueDay: Number.parseInt(schedulerForm.overdueDay, 10),
+          reminderHour: Number.parseInt(schedulerForm.reminderHour, 10),
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || "Неуспешно запазване на графика.");
+      }
+      setSchedulerSettingsOpen(false);
+    } catch (error) {
+      setSchedulerSettingsError(error instanceof Error ? error.message : "Възникна грешка.");
+    } finally {
+      setSchedulerSettingsSaving(false);
+    }
+  };
+
   return (
     <main className="amp-page">
       <div className="amp-dot-grid" aria-hidden="true" />
@@ -1617,48 +1689,50 @@ function AdminMembersPageContent() {
         <div className="amp-nav-row">
           <div className="amp-nav-left">
             {isAdmin && (
-              <button className="amp-back-btn" onClick={() => router.push("/admin/players")}>
-                <ArrowLeftIcon />
-                Назад към отбори
-              </button>
+              <div className="amp-nav-back">
+                <button className="amp-back-btn" onClick={() => router.push("/admin/players")}>
+                  <ArrowLeftIcon />
+                  Назад към отбори
+                </button>
+              </div>
             )}
             <button className="amp-add-btn" onClick={() => router.push(`/admin/members/add?clubId=${encodeURIComponent(clubId)}`)}>
               <PlusIcon />
               Добави играч
             </button>
+            {isAdmin && (
+              <button
+                className="amp-inactive-toggle-btn"
+                onClick={async () => {
+                  setInactiveActionError("");
+                  await refreshMembersList();
+                  setInactivePlayersOpen(true);
+                }}
+                type="button"
+              >
+                {"\u041f\u043e\u043a\u0430\u0436\u0438 \u043d\u0435\u0430\u043a\u0442\u0438\u0432\u043d\u0438 \u0438\u0433\u0440\u0430\u0447\u0438"}
+              </button>
+            )}
           </div>
-          {isAdmin && (
-            <button
-              className="amp-inactive-toggle-btn"
-              onClick={async () => {
-                setInactiveActionError("");
-                await refreshMembersList();
-                setInactivePlayersOpen(true);
-              }}
-              type="button"
-            >
-              Покажи неактивни играчи
-            </button>
-          )}
           {isAdmin && clubId && (
-            <button
-              className="amp-edit-team-btn"
-              onClick={() => router.push(`/admin/teams/${encodeURIComponent(clubId)}/edit`)}
-              disabled={isDeletingTeam}
-            >
-              Редактирай отбор
-            </button>
-          )}
-          {isAdmin && clubId && (
-            <button
-              className="amp-delete-team-btn"
-              onClick={() => setIsTeamDeleteConfirmOpen(true)}
-              disabled={isDeletingTeam}
-              type="button"
-            >
-              <TrashIcon />
-              {isDeletingTeam ? "Изтриване..." : "Изтрий отбор"}
-            </button>
+            <div className="amp-team-actions">
+              <button
+                className="amp-edit-team-btn"
+                onClick={() => router.push(`/admin/teams/${encodeURIComponent(clubId)}/edit`)}
+                disabled={isDeletingTeam}
+              >
+                Редактирай отбор
+              </button>
+              <button
+                className="amp-delete-team-btn"
+                onClick={() => setIsTeamDeleteConfirmOpen(true)}
+                disabled={isDeletingTeam}
+                type="button"
+              >
+                <TrashIcon />
+                {isDeletingTeam ? "Изтриване..." : "Изтрий отбор"}
+              </button>
+            </div>
           )}
         </div>
 
@@ -1667,11 +1741,19 @@ function AdminMembersPageContent() {
             <ChartColumnIcon />
             Център за отчети
           </button>
-          {isAdmin && (
-            <button className="amp-download-links-btn" onClick={() => void handleDownloadMemberLinks()} type="button">
-              <DownloadIcon />
-              Изтегли линкове
-            </button>
+          {(isAdmin || isCoach) && clubId && (
+            <>
+              <button className="amp-download-links-btn amp-scheduler-settings-btn" onClick={() => void openSchedulerSettings()} type="button">
+                <CalendarIcon />
+                {"\u0413\u0440\u0430\u0444\u0438\u043a \u0438\u0437\u0432\u0435\u0441\u0442\u0438\u044f"}
+              </button>
+              {isAdmin && (
+                <button className="amp-download-links-btn" onClick={() => void handleDownloadMemberLinks()} type="button">
+                  <DownloadIcon />
+                  Изтегли линкове
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -1970,6 +2052,104 @@ function AdminMembersPageContent() {
           }}
           onConfirm={handlePermanentDeleteMember}
         />
+      )}
+      {schedulerSettingsOpen && (
+        <div
+          className="amp-overlay"
+          onClick={() => {
+            if (!schedulerSettingsSaving) {
+              setSchedulerSettingsOpen(false);
+            }
+          }}
+        >
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="amp-modal-tint" aria-hidden="true" />
+            <h2 className="amp-modal-title">
+              <span className="amp-modal-title-gradient">Настройки на график</span>
+              <button
+                className="amp-modal-close"
+                onClick={() => setSchedulerSettingsOpen(false)}
+                aria-label="Затвори"
+                disabled={schedulerSettingsSaving}
+              >
+                <XIcon />
+              </button>
+            </h2>
+
+            <div className="amp-modal-body">
+              {schedulerSettingsLoading ? (
+                <p className="amp-empty amp-empty--modal">Зареждане...</p>
+              ) : (
+                <div className="amp-edit-grid">
+                  <label className="amp-edit-field">
+                    <span className="amp-lbl">Ден месечно напомняне (1-28)</span>
+                    <input
+                      className="amp-edit-input"
+                      inputMode="numeric"
+                      value={schedulerForm.reminderDay}
+                      onChange={(e) =>
+                        setSchedulerForm((prev) => ({
+                          ...prev,
+                          reminderDay: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
+                      disabled={schedulerSettingsSaving}
+                    />
+                  </label>
+                  <label className="amp-edit-field">
+                    <span className="amp-lbl">Ден за начало на платежния месец</span>
+                    <input
+                      className="amp-edit-input"
+                      inputMode="numeric"
+                      value={schedulerForm.overdueDay}
+                      onChange={(e) =>
+                        setSchedulerForm((prev) => ({
+                          ...prev,
+                          overdueDay: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
+                      disabled={schedulerSettingsSaving}
+                    />
+                  </label>
+                  <label className="amp-edit-field">
+                    <span className="amp-lbl">Час (0-23)</span>
+                    <input
+                      className="amp-edit-input"
+                      inputMode="numeric"
+                      value={schedulerForm.reminderHour}
+                      onChange={(e) =>
+                        setSchedulerForm((prev) => ({
+                          ...prev,
+                          reminderHour: e.target.value.replace(/\D/g, ""),
+                        }))
+                      }
+                      disabled={schedulerSettingsSaving}
+                    />
+                  </label>
+                </div>
+              )}
+
+              {schedulerSettingsError && <p className="amp-confirm-error">{schedulerSettingsError}</p>}
+
+              <div className="amp-modal-actions">
+                <button
+                  className="amp-btn amp-btn--ghost"
+                  onClick={() => setSchedulerSettingsOpen(false)}
+                  disabled={schedulerSettingsSaving}
+                >
+                  Отказ
+                </button>
+                <button
+                  className="amp-btn amp-btn--primary"
+                  onClick={() => void saveSchedulerSettings()}
+                  disabled={schedulerSettingsSaving || schedulerSettingsLoading}
+                >
+                  {schedulerSettingsSaving ? "Запазване..." : "Запази"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

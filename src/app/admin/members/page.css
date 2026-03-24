@@ -64,8 +64,21 @@
 
 .amp-nav-left {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.amp-nav-back {
+  flex-basis: 100%;
+}
+
+.amp-team-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .amp-back-btn {
@@ -1286,6 +1299,16 @@
 }
 
 .amp-download-links-btn:hover { background-color: rgba(245, 176, 0, 0.14); }
+
+.amp-scheduler-settings-btn {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #38bdf8;
+}
+
+.amp-scheduler-settings-btn:hover {
+  background-color: rgba(56, 189, 248, 0.14);
+}
+
 
 /* Responsive */
 @media (max-width: 640px) {

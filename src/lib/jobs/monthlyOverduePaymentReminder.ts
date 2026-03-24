@@ -6,8 +6,8 @@ import { buildNotificationPayload } from "@/lib/push/templates";
 const REMINDER_TYPE = "monthly_overdue_payment_reminder" as const;
 const DEFAULT_TIME_ZONE = "Europe/Sofia";
 const STATUS_ROLLOVER_JOB = "monthly_status_rollover";
-const RUN_DAY = 1;
-const RUN_HOUR = 10;
+const DEFAULT_RUN_DAY = 1;
+const DEFAULT_RUN_HOUR = 10;
 const DEFAULT_LOCK_TIMEOUT_MINUTES = 180;
 const MEMBER_PROCESSING_CONCURRENCY = 2;
 
@@ -140,8 +140,8 @@ async function markMonthlyJobCompleted(jobName: string, year: number, month: num
   });
 }
 
-async function runMonthlyStatusRollover(year: number, month: number) {
-  const lock = await acquireMonthlyJobLock(STATUS_ROLLOVER_JOB, year, month);
+async function runMonthlyStatusRollover(year: number, month: number, clubId: string) {
+  const lock = await acquireMonthlyJobLock(`${STATUS_ROLLOVER_JOB}:${clubId}`, year, month);
 
   if (lock.inProgress) {
     return {
@@ -166,6 +166,9 @@ async function runMonthlyStatusRollover(year: number, month: number) {
 
   const pausedCurrentMonthRows = await prisma.paymentWaiver.findMany({
     where: {
+      player: {
+        clubId,
+      },
       waivedFor: {
         gte: currentMonthStart,
         lt: nextMonthStart,
@@ -178,6 +181,9 @@ async function runMonthlyStatusRollover(year: number, month: number) {
 
   const paidCurrentMonthRows = await prisma.paymentLog.findMany({
     where: {
+      player: {
+        clubId,
+      },
       paidFor: {
         gte: currentMonthStart,
         lt: nextMonthStart,
@@ -199,6 +205,7 @@ async function runMonthlyStatusRollover(year: number, month: number) {
         in: paidCurrentMonthIdList,
         ...(pausedCurrentMonthIds.length > 0 ? { notIn: pausedCurrentMonthIds } : {}),
       },
+      clubId,
       status: {
         in: ["warning", "overdue"],
       },
@@ -209,6 +216,7 @@ async function runMonthlyStatusRollover(year: number, month: number) {
   const [paidRows, warningRows] = await Promise.all([
     prisma.player.findMany({
       where: {
+        clubId,
         status: "paid",
         ...(excludedFromRolloverIds.length > 0
           ? {
@@ -222,6 +230,7 @@ async function runMonthlyStatusRollover(year: number, month: number) {
     }),
     prisma.player.findMany({
       where: {
+        clubId,
         status: "warning",
         ...(excludedFromRolloverIds.length > 0
           ? {
@@ -263,7 +272,7 @@ async function runMonthlyStatusRollover(year: number, month: number) {
         }),
   ]);
 
-  await markMonthlyJobCompleted(STATUS_ROLLOVER_JOB, year, month);
+  await markMonthlyJobCompleted(`${STATUS_ROLLOVER_JOB}:${clubId}`, year, month);
 
   return {
     phase: "executed" as const,
@@ -277,16 +286,22 @@ export async function runMonthlyOverduePaymentReminder(
     now = new Date(),
     options?: { ignoreSchedule?: boolean }
 ): Promise<MonthlyOverduePaymentReminderResult> {
-  const timeZone = process.env.CRON_TIMEZONE?.trim() || DEFAULT_TIME_ZONE;
+  const schedulerTimeZone = DEFAULT_TIME_ZONE;
   const nowIso = now.toISOString();
-  const { year, month, day, hour } = getDatePartsInTimeZone(now, timeZone);
+  const clubs = await prisma.club.findMany({
+    select: {
+      id: true,
+      overdueDay: true,
+      reminderHour: true,
+    },
+  });
 
-  if (!year || !month || !day || hour === undefined || Number.isNaN(hour)) {
+  if (clubs.length === 0) {
     return {
-      success: false,
+      success: true,
       skipped: true,
-      reason: "Could not resolve date parts in configured time zone.",
-      timeZone,
+      reason: "No clubs configured.",
+      timeZone: schedulerTimeZone,
       nowIso,
       previousMonthIso: "",
       targetMembers: 0,
@@ -302,12 +317,22 @@ export async function runMonthlyOverduePaymentReminder(
     };
   }
 
-  if (!options?.ignoreSchedule && (day !== RUN_DAY || hour !== RUN_HOUR)) {
+  const eligibleClubs = clubs.filter((club) => {
+    if (options?.ignoreSchedule) {
+      return true;
+    }
+    const { day, hour } = getDatePartsInTimeZone(now, schedulerTimeZone);
+    const runDay = Number.isInteger(club.overdueDay) ? club.overdueDay : DEFAULT_RUN_DAY;
+    const runHour = Number.isInteger(club.reminderHour) ? club.reminderHour : DEFAULT_RUN_HOUR;
+    return day === runDay && hour === runHour;
+  });
+
+  if (eligibleClubs.length === 0) {
     return {
       success: true,
       skipped: true,
-      reason: `Current local time is day ${day}, hour ${hour}; overdue reminders run only on day ${RUN_DAY} at ${RUN_HOUR}:00 (${timeZone}).`,
-      timeZone,
+      reason: "No clubs are scheduled for overdue reminders at this time.",
+      timeZone: schedulerTimeZone,
       nowIso,
       previousMonthIso: "",
       targetMembers: 0,
@@ -323,86 +348,15 @@ export async function runMonthlyOverduePaymentReminder(
     };
   }
 
-  const statusRollover = await runMonthlyStatusRollover(year, month);
-
-  if (statusRollover.phase === "in_progress") {
-    return {
-      success: true,
-      skipped: true,
-      reason: "Status rollover is currently in progress in another run.",
-      timeZone,
-      nowIso,
-      previousMonthIso: "",
-      targetMembers: 0,
-      alreadyNotifiedThisMonth: 0,
-      historySaved: 0,
-      statusRollover,
-      pushSummary: { total: 0, sent: 0, failed: 0, deactivated: 0 },
-    };
-  }
-
-  const previousMonthStart = new Date(Date.UTC(year, month - 2, 1, 0, 0, 0, 0));
-  const previousMonthIso = previousMonthStart.toISOString();
-  const notificationMonthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const notificationMonthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
-
-  const [eligibleMembers, alreadySentRows] = await Promise.all([
-    prisma.player.findMany({
-      where: {
-        status: "overdue",
-        paymentWaivers: {
-          none: {
-            waivedFor: {
-              gte: notificationMonthStart,
-              lt: notificationMonthEnd,
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        cards: {
-          where: { isActive: true },
-          select: { cardCode: true },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
-    }),
-    prisma.playerNotification.findMany({
-      where: {
-        type: REMINDER_TYPE,
-        sentAt: {
-          gte: notificationMonthStart,
-          lt: notificationMonthEnd,
-        },
-      },
-      distinct: ["playerId"],
-      select: { playerId: true },
-    }),
-  ]);
-
-  const alreadySentIds = new Set(alreadySentRows.map((row) => row.playerId));
-
-  const targetMembers = eligibleMembers.filter(
-      (member) => !alreadySentIds.has(member.id)
-  );
-
-  if (targetMembers.length === 0) {
-    return {
-      success: true,
-      skipped: true,
-      reason: "No overdue members to notify this month.",
-      timeZone,
-      nowIso,
-      previousMonthIso,
-      targetMembers: 0,
-      alreadyNotifiedThisMonth: alreadySentIds.size,
-      historySaved: 0,
-      statusRollover,
-      pushSummary: { total: 0, sent: 0, failed: 0, deactivated: 0 },
-    };
-  }
+  let previousMonthIso = "";
+  let targetMemberCount = 0;
+  let alreadyNotifiedCount = 0;
+  let inProgressCount = 0;
+  const rolloverAgg = {
+    forcedToPaid: 0,
+    paidToWarning: 0,
+    warningToOverdue: 0,
+  };
 
   const results: Array<{
     historySaved: number;
@@ -412,29 +366,97 @@ export async function runMonthlyOverduePaymentReminder(
     deactivated: number;
   }> = [];
 
-  for (let index = 0; index < targetMembers.length; index += MEMBER_PROCESSING_CONCURRENCY) {
-    const batch = targetMembers.slice(index, index + MEMBER_PROCESSING_CONCURRENCY);
-    const batchResults = await Promise.all(
-      batch.map(async (member) => {
-        const url = member.cards[0] ? `/member/${member.cards[0].cardCode}` : "/";
-        const payload = buildNotificationPayload({
+  for (const club of eligibleClubs) {
+    const dateParts = getDatePartsInTimeZone(now, schedulerTimeZone);
+    const year = dateParts.year;
+    const month = dateParts.month;
+    if (!year || !month) {
+      continue;
+    }
+
+    const statusRollover = await runMonthlyStatusRollover(year, month, club.id);
+    if (statusRollover.phase === "in_progress") {
+      inProgressCount += 1;
+      continue;
+    }
+    rolloverAgg.forcedToPaid += statusRollover.forcedToPaid;
+    rolloverAgg.paidToWarning += statusRollover.paidToWarning;
+    rolloverAgg.warningToOverdue += statusRollover.warningToOverdue;
+
+    const previousMonthStart = new Date(Date.UTC(year, month - 2, 1, 0, 0, 0, 0));
+    previousMonthIso = previousMonthStart.toISOString();
+    const notificationMonthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const notificationMonthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+
+    const [eligibleMembers, alreadySentRows] = await Promise.all([
+      prisma.player.findMany({
+        where: {
+          clubId: club.id,
+          status: "overdue",
+          paymentWaivers: {
+            none: {
+              waivedFor: {
+                gte: notificationMonthStart,
+                lt: notificationMonthEnd,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          cards: {
+            where: { isActive: true },
+            select: { cardCode: true },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      }),
+      prisma.playerNotification.findMany({
+        where: {
           type: REMINDER_TYPE,
-          url,
-        });
+          sentAt: {
+            gte: notificationMonthStart,
+            lt: notificationMonthEnd,
+          },
+          player: {
+            clubId: club.id,
+          },
+        },
+        distinct: ["playerId"],
+        select: { playerId: true },
+      }),
+    ]);
 
-        await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
-        const pushResult = await sendPushToMember(member.id, payload);
+    const alreadySentIds = new Set(alreadySentRows.map((row) => row.playerId));
+    const targetMembers = eligibleMembers.filter((member) => !alreadySentIds.has(member.id));
+    targetMemberCount += targetMembers.length;
+    alreadyNotifiedCount += alreadySentIds.size;
 
-        return {
-          historySaved: 1,
-          total: pushResult.total,
-          sent: pushResult.sent,
-          failed: pushResult.failed,
-          deactivated: pushResult.deactivated,
-        };
-      })
-    );
-    results.push(...batchResults);
+    for (let index = 0; index < targetMembers.length; index += MEMBER_PROCESSING_CONCURRENCY) {
+      const batch = targetMembers.slice(index, index + MEMBER_PROCESSING_CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(async (member) => {
+          const url = member.cards[0] ? `/member/${member.cards[0].cardCode}` : "/";
+          const payload = buildNotificationPayload({
+            type: REMINDER_TYPE,
+            url,
+          });
+
+          await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
+          const pushResult = await sendPushToMember(member.id, payload);
+
+          return {
+            historySaved: 1,
+            total: pushResult.total,
+            sent: pushResult.sent,
+            failed: pushResult.failed,
+            deactivated: pushResult.deactivated,
+          };
+        }),
+      );
+      results.push(...batchResults);
+    }
   }
 
   const historySaved = results.reduce((sum, item) => sum + item.historySaved, 0);
@@ -452,14 +474,27 @@ export async function runMonthlyOverduePaymentReminder(
 
   return {
     success: true,
-    skipped: false,
-    timeZone,
+    skipped: targetMemberCount === 0,
+    reason:
+      targetMemberCount === 0
+        ? inProgressCount > 0
+          ? "Status rollover is currently in progress in another run."
+          : "No overdue members to notify this cycle."
+        : undefined,
+    timeZone: schedulerTimeZone,
     nowIso,
     previousMonthIso,
-    targetMembers: targetMembers.length,
-    alreadyNotifiedThisMonth: alreadySentIds.size,
+    targetMembers: targetMemberCount,
+    alreadyNotifiedThisMonth: alreadyNotifiedCount,
     historySaved,
-    statusRollover,
+    statusRollover: {
+      phase: inProgressCount > 0 && rolloverAgg.forcedToPaid + rolloverAgg.paidToWarning + rolloverAgg.warningToOverdue === 0
+        ? "in_progress"
+        : "executed",
+      forcedToPaid: rolloverAgg.forcedToPaid,
+      paidToWarning: rolloverAgg.paidToWarning,
+      warningToOverdue: rolloverAgg.warningToOverdue,
+    },
     pushSummary,
   };
 }

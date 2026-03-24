@@ -39,6 +39,9 @@ export async function GET(request: NextRequest) {
           emblemUrl: true,
           imageUrl: true,
           imagePublicId: true,
+          reminderDay: true,
+          overdueDay: true,
+          reminderHour: true,
         },
         orderBy: {
           name: "asc",
@@ -57,6 +60,9 @@ export async function GET(request: NextRequest) {
           emblemUrl: true,
           imageUrl: true,
           imagePublicId: true,
+          reminderDay: true,
+          overdueDay: true,
+          reminderHour: true,
         },
         orderBy: {
           name: "asc",

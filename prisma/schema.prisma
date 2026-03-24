@@ -14,6 +14,10 @@ model Club {
   emblemUrl     String?  @map("emblem_url")
   imagePublicId String?  @map("image_public_id")
   imageUrl      String?  @map("image_url")
+  reminderDay   Int      @default(25) @map("reminder_day")
+  overdueDay    Int      @default(1) @map("overdue_day")
+  reminderHour  Int      @default(10) @map("reminder_hour")
+  reminderTz    String   @default("Europe/Sofia") @map("reminder_tz")
   players       Player[]
 
   @@map("clubs")

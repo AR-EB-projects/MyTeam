@@ -5,8 +5,8 @@ import { buildNotificationPayload } from "@/lib/push/templates";
 
 const REMINDER_TYPE = "monthly_membership_payment_reminder" as const;
 const DEFAULT_TIME_ZONE = "Europe/Sofia";
-const RUN_DAY = 25;
-const RUN_HOUR = 10;
+const DEFAULT_RUN_DAY = 25;
+const DEFAULT_RUN_HOUR = 10;
 const MEMBER_PROCESSING_CONCURRENCY = 2;
 
 function getDatePartsInTimeZone(date: Date, timeZone: string) {
@@ -51,16 +51,22 @@ export async function runMonthlyMembershipPaymentReminder(
     now = new Date(),
     options?: { ignoreSchedule?: boolean }
 ): Promise<MonthlyMembershipReminderResult> {
-  const timeZone = process.env.CRON_TIMEZONE?.trim() || DEFAULT_TIME_ZONE;
+  const schedulerTimeZone = DEFAULT_TIME_ZONE;
   const nowIso = now.toISOString();
-  const { year, month, day, hour } = getDatePartsInTimeZone(now, timeZone);
+  const clubs = await prisma.club.findMany({
+    select: {
+      id: true,
+      reminderDay: true,
+      reminderHour: true,
+    },
+  });
 
-  if (!year || !month || !day || hour === undefined || Number.isNaN(hour)) {
+  if (clubs.length === 0) {
     return {
-      success: false,
+      success: true,
       skipped: true,
-      reason: "Could not resolve date parts in configured time zone.",
-      timeZone,
+      reason: "No clubs configured.",
+      timeZone: schedulerTimeZone,
       nowIso,
       targetMembers: 0,
       alreadyNotifiedThisMonth: 0,
@@ -69,12 +75,22 @@ export async function runMonthlyMembershipPaymentReminder(
     };
   }
 
-  if (!options?.ignoreSchedule && (day !== RUN_DAY || hour !== RUN_HOUR)) {
+  const eligibleClubs = clubs.filter((club) => {
+    if (options?.ignoreSchedule) {
+      return true;
+    }
+    const { day, hour } = getDatePartsInTimeZone(now, schedulerTimeZone);
+    const runDay = Number.isInteger(club.reminderDay) ? club.reminderDay : DEFAULT_RUN_DAY;
+    const runHour = Number.isInteger(club.reminderHour) ? club.reminderHour : DEFAULT_RUN_HOUR;
+    return day === runDay && hour === runHour;
+  });
+
+  if (eligibleClubs.length === 0) {
     return {
       success: true,
       skipped: true,
-      reason: `Current local time is day ${day}, hour ${hour}; monthly reminders run only on day ${RUN_DAY} at ${RUN_HOUR}:00 (${timeZone}).`,
-      timeZone,
+      reason: "No clubs are scheduled for membership reminders at this time.",
+      timeZone: schedulerTimeZone,
       nowIso,
       targetMembers: 0,
       alreadyNotifiedThisMonth: 0,
@@ -83,64 +99,8 @@ export async function runMonthlyMembershipPaymentReminder(
     };
   }
 
-  const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
-
-  const [members, alreadySentRows] = await Promise.all([
-    prisma.player.findMany({
-      where: {
-        status: {
-          in: ["warning", "overdue"],
-        },
-        paymentWaivers: {
-          none: {
-            waivedFor: {
-              gte: monthStart,
-              lt: monthEnd,
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        cards: {
-          where: { isActive: true },
-          select: { cardCode: true },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
-    }),
-    prisma.playerNotification.findMany({
-      where: {
-        type: REMINDER_TYPE,
-        sentAt: {
-          gte: monthStart,
-          lt: monthEnd,
-        },
-      },
-      distinct: ["playerId"],
-      select: { playerId: true },
-    }),
-  ]);
-
-  const alreadySentMemberIds = new Set(alreadySentRows.map((row) => row.playerId));
-  const targetMembers = members.filter((member) => !alreadySentMemberIds.has(member.id));
-
-  if (targetMembers.length === 0) {
-    return {
-      success: true,
-      skipped: true,
-      reason: "All members already received this monthly reminder.",
-      timeZone,
-      nowIso,
-      targetMembers: 0,
-      alreadyNotifiedThisMonth: alreadySentMemberIds.size,
-      historySaved: 0,
-      pushSummary: { total: 0, sent: 0, failed: 0, deactivated: 0 },
-    };
-  }
-
+  let targetMemberCount = 0;
+  let alreadyNotifiedCount = 0;
   const results: Array<{
     historySaved: number;
     total: number;
@@ -149,29 +109,88 @@ export async function runMonthlyMembershipPaymentReminder(
     deactivated: number;
   }> = [];
 
-  for (let index = 0; index < targetMembers.length; index += MEMBER_PROCESSING_CONCURRENCY) {
-    const batch = targetMembers.slice(index, index + MEMBER_PROCESSING_CONCURRENCY);
-    const batchResults = await Promise.all(
-      batch.map(async (member) => {
-        const url = member.cards[0] ? `/member/${member.cards[0].cardCode}` : "/";
-        const payload = buildNotificationPayload({
+  for (const club of eligibleClubs) {
+    const dateParts = getDatePartsInTimeZone(now, schedulerTimeZone);
+    const year = dateParts.year;
+    const month = dateParts.month;
+    if (!year || !month) {
+      continue;
+    }
+
+    const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const monthEnd = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+
+    const [members, alreadySentRows] = await Promise.all([
+      prisma.player.findMany({
+        where: {
+          clubId: club.id,
+          status: {
+            in: ["warning", "overdue"],
+          },
+          paymentWaivers: {
+            none: {
+              waivedFor: {
+                gte: monthStart,
+                lt: monthEnd,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          cards: {
+            where: { isActive: true },
+            select: { cardCode: true },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      }),
+      prisma.playerNotification.findMany({
+        where: {
           type: REMINDER_TYPE,
-          url,
-        });
+          sentAt: {
+            gte: monthStart,
+            lt: monthEnd,
+          },
+          player: {
+            clubId: club.id,
+          },
+        },
+        distinct: ["playerId"],
+        select: { playerId: true },
+      }),
+    ]);
 
-        await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
-        const pushResult = await sendPushToMember(member.id, payload);
+    const alreadySentMemberIds = new Set(alreadySentRows.map((row) => row.playerId));
+    const targetMembers = members.filter((member) => !alreadySentMemberIds.has(member.id));
+    targetMemberCount += targetMembers.length;
+    alreadyNotifiedCount += alreadySentMemberIds.size;
 
-        return {
-          historySaved: 1,
-          total: pushResult.total,
-          sent: pushResult.sent,
-          failed: pushResult.failed,
-          deactivated: pushResult.deactivated,
-        };
-      })
-    );
-    results.push(...batchResults);
+    for (let index = 0; index < targetMembers.length; index += MEMBER_PROCESSING_CONCURRENCY) {
+      const batch = targetMembers.slice(index, index + MEMBER_PROCESSING_CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(async (member) => {
+          const url = member.cards[0] ? `/member/${member.cards[0].cardCode}` : "/";
+          const payload = buildNotificationPayload({
+            type: REMINDER_TYPE,
+            url,
+          });
+
+          await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
+          const pushResult = await sendPushToMember(member.id, payload);
+
+          return {
+            historySaved: 1,
+            total: pushResult.total,
+            sent: pushResult.sent,
+            failed: pushResult.failed,
+            deactivated: pushResult.deactivated,
+          };
+        }),
+      );
+      results.push(...batchResults);
+    }
   }
 
   const historySaved = results.reduce((sum, item) => sum + item.historySaved, 0);
@@ -189,11 +208,12 @@ export async function runMonthlyMembershipPaymentReminder(
 
   return {
     success: true,
-    skipped: false,
-    timeZone,
+    skipped: targetMemberCount === 0,
+    reason: targetMemberCount === 0 ? "All eligible clubs are already notified or have no matching members." : undefined,
+    timeZone: schedulerTimeZone,
     nowIso,
-    targetMembers: targetMembers.length,
-    alreadyNotifiedThisMonth: alreadySentMemberIds.size,
+    targetMembers: targetMemberCount,
+    alreadyNotifiedThisMonth: alreadyNotifiedCount,
     historySaved,
     pushSummary,
   };
