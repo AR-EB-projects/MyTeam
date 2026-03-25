@@ -2522,7 +2522,7 @@ function AdminMembersPageContent() {
                 >
                   {groupOptions.map((group) => (
                     <option key={`training-scope-${group}`} value={String(group)}>
-                      Група {group}
+                      Набор {group}
                     </option>
                   ))}
                 </select>
