@@ -2040,6 +2040,28 @@ function AdminMembersPageContent() {
     }
   };
 
+  useEffect(() => {
+    if (!trainingAttendanceOpen || !clubId || !trainingAttendanceDate) {
+      return;
+    }
+
+    const streamUrl =
+      `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance/stream` +
+      `?date=${encodeURIComponent(trainingAttendanceDate)}`;
+    const source = new EventSource(streamUrl, { withCredentials: true });
+
+    const handleUpdate = () => {
+      void fetchTrainingAttendance(trainingAttendanceDate);
+    };
+
+    source.addEventListener("attendance-update", handleUpdate);
+
+    return () => {
+      source.removeEventListener("attendance-update", handleUpdate);
+      source.close();
+    };
+  }, [trainingAttendanceOpen, clubId, trainingAttendanceDate]);
+
   return (
     <main className="amp-page">
       <div className="amp-dot-grid" aria-hidden="true" />
@@ -2813,11 +2835,11 @@ function AdminMembersPageContent() {
                 <span>Отказали: {trainingAttendanceStats.optedOut}</span>
               </div>
               <div className="amp-edit-field">
-                <span className="amp-lbl">Бележка за деня</span>
+                <span className="amp-lbl">Описание за деня</span>
                 {trainingNote.trim() ? (
                   <p className="amp-val">{trainingNote}</p>
                 ) : (
-                  <p className="amp-val" style={{ color: "rgba(255,255,255,0.55)" }}>Няма бележка.</p>
+                  <p className="amp-val" style={{ color: "rgba(255,255,255,0.55)" }}>Няма описание.</p>
                 )}
               </div>
               <div className="amp-modal-actions amp-modal-actions--end">
@@ -2829,7 +2851,7 @@ function AdminMembersPageContent() {
                   }}
                   disabled={trainingAttendanceLoading || trainingNoteSaving || !trainingAttendanceDate}
                 >
-                  Добави бележка
+                  Добави описание
                 </button>
               </div>
               <div className="amp-training-table-wrap">
