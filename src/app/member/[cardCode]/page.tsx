@@ -403,6 +403,9 @@ export default function MemberCardPage({
   };
 
   const handleNotificationsPanelOpen = async () => {
+    if (isAdmin || isCoach) {
+      return;
+    }
     setNotificationsPanelOpen(true);
     await fetchNotifications();
 
@@ -704,6 +707,11 @@ export default function MemberCardPage({
 
   // Fetch unread notification count on page load
   useEffect(() => {
+    if (isAdmin || isCoach) {
+      setUnreadCount(0);
+      return;
+    }
+
     const fetchUnreadCount = async () => {
       try {
         const response = await fetch(`/api/members/${normalizedCardCode}/notifications`, { cache: "no-store" });
@@ -716,7 +724,7 @@ export default function MemberCardPage({
       }
     };
     void fetchUnreadCount();
-  }, [normalizedCardCode]);
+  }, [normalizedCardCode, isAdmin, isCoach]);
 
   useEffect(() => {
     if (!member) {
@@ -748,6 +756,10 @@ export default function MemberCardPage({
   }, [editImageFile]);
 
   useEffect(() => {
+    if (isAdmin || isCoach) {
+      return;
+    }
+
     const pushOpenTs = searchParams.get("pushOpenTs");
     const shouldOpenNotificationsFromPush =
       searchParams.get("fromPush") === "1" &&
@@ -795,7 +807,7 @@ export default function MemberCardPage({
     const cleanedQuery = cleanedParams.toString();
     const cleanPath = `/member/${encodeURIComponent(normalizedCardCode)}`;
     router.replace(cleanedQuery ? `${cleanPath}?${cleanedQuery}` : cleanPath, { scroll: false });
-  }, [normalizedCardCode, lastHandledPushOpenTs, router, searchParams]);
+  }, [normalizedCardCode, lastHandledPushOpenTs, router, searchParams, isAdmin, isCoach]);
 
   useEffect(() => {
     const checkAdminSession = async () => {
@@ -1272,6 +1284,7 @@ export default function MemberCardPage({
     : "-";
   const canManagePayments = isAdmin || isCoach;
   const canPublicEdit = !isAdmin && !isCoach;
+  const canUseNotifications = !isAdmin && !isCoach;
 
   if (loading) {
     return (
@@ -1330,7 +1343,7 @@ export default function MemberCardPage({
           )}
 
           {/* Notification bell icon */}
-          <button
+          {canUseNotifications && <button
             onClick={handleNotificationsPanelOpen}
             style={{
               position: "relative",
@@ -1375,7 +1388,7 @@ export default function MemberCardPage({
                 {unreadCount}
               </span>
             )}
-          </button>
+          </button>}
         </div>
 
         {/* Member card */}
@@ -1571,14 +1584,14 @@ export default function MemberCardPage({
             </button>
           )}
 
-          {isPushEnabled && (
+          {canUseNotifications && isPushEnabled && (
               <div className="push-enabled-banner">
                 <span className="push-enabled-check" aria-hidden="true">✓</span>
                 <span>Известията са активирани</span>
               </div>
           )}
 
-          {(!isIPhoneDevice || isStandaloneMode) && (
+          {canUseNotifications && (!isIPhoneDevice || isStandaloneMode) && (
             isPushEnabled ? (
               <button className="bell-btn bell-btn--disable" onClick={handleDisablePushNotifications} disabled={isEnablingPush}>
                 {isEnablingPush ? <SpinnerIcon size={16} /> : <BellOffIcon size={16} />}
@@ -1592,7 +1605,7 @@ export default function MemberCardPage({
             )
           )}
 
-          {isIPhoneDevice && !isStandaloneMode && (
+          {canUseNotifications && isIPhoneDevice && !isStandaloneMode && (
             <>
           <button className="add-btn" onClick={() => setInstructionsOpen((v) => !v)}>
             <ShareIcon size={16} />
@@ -1629,16 +1642,16 @@ export default function MemberCardPage({
           )}
         </div>
 
-        {!isPushEnabled && (
+        {canUseNotifications && !isPushEnabled && (
           <p className="push-hint">Получавайте push известия дори когато браузърът е затворен.</p>
         )}
 
-        {pushStatusMessage && (
+        {canUseNotifications && pushStatusMessage && (
           <p className="push-hint" style={{ color: pushStatusTone === "danger" ? "#ff8f8f" : "#32cd32", marginTop: "6px" }}>
             {pushStatusMessage}
           </p>
         )}
-        {pushErrorMessage && (
+        {canUseNotifications && pushErrorMessage && (
           <p className="push-hint" style={{ color: "#ff6b6b", marginTop: "6px" }}>
             {pushErrorMessage}
           </p>
@@ -2205,7 +2218,7 @@ export default function MemberCardPage({
           </div>
         )}
 
-        {notificationsPanelOpen && (
+        {canUseNotifications && notificationsPanelOpen && (
           <div className="pm-overlay" onClick={() => setNotificationsPanelOpen(false)}>
             <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
               <button className="pm-close" onClick={() => setNotificationsPanelOpen(false)}>
