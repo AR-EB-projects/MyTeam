@@ -659,6 +659,10 @@
   font-weight: 600;
 }
 
+.member-training-modal .training-edit-actions {
+  margin-top: 12px;
+}
+
 .member-notifications-scroll {
   max-height: 400px;
   overflow-y: auto;

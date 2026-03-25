@@ -1813,7 +1813,7 @@ export default function MemberCardPage({
                 )}
                 {trainingError && <p className="training-error">{trainingError}</p>}
                 {trainingSelectionOpen && (
-                <div className="pm-actions">
+                <div className="pm-actions training-edit-actions">
                   <button
                     className="pm-btn pm-btn--cancel training-back-btn"
                     type="button"
