@@ -1732,7 +1732,7 @@ export default function MemberCardPage({
                         onClick={() => setTrainingSelectionOpen(true)}
                         disabled={trainingSaveLoading}
                       >
-                        {trainingSelectionOpen ? "Скрий календара" : "Избери дни за отсъствие"}
+                        Редактирай присъствие
                       </button>
                     </div>
                     )}
