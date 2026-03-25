@@ -2464,22 +2464,10 @@ function AdminMembersPageContent() {
                 <div className="amp-modal-loading-overlay">
                   <div className="amp-loading" style={{ minHeight: 120 }}>
                     <div className="amp-spinner" />
-                    <span>Зареждане...</span>
                   </div>
                 </div>
               )}
-              <div className="amp-training-toolbar">
-                <label className="amp-edit-field">
-                  <span className="amp-lbl">Дата</span>
-                </label>
-                <div className="amp-training-stats">
-                  <span>Общо: {trainingAttendanceStats.total}</span>
-                  <span>Присъстват: {trainingAttendanceStats.attending}</span>
-                  <span>Отказали: {trainingAttendanceStats.optedOut}</span>
-                </div>
-              </div>
               <label className="amp-edit-field">
-                <span className="amp-lbl">Описание за тренировката (по избор)</span>
                 <div className="amp-training-calendar amp-training-calendar--attendance">
                   {trainingAttendanceCalendarMonths.map((month) => (
                     <div key={month.key} className="amp-training-month">

@@ -1480,7 +1480,7 @@ export default function MemberCardPage({
 
         {false && <div className="training-section">
           <div className="training-head">
-            <h3 className="training-title">Тренировъчни дни (следващи {trainingWindowDays} дни)</h3>
+            <h3 className="training-title">Легенда: Зелените дати са планирани тренировки, а червените са отбелязани отсъствия.</h3>
           </div>
           {trainingLoading ? (
             <p className="training-empty">Зареждане...</p>
@@ -1718,9 +1718,6 @@ export default function MemberCardPage({
               <div className="pm-divider" />
 
               <div className="training-section" style={{ margin: 0 }}>
-                <div className="training-head">
-                  <h3 className="training-title">Тренировъчни дни (следващи {trainingWindowDays} дни)</h3>
-                </div>
                 {trainingLoading ? (
                   <p className="training-empty">Зареждане...</p>
                 ) : trainingDays.length === 0 ? (
@@ -1802,25 +1799,27 @@ export default function MemberCardPage({
                       </section>
                     ))}
                   </div>
-                    <aside className="training-day-details">
-                      <h4 className="training-notes-title">Описание</h4>
-                      {trainingDetailsItem ? (
-                        <>
-                          <p className="training-note-date">
-                            {new Date(`${trainingDetailsItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })}
-                          </p>
-                          <p className="training-note-text">
-                            {trainingDetailsItem.note.trim() || "Няма описание за този ден."}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="training-note-text">Избери ден от календара за да видиш описание.</p>
-                      )}
-                    </aside>
+                    {!trainingSelectionOpen && (
+                      <aside className="training-day-details">
+                        <h4 className="training-notes-title">Описание</h4>
+                        {trainingDetailsItem ? (
+                          <>
+                            <p className="training-note-date">
+                              {new Date(`${trainingDetailsItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })}
+                            </p>
+                            <p className="training-note-text">
+                              {trainingDetailsItem.note.trim() || "Няма описание за този ден."}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="training-note-text">Избери ден от календара за да видиш описание.</p>
+                        )}
+                      </aside>
+                    )}
                   </div>
                   </>
                 )}

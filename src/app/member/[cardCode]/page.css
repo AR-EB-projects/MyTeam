@@ -654,7 +654,7 @@
 }
 
 .member-training-modal .training-edit-btn::after {
-  content: "Редактирай график";
+  content: "Редактирай присъствие";
   font-size: 14px;
   font-weight: 600;
 }
