@@ -649,6 +649,22 @@
   gap: 16px;
 }
 
+.amp-modal-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgba(13, 13, 13, 0.72);
+  border-radius: 8px;
+  backdrop-filter: blur(1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.amp-modal-body--loading-only > :not(.amp-modal-loading-overlay) {
+  display: none;
+}
+
 /* Info card */
 .amp-info-card {
   display: grid;

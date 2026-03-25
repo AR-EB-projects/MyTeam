@@ -1122,6 +1122,7 @@ function AdminMembersPageContent() {
   const [trainingNoteTargetDates, setTrainingNoteTargetDates] = useState<string[]>([]);
   const [trainingBulkNoteOpen, setTrainingBulkNoteOpen] = useState(false);
   const [trainingDayDetailsOpen, setTrainingDayDetailsOpen] = useState(false);
+  const [trainingDayDetailsOpening, setTrainingDayDetailsOpening] = useState(false);
   const [trainingDaysEditorOpen, setTrainingDaysEditorOpen] = useState(false);
   const [trainingDaysEditorLoading, setTrainingDaysEditorLoading] = useState(false);
   const [trainingDaysEditorSaving, setTrainingDaysEditorSaving] = useState(false);
@@ -1977,9 +1978,14 @@ function AdminMembersPageContent() {
   };
 
   const openTrainingDayDetails = async (date: string) => {
+    setTrainingDayDetailsOpening(true);
     setTrainingAttendanceDate(date);
-    await fetchTrainingAttendance(date);
-    setTrainingDayDetailsOpen(true);
+    try {
+      await fetchTrainingAttendance(date);
+      setTrainingDayDetailsOpen(true);
+    } finally {
+      setTrainingDayDetailsOpening(false);
+    }
   };
 
   const saveTrainingNote = async () => {
@@ -2262,7 +2268,7 @@ function AdminMembersPageContent() {
               </button>
             </h2>
 
-            <div className="amp-modal-body">
+            <div className={`amp-modal-body${trainingDayDetailsOpening ? " amp-modal-body--loading-only" : ""}`}>
               <div className="amp-edit-grid">
                 <label className="amp-edit-field">
                   <span className="amp-lbl">Име и фамилия</span>
@@ -2454,6 +2460,14 @@ function AdminMembersPageContent() {
               </button>
             </h2>
             <div className="amp-modal-body">
+              {trainingDayDetailsOpening && (
+                <div className="amp-modal-loading-overlay">
+                  <div className="amp-loading" style={{ minHeight: 120 }}>
+                    <div className="amp-spinner" />
+                    <span>Зареждане...</span>
+                  </div>
+                </div>
+              )}
               <div className="amp-training-toolbar">
                 <label className="amp-edit-field">
                   <span className="amp-lbl">Дата</span>
@@ -2509,7 +2523,7 @@ function AdminMembersPageContent() {
                               type="button"
                               className={`amp-training-date-btn${isActive ? " amp-training-date-btn--active" : ""}`}
                               onClick={() => void openTrainingDayDetails(date)}
-                              disabled={trainingAttendanceLoading || trainingNoteSaving}
+                              disabled={trainingAttendanceLoading || trainingNoteSaving || trainingDayDetailsOpening}
                             >
                               <span className="amp-training-day-number">{dayNumber}</span>
                               <span className="amp-training-day-meta">
@@ -2636,13 +2650,6 @@ function AdminMembersPageContent() {
                 />
               </label>
               <div className="amp-modal-actions amp-modal-actions--end">
-                <button
-                  className="amp-btn amp-btn--ghost"
-                  onClick={() => void fetchTrainingAttendance(trainingAttendanceDate)}
-                  disabled={trainingAttendanceLoading || trainingNoteSaving}
-                >
-                  Обнови
-                </button>
                 <button
                   className="amp-btn amp-btn--ghost"
                   onClick={() => void openTrainingDaysEditor()}
