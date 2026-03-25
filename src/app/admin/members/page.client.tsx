@@ -192,6 +192,14 @@ function getWeekdayMondayFirstIndex(isoDate: string): number {
   return (day + 6) % 7;
 }
 
+function parseSelectedTeamGroup(selectedGroup: string): number | null {
+  if (selectedGroup === "all") {
+    return null;
+  }
+  const parsed = Number.parseInt(selectedGroup, 10);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 function buildCalendarMonths(dates: string[]) {
   const monthKeys = Array.from(
     new Set(
@@ -1057,6 +1065,7 @@ function AdminMembersPageContent() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
+  const [trainingGroupScope, setTrainingGroupScope] = useState("all");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<Member | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
@@ -1649,7 +1658,8 @@ function AdminMembersPageContent() {
   /* ── Derived ── */
   const groupOptions = [...new Set(
     members.map((m) => m.teamGroup).filter((g): g is number => g !== null)
-  )].sort((a, b) => b - a);
+  )].sort((a, b) => a - b);
+  const selectedTeamGroup = parseSelectedTeamGroup(trainingGroupScope);
   const inactiveMembers = members.filter((m) => !m.isActive);
 
   const filtered = members.filter((m) => {
@@ -1739,7 +1749,11 @@ function AdminMembersPageContent() {
     setSchedulerSettingsLoading(true);
     setSchedulerSettingsOpen(true);
     try {
-      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/scheduler`, {
+      const search = new URLSearchParams();
+      if (selectedTeamGroup !== null) {
+        search.set("teamGroup", String(selectedTeamGroup));
+      }
+      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/scheduler${search.size ? `?${search.toString()}` : ""}`, {
         cache: "no-store",
       });
       if (!response.ok) {
@@ -1776,7 +1790,11 @@ function AdminMembersPageContent() {
     setTrainingDaysEditorError("");
     setTrainingDaysEditorLoading(true);
     try {
-      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/scheduler`, {
+      const search = new URLSearchParams();
+      if (selectedTeamGroup !== null) {
+        search.set("teamGroup", String(selectedTeamGroup));
+      }
+      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/scheduler${search.size ? `?${search.toString()}` : ""}`, {
         cache: "no-store",
       });
       if (!response.ok) {
@@ -1816,6 +1834,7 @@ function AdminMembersPageContent() {
           overdueDay: Number.parseInt(schedulerForm.overdueDay, 10),
           reminderHour: Number.parseInt(schedulerForm.reminderHour, 10),
           trainingDates: schedulerForm.trainingDates,
+          teamGroup: selectedTeamGroup,
         }),
       });
       if (!response.ok) {
@@ -1844,6 +1863,7 @@ function AdminMembersPageContent() {
           overdueDay: Number.parseInt(schedulerForm.overdueDay, 10),
           reminderHour: Number.parseInt(schedulerForm.reminderHour, 10),
           trainingDates: schedulerForm.trainingDates,
+          teamGroup: selectedTeamGroup,
         }),
       });
       if (!response.ok) {
@@ -1881,12 +1901,20 @@ function AdminMembersPageContent() {
     });
   };
 
-  const fetchTrainingAttendance = async (date?: string) => {
+  const fetchTrainingAttendance = async (date?: string, groupScopeOverride?: string) => {
     if (!clubId) return;
+    const teamGroupFilter = parseSelectedTeamGroup(groupScopeOverride ?? trainingGroupScope);
     setTrainingAttendanceLoading(true);
     setTrainingAttendanceError("");
     try {
-      const query = date ? `?date=${encodeURIComponent(date)}` : "";
+      const search = new URLSearchParams();
+      if (date) {
+        search.set("date", date);
+      }
+      if (teamGroupFilter !== null) {
+        search.set("teamGroup", String(teamGroupFilter));
+      }
+      const query = search.size ? `?${search.toString()}` : "";
       const response = await fetch(
         `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance${query}`,
         { cache: "no-store" },
@@ -1978,7 +2006,21 @@ function AdminMembersPageContent() {
     setTrainingDaysEditorOpen(false);
     setTrainingDaysEditorError("");
     setTrainingNoteTargetDates([]);
-    await fetchTrainingAttendance();
+    await fetchTrainingAttendance(undefined, trainingGroupScope);
+  };
+
+  const handleTrainingGroupScopeChange = async (nextScope: string) => {
+    setTrainingGroupScope(nextScope);
+    if (!trainingAttendanceOpen) {
+      return;
+    }
+    setTrainingDayDetailsOpen(false);
+    setTrainingBulkNoteOpen(false);
+    setTrainingDaysEditorOpen(false);
+    setTrainingDaysEditorError("");
+    setTrainingAttendanceError("");
+    setTrainingNoteTargetDates([]);
+    await fetchTrainingAttendance(undefined, nextScope);
   };
 
   const openTrainingDayDetails = async (date: string) => {
@@ -2013,6 +2055,7 @@ function AdminMembersPageContent() {
         body: JSON.stringify({
           trainingDate: targetDates[0],
           note: trainingNote,
+          teamGroup: selectedTeamGroup,
         }),
       });
       if (!response.ok) {
@@ -2030,6 +2073,7 @@ function AdminMembersPageContent() {
           body: JSON.stringify({
             trainingDate: targetDate,
             note: trainingNote,
+            teamGroup: selectedTeamGroup,
           }),
         });
         if (!bulkResponse.ok) {
@@ -2041,7 +2085,7 @@ function AdminMembersPageContent() {
           );
         }
       }
-      await fetchTrainingAttendance(trainingAttendanceDate);
+      await fetchTrainingAttendance();
       setTrainingBulkNoteOpen(false);
     } catch (error) {
       setTrainingAttendanceError(error instanceof Error ? error.message : "Възникна грешка.");
@@ -2055,9 +2099,13 @@ function AdminMembersPageContent() {
       return;
     }
 
+    const search = new URLSearchParams({ date: trainingAttendanceDate });
+    if (selectedTeamGroup !== null) {
+      search.set("teamGroup", String(selectedTeamGroup));
+    }
     const streamUrl =
       `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance/stream` +
-      `?date=${encodeURIComponent(trainingAttendanceDate)}`;
+      `?${search.toString()}`;
     const source = new EventSource(streamUrl, { withCredentials: true });
 
     const handleUpdate = () => {
@@ -2070,7 +2118,7 @@ function AdminMembersPageContent() {
       source.removeEventListener("attendance-update", handleUpdate);
       source.close();
     };
-  }, [trainingAttendanceOpen, clubId, trainingAttendanceDate]);
+  }, [trainingAttendanceOpen, clubId, trainingAttendanceDate, selectedTeamGroup]);
 
   return (
     <main className="amp-page">
@@ -2464,6 +2512,21 @@ function AdminMembersPageContent() {
               </button>
             </h2>
             <div className="amp-modal-body">
+              <label className="amp-edit-field" style={{ marginBottom: "12px" }}>
+                <span className="amp-lbl">Набор</span>
+                <select
+                  className="amp-edit-input"
+                  value={trainingGroupScope}
+                  onChange={(e) => void handleTrainingGroupScopeChange(e.target.value)}
+                  disabled={trainingAttendanceLoading || trainingNoteSaving || trainingDaysEditorSaving}
+                >
+                  {groupOptions.map((group) => (
+                    <option key={`training-scope-${group}`} value={String(group)}>
+                      Група {group}
+                    </option>
+                  ))}
+                </select>
+              </label>
               {trainingDayDetailsOpening && (
                 <div className="amp-modal-loading-overlay">
                   <div className="amp-loading" style={{ minHeight: 120 }}>

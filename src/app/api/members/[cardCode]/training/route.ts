@@ -28,6 +28,7 @@ async function getMemberTrainingContext(cardCode: string) {
         select: {
           id: true,
           clubId: true,
+          teamGroup: true,
           club: {
             select: {
               id: true,
@@ -45,15 +46,31 @@ async function getMemberTrainingContext(cardCode: string) {
     return null;
   }
 
-  const trainingWeekdays = (card.player.club.trainingWeekdays ?? [])
+  const groupSchedule = card.player.teamGroup === null
+    ? null
+    : await prisma.clubTrainingGroupSchedule.findUnique({
+        where: {
+          clubId_teamGroup: {
+            clubId: card.player.clubId,
+            teamGroup: card.player.teamGroup,
+          },
+        },
+        select: {
+          trainingDates: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+        },
+      });
+
+  const trainingWeekdays = (groupSchedule?.trainingWeekdays ?? card.player.club.trainingWeekdays ?? [])
     .filter((value) => Number.isInteger(value) && value >= 1 && value <= 7)
     .sort((a, b) => a - b);
   const trainingWindowDays = TRAINING_SELECTION_WINDOW_DAYS;
 
   const upcomingDates = getConfiguredTrainingDates({
-    trainingDates: card.player.club.trainingDates ?? [],
+    trainingDates: groupSchedule?.trainingDates ?? card.player.club.trainingDates ?? [],
     weekdays: trainingWeekdays,
-    windowDays: card.player.club.trainingWindowDays ?? trainingWindowDays,
+    windowDays: groupSchedule?.trainingWindowDays ?? card.player.club.trainingWindowDays ?? trainingWindowDays,
     timeZone: FIXED_TIME_ZONE,
     maxDays: TRAINING_SELECTION_WINDOW_DAYS,
   });

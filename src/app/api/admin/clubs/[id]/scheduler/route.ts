@@ -14,6 +14,17 @@ export const dynamic = "force-dynamic";
 const FIXED_TIME_ZONE = "Europe/Sofia";
 const TRAINING_SELECTION_WINDOW_DAYS = 30;
 
+function parseTeamGroupValue(raw: unknown): number | null {
+  if (raw === null || raw === undefined || String(raw).trim() === "") {
+    return null;
+  }
+  const parsed = Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isInteger(parsed)) {
+    throw new Error("Invalid teamGroup");
+  }
+  return parsed;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -24,6 +35,14 @@ export async function GET(
   }
 
   const { id } = await params;
+  const teamGroupRaw = request.nextUrl.searchParams.get("teamGroup");
+  let teamGroup: number | null = null;
+  try {
+    teamGroup = parseTeamGroupValue(teamGroupRaw);
+  } catch {
+    return NextResponse.json({ error: "Invalid teamGroup" }, { status: 400 });
+  }
+
   const club = await prisma.club.findUnique({
     where: { id },
     select: {
@@ -42,16 +61,33 @@ export async function GET(
     return NextResponse.json({ error: "\u041e\u0442\u0431\u043e\u0440\u044a\u0442 \u043d\u0435 \u0435 \u043d\u0430\u043c\u0435\u0440\u0435\u043d." }, { status: 404 });
   }
 
+  const groupSchedule = teamGroup === null
+    ? null
+    : await prisma.clubTrainingGroupSchedule.findUnique({
+        where: {
+          clubId_teamGroup: {
+            clubId: id,
+            teamGroup,
+          },
+        },
+        select: {
+          trainingDates: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+        },
+      });
+
   const trainingDates = getConfiguredTrainingDates({
-    trainingDates: club.trainingDates,
-    weekdays: club.trainingWeekdays,
-    windowDays: club.trainingWindowDays,
+    trainingDates: groupSchedule?.trainingDates ?? club.trainingDates,
+    weekdays: groupSchedule?.trainingWeekdays ?? club.trainingWeekdays,
+    windowDays: groupSchedule?.trainingWindowDays ?? club.trainingWindowDays,
     timeZone: FIXED_TIME_ZONE,
     maxDays: TRAINING_SELECTION_WINDOW_DAYS,
   });
 
   return NextResponse.json({
     ...club,
+    teamGroup,
     trainingDates,
     trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
   });
@@ -75,6 +111,14 @@ export async function PUT(
   const rawTrainingDates = (body as { trainingDates?: unknown }).trainingDates;
   const rawWeekdays = (body as { trainingWeekdays?: unknown }).trainingWeekdays;
   const rawWindowDays = Number.parseInt(String((body as { trainingWindowDays?: unknown }).trainingWindowDays ?? ""), 10);
+  const rawTeamGroup = (body as { teamGroup?: unknown }).teamGroup;
+
+  let teamGroup: number | null = null;
+  try {
+    teamGroup = parseTeamGroupValue(rawTeamGroup);
+  } catch {
+    return NextResponse.json({ error: "Invalid teamGroup" }, { status: 400 });
+  }
 
   if (!Number.isInteger(reminderDay) || reminderDay < 1 || reminderDay > 28) {
     return NextResponse.json({ error: "\u0414\u0435\u043d\u044f\u0442 \u0437\u0430 \u043c\u0435\u0441\u0435\u0447\u043d\u043e \u043d\u0430\u043f\u043e\u043c\u043d\u044f\u043d\u0435 \u0442\u0440\u044f\u0431\u0432\u0430 \u0434\u0430 \u0435 \u043c\u0435\u0436\u0434\u0443 1 \u0438 28." }, { status: 400 });
@@ -138,9 +182,13 @@ export async function PUT(
       overdueDay,
       reminderHour,
       reminderTz: FIXED_TIME_ZONE,
-      trainingDates,
-      trainingWeekdays,
-      trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
+      ...(teamGroup === null
+        ? {
+            trainingDates,
+            trainingWeekdays,
+            trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -154,8 +202,32 @@ export async function PUT(
     },
   });
 
+  if (teamGroup !== null) {
+    await prisma.clubTrainingGroupSchedule.upsert({
+      where: {
+        clubId_teamGroup: {
+          clubId: id,
+          teamGroup,
+        },
+      },
+      update: {
+        trainingDates,
+        trainingWeekdays,
+        trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
+      },
+      create: {
+        clubId: id,
+        teamGroup,
+        trainingDates,
+        trainingWeekdays,
+        trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
+      },
+    });
+  }
+
   return NextResponse.json({
     ...updated,
+    teamGroup,
     trainingDates,
     trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
   });

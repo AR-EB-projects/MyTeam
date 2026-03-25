@@ -8,19 +8,35 @@ export const dynamic = "force-dynamic";
 
 const CHECK_INTERVAL_MS = 3000;
 
+function parseOptionalTeamGroup(raw: unknown): number | null {
+  if (raw === null || raw === undefined || String(raw).trim() === "") {
+    return null;
+  }
+  const parsed = Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isInteger(parsed)) {
+    throw new Error("Invalid teamGroup");
+  }
+  return parsed;
+}
+
 async function verifySession(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
   return token ? await verifyAdminToken(token) : null;
 }
 
-async function getAttendanceSignature(clubId: string, trainingDate: Date) {
+async function getAttendanceSignature(clubId: string, trainingDate: Date, teamGroup: number | null) {
+  const playerScope = {
+    clubId,
+    isActive: true,
+    ...(teamGroup !== null ? { teamGroup } : {}),
+  };
+
   const [optOutCount, optOutAggregate, note] = await Promise.all([
     prisma.trainingOptOut.count({
       where: {
         trainingDate,
         player: {
-          clubId,
-          isActive: true,
+          ...playerScope,
         },
       },
     }),
@@ -28,8 +44,7 @@ async function getAttendanceSignature(clubId: string, trainingDate: Date) {
       where: {
         trainingDate,
         player: {
-          clubId,
-          isActive: true,
+          ...playerScope,
         },
       },
       _max: {
@@ -67,32 +82,66 @@ export async function GET(
 
   const { id } = await params;
   const dateParam = request.nextUrl.searchParams.get("date")?.trim() ?? "";
+  let teamGroup: number | null = null;
+  try {
+    teamGroup = parseOptionalTeamGroup(request.nextUrl.searchParams.get("teamGroup"));
+  } catch {
+    return new Response("Invalid teamGroup query parameter", { status: 400 });
+  }
   if (!isIsoDate(dateParam)) {
     return new Response("Invalid date query parameter", { status: 400 });
   }
   const trainingDate = isoDateToUtcMidnight(dateParam);
 
   const encoder = new TextEncoder();
-  let previousSignature = await getAttendanceSignature(id, trainingDate);
+  let previousSignature = await getAttendanceSignature(id, trainingDate, teamGroup);
 
   const stream = new ReadableStream({
     start(controller) {
+      let isClosed = false;
+      let interval: ReturnType<typeof setInterval> | null = null;
+
+      const closeStream = () => {
+        if (isClosed) {
+          return;
+        }
+        isClosed = true;
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
+        try {
+          controller.close();
+        } catch {
+          // Ignore close errors when the controller is already closed.
+        }
+      };
+
       const sendEvent = (event: string, data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`event: ${event}\n`));
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        if (isClosed) {
+          return;
+        }
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          closeStream();
+        }
       };
 
       sendEvent("connected", { date: dateParam });
 
-      const interval = setInterval(async () => {
+      interval = setInterval(async () => {
+        if (isClosed) {
+          return;
+        }
         if (request.signal.aborted) {
-          clearInterval(interval);
-          controller.close();
+          closeStream();
           return;
         }
 
         try {
-          const nextSignature = await getAttendanceSignature(id, trainingDate);
+          const nextSignature = await getAttendanceSignature(id, trainingDate, teamGroup);
           if (nextSignature !== previousSignature) {
             previousSignature = nextSignature;
             sendEvent("attendance-update", { date: dateParam, at: Date.now() });
@@ -105,8 +154,7 @@ export async function GET(
       }, CHECK_INTERVAL_MS);
 
       request.signal.addEventListener("abort", () => {
-        clearInterval(interval);
-        controller.close();
+        closeStream();
       });
     },
   });
