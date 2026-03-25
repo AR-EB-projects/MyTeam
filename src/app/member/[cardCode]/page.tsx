@@ -260,6 +260,10 @@ export default function MemberCardPage({
   const [trainingError, setTrainingError] = useState<string | null>(null);
   const [trainingSavingDate, setTrainingSavingDate] = useState<string | null>(null);
   const [trainingModalOpen, setTrainingModalOpen] = useState(false);
+  const [trainingDraftOptOutDates, setTrainingDraftOptOutDates] = useState<string[]>([]);
+  const [trainingSaveLoading, setTrainingSaveLoading] = useState(false);
+  const [trainingSelectionOpen, setTrainingSelectionOpen] = useState(false);
+  const [trainingDetailsDate, setTrainingDetailsDate] = useState<string | null>(null);
 
   // ── Derived: paid months set ─────────────────────────
   const paidSet = new Set<string>(
@@ -287,6 +291,13 @@ export default function MemberCardPage({
   const trainingDaysSorted = [...trainingDays].sort((a, b) => a.date.localeCompare(b.date));
   const trainingDaysWithNotes = trainingDaysSorted.filter((item) => item.note.trim().length > 0);
   const trainingByDate = new Map(trainingDaysSorted.map((item) => [item.date, item]));
+  const trainingCurrentOptOutDates = trainingDaysSorted.filter((item) => item.optedOut).map((item) => item.date);
+  const trainingCurrentOptOutSet = new Set(trainingCurrentOptOutDates);
+  const trainingDraftOptOutSet = new Set(trainingDraftOptOutDates);
+  const trainingHasPendingSelectionChanges =
+    trainingDraftOptOutDates.length !== trainingCurrentOptOutDates.length ||
+    trainingDraftOptOutDates.some((date) => !trainingCurrentOptOutSet.has(date));
+  const trainingDetailsItem = trainingDetailsDate ? trainingByDate.get(trainingDetailsDate) ?? null : null;
   const today = new Date();
   const todayDateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const trainingMonths = (() => {
@@ -411,7 +422,13 @@ export default function MemberCardPage({
     }
   };
 
-  const fetchTrainingDays = async () => {
+  const getOptOutDatesFromDays = (days: TrainingDayStatus[]) =>
+    days
+      .filter((item) => item.optedOut)
+      .map((item) => item.date)
+      .sort((a, b) => a.localeCompare(b));
+
+  const fetchTrainingDays = async (): Promise<TrainingDayStatus[]> => {
     setTrainingLoading(true);
     setTrainingError(null);
     try {
@@ -442,12 +459,107 @@ export default function MemberCardPage({
       const nextWindowDays = Number.parseInt(String(payload?.trainingWindowDays ?? "30"), 10);
       setTrainingWindowDays(Number.isInteger(nextWindowDays) && nextWindowDays > 0 ? nextWindowDays : 30);
       setTrainingDays(days);
+      return days;
     } catch (error) {
       console.error("Failed to fetch training schedule:", error);
       setTrainingError(error instanceof Error ? error.message : "Възникна грешка.");
       setTrainingDays([]);
+      return [];
     } finally {
       setTrainingLoading(false);
+    }
+  };
+
+  const openTrainingModal = async () => {
+    setTrainingError(null);
+    setTrainingSelectionOpen(false);
+    setTrainingDraftOptOutDates(getOptOutDatesFromDays(trainingDays));
+    setTrainingDetailsDate(trainingDaysSorted[0]?.date ?? null);
+    setTrainingModalOpen(true);
+    const latestDays = await fetchTrainingDays();
+    setTrainingDraftOptOutDates(getOptOutDatesFromDays(latestDays));
+    setTrainingDetailsDate(latestDays[0]?.date ?? null);
+  };
+
+  const closeTrainingModal = () => {
+    if (trainingSaveLoading) {
+      return;
+    }
+    setTrainingDraftOptOutDates(getOptOutDatesFromDays(trainingDays));
+    setTrainingSelectionOpen(false);
+    setTrainingDetailsDate(trainingDaysSorted[0]?.date ?? null);
+    setTrainingModalOpen(false);
+  };
+
+  const toggleTrainingDraftSelection = (date: string) => {
+    if (trainingSaveLoading) {
+      return;
+    }
+    setTrainingDraftOptOutDates((prev) => {
+      if (prev.includes(date)) {
+        return prev.filter((item) => item !== date);
+      }
+      return [...prev, date].sort((a, b) => a.localeCompare(b));
+    });
+  };
+
+  const saveTrainingSelection = async () => {
+    if (trainingSaveLoading || !trainingHasPendingSelectionChanges) {
+      return;
+    }
+
+    setTrainingSaveLoading(true);
+    setTrainingError(null);
+    try {
+      const draftOptOutSet = new Set(trainingDraftOptOutDates);
+      const datesToOptOut = trainingDraftOptOutDates.filter((date) => !trainingCurrentOptOutSet.has(date));
+      const datesToAttend = trainingCurrentOptOutDates.filter((date) => !draftOptOutSet.has(date));
+
+      const optOutRequests = datesToOptOut.map(async (trainingDate) => {
+        const response = await fetch(`/api/members/${normalizedCardCode}/training`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trainingDate }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(
+            typeof payload?.error === "string" && payload.error.trim()
+              ? payload.error.trim()
+              : "Неуспешно запазване на тренировъчните дни.",
+          );
+        }
+      });
+
+      const attendRequests = datesToAttend.map(async (trainingDate) => {
+        const response = await fetch(`/api/members/${normalizedCardCode}/training`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trainingDate }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(
+            typeof payload?.error === "string" && payload.error.trim()
+              ? payload.error.trim()
+              : "Неуспешно запазване на тренировъчните дни.",
+          );
+        }
+      });
+
+      await Promise.all([...optOutRequests, ...attendRequests]);
+
+      setTrainingDays((prev) =>
+        prev.map((entry) => ({
+          ...entry,
+          optedOut: draftOptOutSet.has(entry.date),
+        })),
+      );
+      setTrainingSelectionOpen(false);
+    } catch (error) {
+      setTrainingError(error instanceof Error ? error.message : "Възникна грешка.");
+    } finally {
+      setTrainingSaveLoading(false);
     }
   };
 
@@ -1442,7 +1554,7 @@ export default function MemberCardPage({
             </button>
           </>)}
 
-          <button className="add-btn" onClick={() => setTrainingModalOpen(true)}>
+          <button className="add-btn" onClick={() => void openTrainingModal()}>
             Тренировки
           </button>
 
@@ -1576,10 +1688,10 @@ export default function MemberCardPage({
         </div>
 
         {trainingModalOpen && (
-          <div className="pm-overlay" onClick={() => !trainingSavingDate && setTrainingModalOpen(false)}>
+          <div className="pm-overlay" onClick={closeTrainingModal}>
             <div className="pm-modal member-training-modal" onClick={(e) => e.stopPropagation()}>
               <div className="member-training-modal-tint" aria-hidden="true" />
-              <button className="pm-close" onClick={() => !trainingSavingDate && setTrainingModalOpen(false)}>
+              <button className="pm-close" onClick={closeTrainingModal}>
                 <XIcon size={16} />
               </button>
 
@@ -1601,6 +1713,20 @@ export default function MemberCardPage({
                 ) : trainingDays.length === 0 ? (
                   <p className="training-empty">Няма настроени тренировъчни дни.</p>
                 ) : (
+                  <>
+                    {!trainingSelectionOpen && (
+                    <div className="pm-actions" style={{ marginBottom: "8px" }}>
+                      <button
+                        className="pm-btn pm-btn--submit training-edit-btn"
+                        type="button"
+                        onClick={() => setTrainingSelectionOpen(true)}
+                        disabled={trainingSaveLoading}
+                      >
+                        {trainingSelectionOpen ? "Скрий календара" : "Избери дни за отсъствие"}
+                      </button>
+                    </div>
+                    )}
+                  <div className="training-layout">
                   <div className="training-calendar">
                     {trainingMonths.map((month) => (
                       <section key={month.key} className="training-calendar-month">
@@ -1632,7 +1758,9 @@ export default function MemberCardPage({
                               );
                             }
 
-                            const isSaving = trainingSavingDate === trainingItem.date;
+                            const isOptedOutSelected = trainingSelectionOpen
+                              ? trainingDraftOptOutSet.has(trainingItem.date)
+                              : trainingItem.optedOut;
                             const dateLabel = new Date(`${trainingItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", {
                               day: "2-digit",
                               month: "2-digit",
@@ -1640,15 +1768,20 @@ export default function MemberCardPage({
                             return (
                               <button
                                 key={cellDate}
-                                className={`training-calendar-cell training-calendar-cell--training${trainingItem.optedOut ? " training-calendar-cell--opted-out" : ""}${isToday ? " training-calendar-cell--today" : ""}`}
-                                onClick={() => void toggleTrainingOptOut(trainingItem)}
-                                disabled={Boolean(trainingSavingDate)}
+                                className={`training-calendar-cell training-calendar-cell--training${isOptedOutSelected ? " training-calendar-cell--opted-out" : ""}${isToday ? " training-calendar-cell--today" : ""}`}
+                                onClick={() => {
+                                  setTrainingDetailsDate(trainingItem.date);
+                                  if (trainingSelectionOpen) {
+                                    toggleTrainingDraftSelection(trainingItem.date);
+                                  }
+                                }}
+                                disabled={trainingSaveLoading}
                                 type="button"
                                 aria-label={`${TRAINING_WEEKDAY_LABELS_BG[trainingItem.weekday] ?? "-"} ${dateLabel}`}
-                                aria-pressed={!trainingItem.optedOut}
+                                aria-pressed={!isOptedOutSelected}
                               >
                                 <span className="training-calendar-day-number">{dayNumber}</span>
-                                <span className="training-calendar-mark">{isSaving ? "..." : trainingItem.optedOut ? "x" : "✓"}</span>
+                                <span className="training-calendar-mark">{isOptedOutSelected ? "x" : "✓"}</span>
                               </button>
                             );
                           })}
@@ -1656,9 +1789,53 @@ export default function MemberCardPage({
                       </section>
                     ))}
                   </div>
+                    <aside className="training-day-details">
+                      <h4 className="training-notes-title">Описание</h4>
+                      {trainingDetailsItem ? (
+                        <>
+                          <p className="training-note-date">
+                            {new Date(`${trainingDetailsItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
+                          </p>
+                          <p className="training-note-text">
+                            {trainingDetailsItem.note.trim() || "Няма описание за този ден."}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="training-note-text">Избери ден от календара за да видиш описание.</p>
+                      )}
+                    </aside>
+                  </div>
+                  </>
                 )}
                 {trainingError && <p className="training-error">{trainingError}</p>}
-                {trainingDaysWithNotes.length > 0 && (
+                {trainingSelectionOpen && (
+                <div className="pm-actions">
+                  <button
+                    className="pm-btn pm-btn--cancel training-back-btn"
+                    type="button"
+                    onClick={() => {
+                      setTrainingDraftOptOutDates(getOptOutDatesFromDays(trainingDays));
+                      setTrainingSelectionOpen(false);
+                    }}
+                    disabled={trainingSaveLoading}
+                  >
+                    Отказ
+                  </button>
+                  <button
+                    className="pm-btn pm-btn--submit"
+                    type="button"
+                    onClick={() => void saveTrainingSelection()}
+                    disabled={trainingSaveLoading || !trainingHasPendingSelectionChanges || trainingLoading}
+                  >
+                    {trainingSaveLoading ? "Запазване..." : "Запази"}
+                  </button>
+                </div>
+                )}
+                {false && (
                   <div className="training-notes">
                     <p className="training-notes-title">Описание</p>
                     <div className="training-notes-list">

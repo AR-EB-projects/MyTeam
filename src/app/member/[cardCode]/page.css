@@ -420,6 +420,20 @@
   color: #ff8f8f;
 }
 
+.training-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.training-day-details {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .training-notes {
   margin-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -623,6 +637,26 @@
   margin-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding-top: 10px;
+}
+
+.member-training-modal .training-back-btn {
+  font-size: 0;
+}
+
+.member-training-modal .training-back-btn::after {
+  content: "Назад";
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.member-training-modal .training-edit-btn {
+  font-size: 0;
+}
+
+.member-training-modal .training-edit-btn::after {
+  content: "Редактирай график";
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .member-notifications-scroll {
@@ -1617,6 +1651,11 @@
   }
 
   .member-training-modal .training-calendar {
+    gap: 8px;
+  }
+
+  .training-layout {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
