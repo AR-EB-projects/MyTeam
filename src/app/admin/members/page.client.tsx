@@ -10,7 +10,11 @@ import "./page.css";
 // Reports-related imports
 const MONTHS = ["Януари", "Февруари", "Март", "Април", "Май", "Юни", "Юли", "Август", "Септември", "Октомври", "Ноември", "Декември"];
 const TRAINING_SELECTION_WINDOW_DAYS = 30;
-const TRAINING_WEEKDAY_SHORT_BG = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const TRAINING_WEEKDAY_SHORT_BG = Array.from({ length: 7 }, (_, index) =>
+  new Intl.DateTimeFormat("bg-BG", { weekday: "short" })
+    .format(new Date(Date.UTC(2024, 0, index + 1)))
+    .replace(".", ""),
+);
 
 type ReportKind = "monthly" | "yearly";
 
