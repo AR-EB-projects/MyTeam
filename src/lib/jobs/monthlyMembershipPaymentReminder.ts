@@ -8,6 +8,7 @@ const DEFAULT_TIME_ZONE = "Europe/Sofia";
 const DEFAULT_RUN_DAY = 25;
 const DEFAULT_RUN_HOUR = 10;
 const DEFAULT_RUN_MINUTE = 0;
+const DEFAULT_SCHEDULE_GRACE_MINUTES = 10;
 const MEMBER_PROCESSING_CONCURRENCY = 2;
 
 function getDatePartsInTimeZone(date: Date, timeZone: string) {
@@ -31,6 +32,25 @@ function getDatePartsInTimeZone(date: Date, timeZone: string) {
     hour: get("hour"),
     minute: get("minute"),
   };
+}
+
+function shouldRunAtScheduledTime(
+  currentDay: number,
+  currentHour: number,
+  currentMinute: number,
+  runDay: number,
+  runHour: number,
+  runMinute: number
+) {
+  if (currentDay !== runDay) {
+    return false;
+  }
+
+  const nowTotalMinutes = currentHour * 60 + currentMinute;
+  const runTotalMinutes = runHour * 60 + runMinute;
+  const minuteDelta = nowTotalMinutes - runTotalMinutes;
+
+  return minuteDelta >= 0 && minuteDelta <= DEFAULT_SCHEDULE_GRACE_MINUTES;
 }
 
 export interface MonthlyMembershipReminderResult {
@@ -87,7 +107,7 @@ export async function runMonthlyMembershipPaymentReminder(
     const runDay = Number.isInteger(club.reminderDay) ? club.reminderDay : DEFAULT_RUN_DAY;
     const runHour = Number.isInteger(club.reminderHour) ? club.reminderHour : DEFAULT_RUN_HOUR;
     const runMinute = Number.isInteger(club.reminderMinute) ? club.reminderMinute : DEFAULT_RUN_MINUTE;
-    return day === runDay && hour === runHour && minute === runMinute;
+    return shouldRunAtScheduledTime(day, hour, minute, runDay, runHour, runMinute);
   });
 
   if (eligibleClubs.length === 0) {

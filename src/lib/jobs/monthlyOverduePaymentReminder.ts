@@ -9,6 +9,7 @@ const STATUS_ROLLOVER_JOB = "monthly_status_rollover";
 const DEFAULT_RUN_DAY = 1;
 const DEFAULT_RUN_HOUR = 10;
 const DEFAULT_RUN_MINUTE = 0;
+const DEFAULT_SCHEDULE_GRACE_MINUTES = 10;
 const DEFAULT_LOCK_TIMEOUT_MINUTES = 180;
 const MEMBER_PROCESSING_CONCURRENCY = 2;
 
@@ -33,6 +34,25 @@ function getDatePartsInTimeZone(date: Date, timeZone: string) {
     hour: get("hour"),
     minute: get("minute"),
   };
+}
+
+function shouldRunAtScheduledTime(
+  currentDay: number,
+  currentHour: number,
+  currentMinute: number,
+  runDay: number,
+  runHour: number,
+  runMinute: number
+) {
+  if (currentDay !== runDay) {
+    return false;
+  }
+
+  const nowTotalMinutes = currentHour * 60 + currentMinute;
+  const runTotalMinutes = runHour * 60 + runMinute;
+  const minuteDelta = nowTotalMinutes - runTotalMinutes;
+
+  return minuteDelta >= 0 && minuteDelta <= DEFAULT_SCHEDULE_GRACE_MINUTES;
 }
 
 export interface MonthlyOverduePaymentReminderResult {
@@ -358,7 +378,7 @@ export async function runMonthlyOverduePaymentReminder(
     const runDay = Number.isInteger(club.overdueDay) ? club.overdueDay : DEFAULT_RUN_DAY;
     const runHour = Number.isInteger(club.overdueHour) ? club.overdueHour : DEFAULT_RUN_HOUR;
     const runMinute = Number.isInteger(club.overdueMinute) ? club.overdueMinute : DEFAULT_RUN_MINUTE;
-    return day === runDay && hour === runHour && minute === runMinute;
+    return shouldRunAtScheduledTime(day, hour, minute, runDay, runHour, runMinute);
   });
 
   if (eligibleClubs.length === 0) {
