@@ -2347,7 +2347,7 @@ function AdminMembersPageContent() {
       )}
       {memberToEdit && (
         <div className="amp-overlay" onClick={isSavingEdit ? undefined : closeEditModal}>
-          <div className="amp-modal amp-modal--confirm amp-modal--scheduler-settings" onClick={(e) => e.stopPropagation()}>
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
               <span className="amp-modal-title-gradient">Редактиране на играч</span>

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
+import { randomUUID } from "crypto";
+import { cloudinary } from "@/lib/cloudinary";
+import { transliterateBG } from "@/lib/transliterate";
+import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,8 +34,81 @@ function normalizePlayerName(value: string): string {
     .toLocaleLowerCase("bg-BG");
 }
 
-function buildDriveViewUrl(fileId: string): string {
-  return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`;
+function getPlayerUploadPublicId(name: string): string {
+  const slug = transliterateBG(name);
+  const folder = "players";
+  const fallbackSlug = `${folder}-${Date.now()}`;
+  const shortId = randomUUID().replace(/-/g, "").slice(0, 8);
+  return `${folder}/${slug || fallbackSlug}-${shortId}`;
+}
+
+async function fetchDriveFileBuffer(fileId: string, apiKey: string): Promise<Buffer> {
+  const attempts = [
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(apiKey)}`,
+    `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`,
+  ];
+
+  let lastError = "Unknown Google Drive download error";
+
+  for (const url of attempts) {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      redirect: "follow",
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      lastError = `Google Drive file download failed (${response.status}): ${errorBody || "no details"}`;
+      continue;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      const errorBody = await response.text().catch(() => "");
+      lastError = `Google Drive download returned non-image content (${contentType || "unknown"}): ${errorBody.slice(0, 200) || "no details"}`;
+      continue;
+    }
+
+    const bytes = await response.arrayBuffer();
+    return Buffer.from(bytes);
+  }
+
+  throw new Error(lastError);
+}
+
+async function uploadPlayerImageToCloudinary(buffer: Buffer, playerName: string): Promise<string> {
+  const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id: getPlayerUploadPublicId(playerName),
+        format: "webp",
+        transformation: [
+          {
+            width: 640,
+            height: 800,
+            crop: "limit",
+            quality: "auto:good",
+          },
+        ],
+      },
+      (error, uploadResult) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        if (!uploadResult?.secure_url) {
+          reject(new Error("Cloudinary upload failed"));
+          return;
+        }
+        resolve({ secure_url: uploadResult.secure_url });
+      },
+    );
+
+    stream.end(buffer);
+  });
+
+  return extractUploadPathFromCloudinaryUrl(result.secure_url);
 }
 
 async function fetchDriveFilesFromFolder(folderId: string, apiKey: string): Promise<DriveFile[]> {
@@ -133,9 +210,11 @@ export async function POST(request: NextRequest) {
     let skippedAmbiguous = 0;
     let skippedExisting = 0;
     let unmatched = 0;
+    let failedUploads = 0;
 
     const unmatchedFiles: string[] = [];
     const ambiguousFiles: string[] = [];
+    const failedFiles: Array<{ fileName: string; reason: string }> = [];
     const updatedPlayers: Array<{ playerId: string; playerName: string; fileName: string }> = [];
 
     for (const file of driveFiles) {
@@ -159,15 +238,29 @@ export async function POST(request: NextRequest) {
       }
 
       const player = candidates[0];
-      const nextDriveUrl = buildDriveViewUrl(file.id);
       const currentAdminImage = player.images.find((image) => image.isAdminView)?.imageUrl ?? null;
 
-      if (currentAdminImage === nextDriveUrl) {
-        unchanged += 1;
-        continue;
-      }
       if (currentAdminImage && !overwrite) {
         skippedExisting += 1;
+        continue;
+      }
+
+      let nextImagePath = "";
+      try {
+        const fileBuffer = await fetchDriveFileBuffer(file.id, apiKey);
+        const cloudinaryName = player.fullName.trim() || file.name;
+        nextImagePath = await uploadPlayerImageToCloudinary(fileBuffer, cloudinaryName);
+      } catch (uploadError) {
+        failedUploads += 1;
+        failedFiles.push({
+          fileName: file.name,
+          reason: uploadError instanceof Error ? uploadError.message : "Unknown upload error",
+        });
+        continue;
+      }
+
+      if (currentAdminImage === nextImagePath) {
+        unchanged += 1;
         continue;
       }
 
@@ -179,7 +272,7 @@ export async function POST(request: NextRequest) {
         prisma.image.create({
           data: {
             playerId: player.id,
-            imageUrl: nextDriveUrl,
+            imageUrl: nextImagePath,
             isAdminView: true,
           },
         }),
@@ -203,10 +296,12 @@ export async function POST(request: NextRequest) {
       skippedExisting,
       skippedAmbiguous,
       unmatched,
+      failedUploads,
       details: {
         updatedPlayers,
         unmatchedFiles: unmatchedFiles.slice(0, 100),
         ambiguousFiles: ambiguousFiles.slice(0, 100),
+        failedFiles: failedFiles.slice(0, 100),
       },
     });
   } catch (error) {
@@ -217,4 +312,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
