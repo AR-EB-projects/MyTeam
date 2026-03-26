@@ -139,6 +139,30 @@ async function markMonthlyJobCompleted(jobName: string, year: number, month: num
     },
     data: {
       completedAt: new Date(),
+      failedAt: null,
+      errorMessage: null,
+    },
+  });
+}
+
+async function markMonthlyJobFailed(jobName: string, year: number, month: number, error: unknown) {
+  const message =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : typeof error === "string"
+        ? error
+        : "Unknown rollover error";
+
+  await prisma.cronJobRun.updateMany({
+    where: {
+      jobName,
+      runYear: year,
+      runMonth: month,
+      completedAt: null,
+    },
+    data: {
+      failedAt: new Date(),
+      errorMessage: message.slice(0, 1000),
     },
   });
 }
@@ -164,10 +188,11 @@ async function runMonthlyStatusRollover(year: number, month: number, clubId: str
     };
   }
 
-  const currentMonthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const nextMonthStart = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+  try {
+    const currentMonthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const nextMonthStart = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
 
-  const pausedCurrentMonthRows = await prisma.paymentWaiver.findMany({
+    const pausedCurrentMonthRows = await prisma.paymentWaiver.findMany({
     where: {
       player: {
         clubId,
@@ -180,9 +205,9 @@ async function runMonthlyStatusRollover(year: number, month: number, clubId: str
     distinct: ["playerId"],
     select: { playerId: true },
   });
-  const pausedCurrentMonthIds = pausedCurrentMonthRows.map((row) => row.playerId);
+    const pausedCurrentMonthIds = pausedCurrentMonthRows.map((row) => row.playerId);
 
-  const paidCurrentMonthRows = await prisma.paymentLog.findMany({
+    const paidCurrentMonthRows = await prisma.paymentLog.findMany({
     where: {
       player: {
         clubId,
@@ -196,13 +221,13 @@ async function runMonthlyStatusRollover(year: number, month: number, clubId: str
     select: { playerId: true },
   });
 
-  const paidCurrentMonthIds = new Set(paidCurrentMonthRows.map((row) => row.playerId));
-  const paidCurrentMonthIdList = Array.from(paidCurrentMonthIds);
-  const excludedFromRolloverIds = Array.from(
-    new Set([...pausedCurrentMonthIds, ...paidCurrentMonthIdList]),
-  );
+    const paidCurrentMonthIds = new Set(paidCurrentMonthRows.map((row) => row.playerId));
+    const paidCurrentMonthIdList = Array.from(paidCurrentMonthIds);
+    const excludedFromRolloverIds = Array.from(
+      new Set([...pausedCurrentMonthIds, ...paidCurrentMonthIdList]),
+    );
 
-  const forcedToPaidResult = await prisma.player.updateMany({
+    const forcedToPaidResult = await prisma.player.updateMany({
     where: {
       id: {
         in: paidCurrentMonthIdList,
@@ -216,8 +241,8 @@ async function runMonthlyStatusRollover(year: number, month: number, clubId: str
     data: { status: "paid" },
   });
 
-  const [paidRows, warningRows] = await Promise.all([
-    prisma.player.findMany({
+    const [paidRows, warningRows] = await Promise.all([
+      prisma.player.findMany({
       where: {
         clubId,
         status: "paid",
@@ -231,7 +256,7 @@ async function runMonthlyStatusRollover(year: number, month: number, clubId: str
       },
       select: { id: true },
     }),
-    prisma.player.findMany({
+      prisma.player.findMany({
       where: {
         clubId,
         status: "warning",
@@ -245,44 +270,48 @@ async function runMonthlyStatusRollover(year: number, month: number, clubId: str
       },
       select: { id: true },
     }),
-  ]);
+    ]);
 
-  const paidIds = paidRows.map((row) => row.id);
-  const warningIds = warningRows.map((row) => row.id);
+    const paidIds = paidRows.map((row) => row.id);
+    const warningIds = warningRows.map((row) => row.id);
 
-  const [paidToWarningResult, warningToOverdueResult] = await prisma.$transaction([
-    paidIds.length > 0
-      ? prisma.player.updateMany({
-          where: {
-            id: { in: paidIds },
-          },
-          data: { status: "warning" },
-        })
-      : prisma.player.updateMany({
-          where: { id: { in: [] } },
-          data: { status: "warning" },
-        }),
-    warningIds.length > 0
-      ? prisma.player.updateMany({
-          where: {
-            id: { in: warningIds },
-          },
-          data: { status: "overdue" },
-        })
-      : prisma.player.updateMany({
-          where: { id: { in: [] } },
-          data: { status: "overdue" },
-        }),
-  ]);
+    const [paidToWarningResult, warningToOverdueResult] = await prisma.$transaction([
+      paidIds.length > 0
+        ? prisma.player.updateMany({
+            where: {
+              id: { in: paidIds },
+            },
+            data: { status: "warning" },
+          })
+        : prisma.player.updateMany({
+            where: { id: { in: [] } },
+            data: { status: "warning" },
+          }),
+      warningIds.length > 0
+        ? prisma.player.updateMany({
+            where: {
+              id: { in: warningIds },
+            },
+            data: { status: "overdue" },
+          })
+        : prisma.player.updateMany({
+            where: { id: { in: [] } },
+            data: { status: "overdue" },
+          }),
+    ]);
 
-  await markMonthlyJobCompleted(`${STATUS_ROLLOVER_JOB}:${clubId}`, year, month);
+    await markMonthlyJobCompleted(`${STATUS_ROLLOVER_JOB}:${clubId}`, year, month);
 
-  return {
-    phase: "executed" as const,
-    forcedToPaid: forcedToPaidResult.count,
-    paidToWarning: paidToWarningResult.count,
-    warningToOverdue: warningToOverdueResult.count,
-  };
+    return {
+      phase: "executed" as const,
+      forcedToPaid: forcedToPaidResult.count,
+      paidToWarning: paidToWarningResult.count,
+      warningToOverdue: warningToOverdueResult.count,
+    };
+  } catch (error) {
+    await markMonthlyJobFailed(`${STATUS_ROLLOVER_JOB}:${clubId}`, year, month, error);
+    throw error;
+  }
 }
 
 export async function runMonthlyOverduePaymentReminder(

@@ -197,6 +197,8 @@ model CronJobRun {
   runYear     Int       @map("run_year")
   runMonth    Int       @map("run_month")
   completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  failedAt    DateTime? @map("failed_at") @db.Timestamptz(6)
+  errorMessage String?  @map("error_message")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@unique([jobName, runYear, runMonth])
