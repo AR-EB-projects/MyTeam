@@ -663,7 +663,7 @@ export default function MemberCardPage({
         return;
       }
 
-      if (type === "status-updated") {
+      if (type === "status-updated" || type === "payment-history-updated") {
         void (async () => {
           try {
             const response = await fetch(`/api/members/${normalizedCardCode}`, { cache: "no-store" });
@@ -673,7 +673,7 @@ export default function MemberCardPage({
             const data = (await response.json()) as MemberProfile;
             setMember(data);
           } catch (error) {
-            console.error("Failed to refresh member after status event:", error);
+            console.error("Failed to refresh member after live update event:", error);
           }
         })();
       }

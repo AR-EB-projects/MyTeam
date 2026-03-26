@@ -136,6 +136,7 @@ export async function POST(
     const targetCardCode = player.cards[0]?.cardCode;
     if (targetCardCode) {
       publishMemberUpdated(targetCardCode, "status-updated");
+      publishMemberUpdated(targetCardCode, "payment-history-updated");
     }
 
     return NextResponse.json({

@@ -178,6 +178,25 @@ function getTodayIsoDate(): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatBirthDateForExport(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const isoMatch = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day}/${month}/${year}`;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+
+  return parsed.toLocaleDateString("en-GB", { timeZone: "UTC" });
+}
+
 function getNextTrainingCalendarDates(days = TRAINING_SELECTION_WINDOW_DAYS): string[] {
   const startIso = getTodayIsoDate();
   const start = new Date(`${startIso}T00:00:00.000Z`).getTime();
@@ -1705,10 +1724,11 @@ function AdminMembersPageContent() {
 
         return {
           fullName: member.fullName,
+          birthDate: formatBirthDateForExport(member.birthDate),
           url: `${window.location.origin}/member/${encodeURIComponent(cardCode)}`,
         };
       })
-      .filter((item): item is { fullName: string; url: string } => item !== null)
+      .filter((item): item is { fullName: string; birthDate: string; url: string } => item !== null)
       .sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }));
 
     if (rows.length === 0) {
@@ -1725,6 +1745,7 @@ function AdminMembersPageContent() {
       .map(
         (row, index) =>
           `${index + 1}. ${row.fullName}\n` +
+          `   Birthdate: ${row.birthDate}\n` +
           `   ${row.url}`,
       )
       .join("\n\n");

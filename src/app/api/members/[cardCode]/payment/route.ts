@@ -187,6 +187,7 @@ export async function POST(
     });
 
     publishMemberUpdated(normalizedCardCode, "status-updated");
+    publishMemberUpdated(normalizedCardCode, "payment-history-updated");
 
     return NextResponse.json({
       success: true,
