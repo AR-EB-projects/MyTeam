@@ -94,6 +94,7 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
+                sports: true,
                 imageUrl: true,
                 emblemUrl: true,
               },
@@ -213,6 +214,7 @@ export async function GET(
         name: card.player.fullName,
         clubId: card.player.club?.id ?? null,
         clubName: card.player.club?.name ?? null,
+        clubSports: card.player.club?.sports ?? null,
         clubLogoUrl,
         avatarUrl: buildAvatarUrlFromPath(playerImagePath, cloudName),
         visits_total: 0,

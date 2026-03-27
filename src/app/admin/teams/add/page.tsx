@@ -8,12 +8,14 @@ import "./page.css";
 
 interface TeamForm {
   name: string;
+  sports: string;
 }
 
 export default function AdminAddTeamPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<TeamForm>({
     name: "",
+    sports: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export default function AdminAddTeamPage() {
         },
         body: JSON.stringify({
           name: trimmedName,
+          sports: formData.sports.trim(),
           imageUrl: resolvedImageUrl,
           imagePublicId: resolvedImagePublicId,
         }),
@@ -122,6 +125,20 @@ export default function AdminAddTeamPage() {
               className="form-input"
               placeholder="Въведете име на отбора"
               required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="sports" className="form-label">
+              Спорт
+            </label>
+            <input
+              type="text"
+              id="sports"
+              name="sports"
+              value={formData.sports}
+              onChange={(e) => setFormData((prev) => ({ ...prev, sports: e.target.value }))}
+              className="form-input"
             />
           </div>
 

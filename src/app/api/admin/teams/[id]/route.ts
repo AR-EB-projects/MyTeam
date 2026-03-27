@@ -56,6 +56,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       select: {
         id: true,
         name: true,
+        sports: true,
         emblemUrl: true,
         imageUrl: true,
         imagePublicId: true,
@@ -99,6 +100,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const body = await request.json();
     const name = String(body.name ?? "").trim();
+    const sportsRaw = body.sports;
     const imageUrlRaw = body.imageUrl;
     const imagePublicIdRaw = body.imagePublicId;
 
@@ -125,11 +127,16 @@ export async function PUT(request: NextRequest, { params }: Params) {
       String(imagePublicIdRaw).trim() === ""
         ? null
         : String(imagePublicIdRaw).trim();
+    const sports =
+      sportsRaw === null || sportsRaw === undefined || String(sportsRaw).trim() === ""
+        ? null
+        : String(sportsRaw).trim();
 
     const updated = await prisma.club.update({
       where: { id },
       data: {
         name,
+        sports,
         imageUrl,
         imagePublicId,
       },

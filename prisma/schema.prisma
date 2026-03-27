@@ -10,6 +10,7 @@ datasource db {
 model Club {
   id                     String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                   String
+  sports                 String?
   createdAt              DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
   emblemUrl              String?                     @map("emblem_url")
   imagePublicId          String?                     @map("image_public_id")

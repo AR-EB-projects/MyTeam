@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           name: true,
+          sports: true,
           emblemUrl: true,
           imageUrl: true,
           imagePublicId: true,
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           name: true,
+          sports: true,
           emblemUrl: true,
           imageUrl: true,
           imagePublicId: true,

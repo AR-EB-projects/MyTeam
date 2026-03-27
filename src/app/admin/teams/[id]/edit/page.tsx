@@ -8,11 +8,13 @@ import "../../add/page.css";
 
 interface TeamForm {
   name: string;
+  sports: string;
 }
 
 interface TeamPayload {
   id: string;
   name: string;
+  sports: string | null;
   imageUrl: string | null;
   imagePath: string | null;
   imagePublicId: string | null;
@@ -23,7 +25,7 @@ export default function AdminEditTeamPage() {
   const params = useParams<{ id: string }>();
   const teamId = typeof params.id === "string" ? params.id : "";
 
-  const [formData, setFormData] = useState<TeamForm>({ name: "" });
+  const [formData, setFormData] = useState<TeamForm>({ name: "", sports: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [existingImagePath, setExistingImagePath] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export default function AdminEditTeamPage() {
         }
 
         const data = (await response.json()) as TeamPayload;
-        setFormData({ name: data.name ?? "" });
+        setFormData({ name: data.name ?? "", sports: data.sports ?? "" });
         setPreviewUrl(data.imageUrl ?? null);
         setExistingImagePath(data.imagePath ?? null);
         setExistingImagePublicId(data.imagePublicId ?? null);
@@ -83,7 +85,7 @@ export default function AdminEditTeamPage() {
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
-    setFormData({ name });
+    setFormData((prev) => ({ ...prev, name }));
   };
 
   const handleImageSelect = (file: File | null) => {
@@ -131,6 +133,7 @@ export default function AdminEditTeamPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: trimmedName,
+          sports: formData.sports.trim(),
           imageUrl: resolvedImageUrl,
           imagePublicId: resolvedImagePublicId,
         }),
@@ -193,6 +196,20 @@ export default function AdminEditTeamPage() {
               className="form-input"
               placeholder="Въведете име на отбора"
               required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="sports" className="form-label">
+              Спорт
+            </label>
+            <input
+              type="text"
+              id="sports"
+              name="sports"
+              value={formData.sports}
+              onChange={(e) => setFormData((prev) => ({ ...prev, sports: e.target.value }))}
+              className="form-input"
             />
           </div>
 

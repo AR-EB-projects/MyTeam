@@ -12,6 +12,7 @@ interface MemberProfile {
   name: string;
   clubId?: string | null;
   clubName?: string | null;
+  clubSports?: string | null;
   clubLogoUrl?: string | null;
   avatarUrl?: string | null;
   jerseyNumber?: string | null;
@@ -1461,8 +1462,8 @@ export default function MemberCardPage({
                   <span className="info-val">{birthDateText}</span>
                 </div>
                 <div className="info-row">
-                  <span className="info-lbl">Набор:</span>
-                  <span className="info-val green">{member.team_group ?? "-"}</span>
+                  <span className="info-lbl">Спорт:</span>
+                  <span className="info-val green">{member.clubSports?.trim() || "-"}</span>
                 </div>
                 <div className="info-row">
                   <span className="info-lbl">Статус:</span>

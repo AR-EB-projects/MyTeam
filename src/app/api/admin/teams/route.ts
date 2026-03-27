@@ -44,7 +44,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, imageUrl, imagePublicId } = body;
+    const { name, sports, imageUrl, imagePublicId } = body;
 
     // Validation
     if (!name || !name.trim()) {
@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     const team = await prisma.club.create({
       data: {
         name: name.trim(),
+        sports: typeof sports === "string" && sports.trim() ? sports.trim() : null,
         imageUrl: imageUrl || null,
         imagePublicId: imagePublicId || null,
       },
