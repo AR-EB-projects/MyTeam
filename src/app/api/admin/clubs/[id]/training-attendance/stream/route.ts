@@ -8,6 +8,15 @@ export const dynamic = "force-dynamic";
 
 const CHECK_INTERVAL_MS = 3000;
 
+function isTransientPrismaConnectionError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+  const maybeError = error as { code?: unknown };
+  const code = typeof maybeError.code === "string" ? maybeError.code : "";
+  return code === "P1001" || code === "P2024";
+}
+
 function parseOptionalTeamGroup(raw: unknown): number | null {
   if (raw === null || raw === undefined || String(raw).trim() === "") {
     return null;
@@ -19,15 +28,41 @@ function parseOptionalTeamGroup(raw: unknown): number | null {
   return parsed;
 }
 
+function parseOptionalTrainingGroupId(raw: unknown): string | null {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  const value = String(raw).trim();
+  return value ? value : null;
+}
+
 async function verifySession(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
   return token ? await verifyAdminToken(token) : null;
 }
 
-async function getAttendanceSignature(clubId: string, trainingDate: Date, teamGroup: number | null) {
+async function getAttendanceSignature(
+  clubId: string,
+  trainingDate: Date,
+  teamGroup: number | null,
+  trainingGroupId: string | null,
+) {
+  const trainingGroup = trainingGroupId
+    ? await prisma.clubTrainingScheduleGroup.findFirst({
+        where: {
+          id: trainingGroupId,
+          clubId,
+        },
+        select: {
+          id: true,
+          teamGroups: true,
+        },
+      })
+    : null;
   const playerScope = {
     clubId,
     isActive: true,
+    ...(trainingGroup ? { teamGroup: { in: trainingGroup.teamGroups } } : {}),
     ...(teamGroup !== null ? { teamGroup } : {}),
   };
 
@@ -83,10 +118,15 @@ export async function GET(
   const { id } = await params;
   const dateParam = request.nextUrl.searchParams.get("date")?.trim() ?? "";
   let teamGroup: number | null = null;
+  let trainingGroupId: string | null = null;
   try {
     teamGroup = parseOptionalTeamGroup(request.nextUrl.searchParams.get("teamGroup"));
+    trainingGroupId = parseOptionalTrainingGroupId(request.nextUrl.searchParams.get("trainingGroupId"));
   } catch {
-    return new Response("Invalid teamGroup query parameter", { status: 400 });
+    return new Response("Invalid teamGroup or trainingGroupId query parameter", { status: 400 });
+  }
+  if (teamGroup !== null && trainingGroupId) {
+    return new Response("Use either teamGroup or trainingGroupId.", { status: 400 });
   }
   if (!isIsoDate(dateParam)) {
     return new Response("Invalid date query parameter", { status: 400 });
@@ -94,7 +134,18 @@ export async function GET(
   const trainingDate = isoDateToUtcMidnight(dateParam);
 
   const encoder = new TextEncoder();
-  let previousSignature = await getAttendanceSignature(id, trainingDate, teamGroup);
+  let previousSignature = "";
+  try {
+    previousSignature = await getAttendanceSignature(id, trainingDate, teamGroup, trainingGroupId);
+  } catch (error) {
+    console.error("Training attendance stream init error:", error);
+    if (isTransientPrismaConnectionError(error)) {
+      return new Response("Database temporarily unavailable. Please retry in a few seconds.", {
+        status: 503,
+      });
+    }
+    return new Response("Internal Server Error", { status: 500 });
+  }
 
   const stream = new ReadableStream({
     start(controller) {
@@ -141,7 +192,7 @@ export async function GET(
         }
 
         try {
-          const nextSignature = await getAttendanceSignature(id, trainingDate, teamGroup);
+          const nextSignature = await getAttendanceSignature(id, trainingDate, teamGroup, trainingGroupId);
           if (nextSignature !== previousSignature) {
             previousSignature = nextSignature;
             sendEvent("attendance-update", { date: dateParam, at: Date.now() });

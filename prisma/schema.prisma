@@ -28,6 +28,7 @@ model Club {
   players                Player[]
   trainingNotes          TrainingNote[]
   trainingGroupSchedules ClubTrainingGroupSchedule[]
+  trainingScheduleGroups ClubTrainingScheduleGroup[]
 
   @@map("clubs")
 }
@@ -46,6 +47,22 @@ model ClubTrainingGroupSchedule {
   @@unique([clubId, teamGroup])
   @@index([clubId])
   @@map("club_training_group_schedules")
+}
+
+model ClubTrainingScheduleGroup {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clubId             String   @map("club_id") @db.Uuid
+  name               String
+  teamGroups         Int[]    @default([]) @map("team_groups")
+  trainingWeekdays   Int[]    @default([]) @map("training_weekdays")
+  trainingDates      String[] @default([]) @map("training_dates")
+  trainingWindowDays Int      @default(30) @map("training_window_days")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  club               Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
+  @@map("club_training_schedule_groups")
 }
 
 model User {

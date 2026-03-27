@@ -62,15 +62,37 @@ async function getMemberTrainingContext(cardCode: string) {
         },
       });
 
-  const trainingWeekdays = (groupSchedule?.trainingWeekdays ?? card.player.club.trainingWeekdays ?? [])
+  const trainingGroupOverride = card.player.teamGroup === null
+    ? null
+    : await prisma.clubTrainingScheduleGroup.findFirst({
+        where: {
+          clubId: card.player.clubId,
+          teamGroups: {
+            has: card.player.teamGroup,
+          },
+          trainingDates: {
+            isEmpty: false,
+          },
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        select: {
+          trainingDates: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+        },
+      });
+
+  const trainingWeekdays = (trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? card.player.club.trainingWeekdays ?? [])
     .filter((value) => Number.isInteger(value) && value >= 1 && value <= 7)
     .sort((a, b) => a - b);
   const trainingWindowDays = TRAINING_SELECTION_WINDOW_DAYS;
 
   const upcomingDates = getConfiguredTrainingDates({
-    trainingDates: groupSchedule?.trainingDates ?? card.player.club.trainingDates ?? [],
+    trainingDates: trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? card.player.club.trainingDates ?? [],
     weekdays: trainingWeekdays,
-    windowDays: groupSchedule?.trainingWindowDays ?? card.player.club.trainingWindowDays ?? trainingWindowDays,
+    windowDays: trainingGroupOverride?.trainingWindowDays ?? groupSchedule?.trainingWindowDays ?? card.player.club.trainingWindowDays ?? trainingWindowDays,
     timeZone: FIXED_TIME_ZONE,
     maxDays: TRAINING_SELECTION_WINDOW_DAYS,
   });

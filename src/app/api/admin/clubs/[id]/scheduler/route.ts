@@ -80,10 +80,32 @@ export async function GET(
         },
       });
 
+  const trainingGroupOverride = teamGroup === null
+    ? null
+    : await prisma.clubTrainingScheduleGroup.findFirst({
+        where: {
+          clubId: id,
+          teamGroups: {
+            has: teamGroup,
+          },
+          trainingDates: {
+            isEmpty: false,
+          },
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        select: {
+          trainingDates: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+        },
+      });
+
   const trainingDates = getConfiguredTrainingDates({
-    trainingDates: groupSchedule?.trainingDates ?? club.trainingDates,
-    weekdays: groupSchedule?.trainingWeekdays ?? club.trainingWeekdays,
-    windowDays: groupSchedule?.trainingWindowDays ?? club.trainingWindowDays,
+    trainingDates: trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? club.trainingDates,
+    weekdays: trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? club.trainingWeekdays,
+    windowDays: trainingGroupOverride?.trainingWindowDays ?? groupSchedule?.trainingWindowDays ?? club.trainingWindowDays,
     timeZone: FIXED_TIME_ZONE,
     maxDays: TRAINING_SELECTION_WINDOW_DAYS,
   });
@@ -244,6 +266,36 @@ export async function PUT(
         trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
       },
     });
+
+    const groupsContainingTeamGroup = await prisma.clubTrainingScheduleGroup.findMany({
+      where: {
+        clubId: id,
+        teamGroups: {
+          has: teamGroup,
+        },
+      },
+      select: {
+        id: true,
+        teamGroups: true,
+      },
+    });
+
+    for (const group of groupsContainingTeamGroup) {
+      const nextTeamGroups = group.teamGroups.filter((value) => value !== teamGroup);
+      if (nextTeamGroups.length < 2) {
+        await prisma.clubTrainingScheduleGroup.delete({
+          where: { id: group.id },
+        });
+        continue;
+      }
+
+      await prisma.clubTrainingScheduleGroup.update({
+        where: { id: group.id },
+        data: {
+          teamGroups: nextTeamGroups,
+        },
+      });
+    }
   }
 
   return NextResponse.json({
