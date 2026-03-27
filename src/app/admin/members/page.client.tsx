@@ -1909,7 +1909,7 @@ function AdminMembersPageContent() {
   const openTrainingGroupEditModal = (groupId: string) => {
     const group = trainingScheduleGroups.find((item) => item.id === groupId);
     if (!group) {
-      setTrainingAttendanceError("Тренировъчната група не е намерена.");
+      setTrainingAttendanceError("Сборният отбор не е намерен.");
       return;
     }
     setTrainingGroupEditError("");
@@ -1942,7 +1942,7 @@ function AdminMembersPageContent() {
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || "Неуспешно създаване на тренировъчна група.");
+        throw new Error(payload?.error || "Неуспешно създаване на сборен отбор.");
       }
 
       setTrainingGroupCreateOpen(false);
@@ -1979,7 +1979,7 @@ function AdminMembersPageContent() {
       );
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || "Неуспешна редакция на тренировъчната група.");
+        throw new Error(payload?.error || "Неуспешна редакция на сборния отбор.");
       }
 
       setTrainingGroupEditOpen(false);
@@ -2031,7 +2031,7 @@ function AdminMembersPageContent() {
           trainingScheduleGroups.find((group) => group.id === selectedTrainingGroupId) ??
           null;
         if (!resolvedGroup) {
-          throw new Error("Изберете тренировъчна група.");
+          throw new Error("Изберете сборен отбор.");
         }
         setSchedulerForm((prev) => ({
           ...prev,
@@ -2183,7 +2183,7 @@ function AdminMembersPageContent() {
       });
       if (!createResponse.ok) {
         const payload = await createResponse.json().catch(() => ({}));
-        throw new Error(payload?.error || "Неуспешно създаване на тренировъчна група.");
+        throw new Error(payload?.error || "Неуспешно създаване на сборен отбор.");
       }
       setTrainingDaysEditorOpen(false);
       await fetchTrainingAttendance(trainingAttendanceDate);
@@ -2442,7 +2442,7 @@ function AdminMembersPageContent() {
   const openTrainingDaysEditorForCurrentScope = async () => {
     if (trainingAttendanceView === "trainingGroups") {
       if (!selectedTrainingGroupId) {
-        setTrainingAttendanceError("Изберете тренировъчна група.");
+        setTrainingAttendanceError("Изберете сборен отбор.");
         return;
       }
       await openTrainingDaysEditor("trainingGroup");
@@ -2689,7 +2689,7 @@ function AdminMembersPageContent() {
               </button>
               <button className="amp-download-links-btn amp-scheduler-settings-btn" onClick={() => void openTrainingAttendance()} type="button">
                 <UsersIcon />
-                {"Тренировки"}
+                {"Тренировъчен график"}
               </button>
               {isAdmin && (
                 <button className="amp-download-links-btn" onClick={() => void handleDownloadMemberLinks()} type="button">
@@ -2704,24 +2704,22 @@ function AdminMembersPageContent() {
         {/* ── Content ── */}
         <div className="amp-content">
 
-          {/* Group filter pills */}
-          <div className="amp-pills">
-            <button
-              className={`amp-pill${selectedGroup === "all" ? " amp-pill--active" : ""}`}
-              onClick={() => setSelectedGroup("all")}
+          {/* Group filter dropdown */}
+          <label className="amp-edit-field" style={{ marginBottom: "10px", maxWidth: "320px" }}>
+            <span className="amp-lbl">Набор</span>
+            <select
+              className="amp-edit-input"
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
             >
-              Всички ({activeMembersCount})
-            </button>
-            {groupOptions.map((g) => (
-              <button
-                key={g}
-                className={`amp-pill${selectedGroup === String(g) ? " amp-pill--active" : ""}`}
-                onClick={() => setSelectedGroup(String(g))}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
+              <option value="all">Всички ({activeMembersCount})</option>
+              {groupOptions.map((g) => (
+                <option key={g} value={String(g)}>
+                  Набор {g}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {/* Search */}
           <div className="amp-search-wrap">
@@ -2973,7 +2971,7 @@ function AdminMembersPageContent() {
           <div className="amp-modal amp-modal--confirm amp-modal--training-attendance" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
-              <span className="amp-modal-title-gradient">Тренировъчно присъствие</span>
+              <span className="amp-modal-title-gradient">Текущ график</span>
               <button
                 className="amp-modal-close"
                 onClick={() => {
@@ -2991,11 +2989,15 @@ function AdminMembersPageContent() {
               <div
                 style={{
                   display: "inline-flex",
-                  gap: "8px",
-                  padding: "4px",
+                  gap: "6px",
+                  padding: "5px",
+                  width: "fit-content",
+                  maxWidth: "100%",
                   borderRadius: "999px",
-                  background: "rgba(255,255,255,0.06)",
-                  marginBottom: "12px",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))",
+                  boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
+                  margin: "0 auto 14px auto",
                 }}
               >
                 <button
@@ -3004,12 +3006,18 @@ function AdminMembersPageContent() {
                   onClick={() => void handleTrainingAttendanceViewChange("teamGroup")}
                   style={{
                     borderRadius: "999px",
-                    borderColor: trainingAttendanceView === "teamGroup" ? "rgba(76, 201, 240, 0.7)" : undefined,
-                    background: trainingAttendanceView === "teamGroup" ? "rgba(76, 201, 240, 0.18)" : undefined,
+                    minWidth: "120px",
+                    fontWeight: 700,
+                    borderColor: trainingAttendanceView === "teamGroup" ? "rgba(50,205,50,0.62)" : "rgba(255,255,255,0.2)",
+                    background: trainingAttendanceView === "teamGroup"
+                      ? "linear-gradient(135deg, rgba(50,205,50,0.24), rgba(50,205,50,0.12))"
+                      : "rgba(255,255,255,0.04)",
+                    color: trainingAttendanceView === "teamGroup" ? "#cfffcc" : "#ffffff",
+                    boxShadow: trainingAttendanceView === "teamGroup" ? "0 0 18px rgba(50,205,50,0.2)" : undefined,
                   }}
                   disabled={trainingAttendanceLoading || trainingNoteSaving || trainingDaysEditorSaving}
                 >
-                  Набор
+                  Отбор
                 </button>
                 <button
                   type="button"
@@ -3017,12 +3025,18 @@ function AdminMembersPageContent() {
                   onClick={() => void handleTrainingAttendanceViewChange("trainingGroups")}
                   style={{
                     borderRadius: "999px",
-                    borderColor: trainingAttendanceView === "trainingGroups" ? "rgba(76, 201, 240, 0.7)" : undefined,
-                    background: trainingAttendanceView === "trainingGroups" ? "rgba(76, 201, 240, 0.18)" : undefined,
+                    minWidth: "150px",
+                    fontWeight: 700,
+                    borderColor: trainingAttendanceView === "trainingGroups" ? "rgba(50,205,50,0.62)" : "rgba(255,255,255,0.2)",
+                    background: trainingAttendanceView === "trainingGroups"
+                      ? "linear-gradient(135deg, rgba(50,205,50,0.24), rgba(50,205,50,0.12))"
+                      : "rgba(255,255,255,0.04)",
+                    color: trainingAttendanceView === "trainingGroups" ? "#cfffcc" : "#ffffff",
+                    boxShadow: trainingAttendanceView === "trainingGroups" ? "0 0 18px rgba(50,205,50,0.2)" : undefined,
                   }}
                   disabled={trainingAttendanceLoading || trainingNoteSaving || trainingDaysEditorSaving}
                 >
-                  Тренировъчни групи
+                  Сборни отбори
                 </button>
               </div>
               {trainingAttendanceView === "teamGroup" ? (
@@ -3044,7 +3058,7 @@ function AdminMembersPageContent() {
               </label>
               ) : (
                 <div style={{ marginBottom: "12px" }}>
-                  <span className="amp-lbl">Тренировъчни групи</span>
+                  <span className="amp-lbl">Сборни отбори</span>
                   <div style={{ marginTop: "8px", marginBottom: "10px" }}>
                     <button
                       type="button"
@@ -3052,16 +3066,17 @@ function AdminMembersPageContent() {
                       onClick={openTrainingGroupCreateModal}
                       disabled={trainingNoteSaving || trainingGroupCreateSaving}
                     >
-                      {trainingGroupCreateSaving ? "Запазване..." : "Създай тренировъчна група"}
+                      {trainingGroupCreateSaving ? "Запазване..." : "Създай сборен отбор"}
                     </button>
                   </div>
                   {trainingScheduleGroupsLoading ? (
                     <p className="amp-empty amp-empty--modal">Зареждане...</p>
                   ) : trainingScheduleGroups.length === 0 ? (
-                    <p className="amp-empty amp-empty--modal">Няма създадени тренировъчни групи</p>
+                    <p className="amp-empty amp-empty--modal">Няма създадени сборни отбори</p>
                   ) : (
+                    <>
                     <label className="amp-edit-field" style={{ marginBottom: "12px" }}>
-                      <span className="amp-lbl">Тренировъчна група</span>
+                      <span className="amp-lbl">Сборен отбор</span>
                       <select
                         className="amp-edit-input"
                         value={selectedTrainingGroupId}
@@ -3075,6 +3090,15 @@ function AdminMembersPageContent() {
                         ))}
                       </select>
                     </label>
+                    <button
+                      type="button"
+                      className="amp-btn amp-btn--ghost"
+                      onClick={() => openTrainingGroupEditModal(selectedTrainingGroupId)}
+                      disabled={!selectedTrainingGroupId || trainingScheduleGroupsLoading || trainingGroupEditSaving}
+                    >
+                      {trainingGroupEditSaving ? "Отваряне..." : "Редактирай сборен отбор"}
+                    </button>
+                    </>
                   )}
                 </div>
               )}
@@ -3332,7 +3356,7 @@ function AdminMembersPageContent() {
             </h2>
             <div className="amp-modal-body">
               <p className="amp-lbl" style={{ whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
-                {`Набор ${selectedTeamGroup} е в тренировъчни групи: ${pendingTeamGroupWarningGroups.map((group) => group.name).join(", ")}. Продължаването ще го премахне от тези групи и може да се наложи да промените имената им.`}
+                {`Набор ${selectedTeamGroup} е в сборни отбори: ${pendingTeamGroupWarningGroups.map((group) => group.name).join(", ")}. Продължаването ще го премахне от тези групи и може да се наложи да промените имената им.`}
               </p>
               <div className="amp-modal-actions amp-modal-actions--end">
                 <button
@@ -3376,7 +3400,7 @@ function AdminMembersPageContent() {
             </h2>
             <div className="amp-modal-body">
               <p className="amp-lbl" style={{ whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word" }}>
-                {`Искате ли да направите промени по тренировъчна група ${postTeamGroupSavePromptGroupName}?`}
+                {`Искате ли да направите промени по сборен отбор ${postTeamGroupSavePromptGroupName}?`}
               </p>
               <div className="amp-modal-actions amp-modal-actions--end">
                 <button
@@ -3412,7 +3436,7 @@ function AdminMembersPageContent() {
           <div className="amp-modal amp-modal--confirm amp-modal--training-days-editor" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
-              <span className="amp-modal-title-gradient">Редакция на тренировъчна група</span>
+              <span className="amp-modal-title-gradient">Редакция на сборен отбор</span>
               <button
                 className="amp-modal-close"
                 onClick={() => {
@@ -3436,27 +3460,19 @@ function AdminMembersPageContent() {
                   disabled={trainingGroupEditSaving}
                 />
               </label>
-              <div className="amp-training-days-editor-header" style={{ marginTop: "10px", alignItems: "flex-start", flexDirection: "column", gap: "8px" }}>
+              <div className="amp-training-days-editor-header amp-training-days-editor-header--stack" style={{ marginTop: "10px" }}>
                 <span className="amp-lbl">Набори за групата (минимум 2):</span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                <div className="amp-group-check-grid">
                   {groupOptions.map((group) => {
                     const value = String(group);
                     const isChecked = trainingGroupEditGroups.includes(value);
                     return (
                       <label
                         key={`training-group-edit-${group}`}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 10px",
-                          borderRadius: "999px",
-                          border: "1px solid rgba(255,255,255,0.22)",
-                          background: isChecked ? "rgba(50,205,50,0.16)" : "rgba(255,255,255,0.06)",
-                          cursor: trainingGroupEditSaving ? "default" : "pointer",
-                        }}
+                        className={`amp-group-check-chip${isChecked ? " is-selected" : ""}${trainingGroupEditSaving ? " is-disabled" : ""}`}
                       >
                         <input
+                          className="amp-group-check-input"
                           type="checkbox"
                           checked={isChecked}
                           disabled={trainingGroupEditSaving}
@@ -3469,12 +3485,13 @@ function AdminMembersPageContent() {
                             });
                           }}
                         />
-                        <span className="amp-lbl">Набор {group}</span>
+                        <span className="amp-group-check-box" aria-hidden="true" />
+                        <span className="amp-lbl amp-group-check-label">Набор {group}</span>
                       </label>
                     );
                   })}
                 </div>
-                <span className="amp-lbl" style={{ opacity: 0.8 }}>
+                <span className="amp-lbl amp-group-check-hint">
                   {trainingGroupEditGroups.length === 0
                     ? "Изберете поне 2 набора."
                     : `Избрани набори: ${trainingGroupEditGroups.join(", ")}`}
@@ -3519,7 +3536,7 @@ function AdminMembersPageContent() {
           <div className="amp-modal amp-modal--confirm amp-modal--training-days-editor" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
-              <span className="amp-modal-title-gradient">Създай тренировъчна група</span>
+              <span className="amp-modal-title-gradient">Създай сборен отбор</span>
               <button
                 className="amp-modal-close"
                 onClick={() => {
@@ -3543,27 +3560,19 @@ function AdminMembersPageContent() {
                   disabled={trainingGroupCreateSaving}
                 />
               </label>
-              <div className="amp-training-days-editor-header" style={{ marginTop: "10px", alignItems: "flex-start", flexDirection: "column", gap: "8px" }}>
+              <div className="amp-training-days-editor-header amp-training-days-editor-header--stack" style={{ marginTop: "10px" }}>
                 <span className="amp-lbl">Набори за групата (минимум 2):</span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                <div className="amp-group-check-grid">
                   {groupOptions.map((group) => {
                     const value = String(group);
                     const isChecked = trainingGroupCreateGroups.includes(value);
                     return (
                       <label
                         key={`training-group-create-${group}`}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 10px",
-                          borderRadius: "999px",
-                          border: "1px solid rgba(255,255,255,0.22)",
-                          background: isChecked ? "rgba(50,205,50,0.16)" : "rgba(255,255,255,0.06)",
-                          cursor: trainingGroupCreateSaving ? "default" : "pointer",
-                        }}
+                        className={`amp-group-check-chip${isChecked ? " is-selected" : ""}${trainingGroupCreateSaving ? " is-disabled" : ""}`}
                       >
                         <input
+                          className="amp-group-check-input"
                           type="checkbox"
                           checked={isChecked}
                           disabled={trainingGroupCreateSaving}
@@ -3576,12 +3585,13 @@ function AdminMembersPageContent() {
                             });
                           }}
                         />
-                        <span className="amp-lbl">Набор {group}</span>
+                        <span className="amp-group-check-box" aria-hidden="true" />
+                        <span className="amp-lbl amp-group-check-label">Набор {group}</span>
                       </label>
                     );
                   })}
                 </div>
-                <span className="amp-lbl" style={{ opacity: 0.8 }}>
+                <span className="amp-lbl amp-group-check-hint">
                   {trainingGroupCreateGroups.length === 0
                     ? "Изберете поне 2 набора."
                     : `Избрани набори: ${trainingGroupCreateGroups.join(", ")}`}
@@ -3606,7 +3616,7 @@ function AdminMembersPageContent() {
                   onClick={() => void saveTrainingGroupFromModal()}
                   disabled={trainingGroupCreateSaving}
                 >
-                  {trainingGroupCreateSaving ? "Създаване..." : "Създай тренировъчна група"}
+                  {trainingGroupCreateSaving ? "Създаване..." : "Създай сборен отбор"}
                 </button>
               </div>
             </div>
@@ -3639,11 +3649,11 @@ function AdminMembersPageContent() {
               {false && !trainingDaysEditorCreateOpen && (
                 <>
                   <div className="amp-training-days-editor-header" style={{ alignItems: "flex-start", flexDirection: "column", gap: "8px" }}>
-                    <span className="amp-lbl">Създадени тренировъчни групи</span>
+                    <span className="amp-lbl">Създадени сборни отбори</span>
                     {trainingScheduleGroupsLoading ? (
                       <p className="amp-empty amp-empty--modal">Зареждане...</p>
                     ) : trainingScheduleGroups.length === 0 ? (
-                      <p className="amp-empty amp-empty--modal">Няма създадени тренировъчни групи</p>
+                      <p className="amp-empty amp-empty--modal">Няма създадени сборни отбори</p>
                     ) : (
                       <div style={{ display: "grid", gap: "8px", width: "100%" }}>
                         {trainingScheduleGroups.map((group) => (
@@ -3674,7 +3684,7 @@ function AdminMembersPageContent() {
                       }}
                       disabled={trainingDaysEditorSaving || trainingDaysEditorLoading}
                     >
-                      Създай тренировъчна група
+                      Създай сборен отбор
                     </button>
                   </div>
                 </>
@@ -3684,9 +3694,9 @@ function AdminMembersPageContent() {
               <div className="amp-training-days-editor-header">
                 <span className="amp-lbl">
                   {trainingDaysEditorMode === "createGroup"
-                    ? "Създай тренировъчна група"
+                    ? "Създай сборен отбор"
                     : trainingDaysEditorMode === "trainingGroup"
-                      ? "Задай тренировъчни дни за тренировъчна група"
+                      ? "Задай тренировъчни дни за сборен отбор"
                     : "Избери тренировъчни дни (следващи 30 дни)"}
                 </span>
                 {trainingDaysEditorMode !== "createGroup" && (
@@ -3708,14 +3718,14 @@ function AdminMembersPageContent() {
                   }}
                 >
                   {trainingDaysEditorMode === "trainingGroup"
-                    ? `Тренировъчна група: ${selectedTrainingGroup?.name ?? "-"}`
+                    ? `Сборен отбор: ${selectedTrainingGroup?.name ?? "-"}`
                     : selectedTeamGroup === null
                       ? "Набор: Всички"
                       : `Набор: ${selectedTeamGroup}`}
                 </span>
                 <span>
                   {trainingDaysEditorMode === "trainingGroup"
-                    ? `Тези промени ще се запазят за тренировъчна група ${selectedTrainingGroup?.name ?? "-"}.`
+                    ? `Тези промени ще се запазят за сборен отбор ${selectedTrainingGroup?.name ?? "-"}.`
                     : selectedTeamGroup === null
                       ? "Тези промени ще се запазят за всички набори."
                       : `Тези промени ще се запазят за набор ${selectedTeamGroup}.`}
@@ -3723,7 +3733,7 @@ function AdminMembersPageContent() {
               </div>
               {trainingDaysEditorMode === "teamGroup" && selectedTeamGroupLinkedTrainingGroups.length > 0 && (
                 <p className="amp-confirm-error" style={{ marginTop: "8px" }}>
-                  {`Внимание: набор ${selectedTeamGroup} участва в тренировъчни групи (${selectedTeamGroupLinkedTrainingGroups.map((group) => group.name).join(", ")}). При запазване ще бъде премахнат от тях и може да се наложи преименуване на групите.`}
+                  {`Внимание: набор ${selectedTeamGroup} участва в сборни отбори (${selectedTeamGroupLinkedTrainingGroups.map((group) => group.name).join(", ")}). При запазване ще бъде премахнат от тях и може да се наложи преименуване на групите.`}
                 </p>
               )}
               {trainingDaysEditorMode === "createGroup" && (
@@ -3862,7 +3872,7 @@ function AdminMembersPageContent() {
                   {trainingDaysEditorSaving
                     ? "Запазване..."
                     : trainingDaysEditorMode === "createGroup"
-                      ? "Създай тренировъчна група"
+                      ? "Създай сборен отбор"
                       : "Запази дни"}
                 </button>
               </div>

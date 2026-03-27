@@ -1014,6 +1014,108 @@
   margin-bottom: 8px;
 }
 
+.amp-training-days-editor-header--stack {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amp-group-check-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amp-group-check-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  user-select: none;
+}
+
+.amp-group-check-chip:hover {
+  border-color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.09);
+}
+
+.amp-group-check-chip:has(.amp-group-check-input:focus-visible) {
+  box-shadow: 0 0 0 2px rgba(76,201,240,0.35);
+  border-color: rgba(76,201,240,0.7);
+}
+
+.amp-group-check-chip.is-selected {
+  border-color: rgba(50,205,50,0.6);
+  background: rgba(50,205,50,0.16);
+}
+
+.amp-group-check-chip.is-selected:hover {
+  border-color: rgba(50,205,50,0.75);
+  background: rgba(50,205,50,0.22);
+}
+
+.amp-group-check-chip.is-disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.amp-group-check-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
+.amp-group-check-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.04);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+  flex-shrink: 0;
+}
+
+.amp-group-check-box::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  transform: rotate(-45deg) translateY(-1px);
+  transition: border-color 0.18s ease;
+}
+
+.amp-group-check-chip.is-selected .amp-group-check-box {
+  border-color: rgba(50,205,50,0.8);
+  background: rgba(50,205,50,0.2);
+}
+
+.amp-group-check-chip.is-selected .amp-group-check-box::after {
+  border-left-color: #b9ffb9;
+  border-bottom-color: #b9ffb9;
+}
+
+.amp-group-check-label {
+  line-height: 1;
+}
+
+.amp-group-check-hint {
+  opacity: 0.82;
+}
+
 
 .amp-modal--training-attendance .amp-training-note-targets,
 .amp-modal--training-attendance .amp-training-note {
