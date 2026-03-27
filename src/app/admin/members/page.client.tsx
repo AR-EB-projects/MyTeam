@@ -287,11 +287,6 @@ const SearchIcon = () => (
     <path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />
   </svg>
 );
-const CircleCheckBigIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21.801 10A10 10 0 1 1 17 3.335" /><path d="m9 11 3 3L22 4" />
-  </svg>
-);
 const XIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 6 6 18" /><path d="m6 6 12 12" />
@@ -1072,11 +1067,6 @@ function PlayerCard({
             </button>
           )}
 
-          {!needsAction && (
-            <span style={{ color: "#32cd32", flexShrink: 0 }}>
-              <CircleCheckBigIcon size={24} />
-            </span>
-          )}
         </div>
       </div>
     </div>
