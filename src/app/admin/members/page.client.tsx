@@ -1094,7 +1094,7 @@ function AdminMembersPageContent() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
-  const [trainingGroupScope, setTrainingGroupScope] = useState("all");
+  const [trainingGroupScope, setTrainingGroupScope] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<Member | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
@@ -1717,6 +1717,13 @@ function AdminMembersPageContent() {
   const groupOptions = [...new Set(
     members.map((m) => m.teamGroup).filter((g): g is number => g !== null)
   )].sort((a, b) => a - b);
+  const activeMembersByGroup = members.reduce<Record<number, number>>((acc, member) => {
+    if (!member.isActive || member.teamGroup === null) {
+      return acc;
+    }
+    acc[member.teamGroup] = (acc[member.teamGroup] ?? 0) + 1;
+    return acc;
+  }, {});
   const selectedTeamGroup = parseSelectedTeamGroup(trainingGroupScope);
   const selectedTrainingGroup = trainingScheduleGroups.find((group) => group.id === selectedTrainingGroupId) ?? null;
   const selectedTeamGroupLinkedTrainingGroups =
@@ -1725,6 +1732,19 @@ function AdminMembersPageContent() {
       : trainingScheduleGroups.filter((group) => group.teamGroups.includes(selectedTeamGroup));
   const activeMembersCount = members.filter((m) => m.isActive).length;
   const inactiveMembers = members.filter((m) => !m.isActive);
+
+  useEffect(() => {
+    if (groupOptions.length === 0) {
+      if (trainingGroupScope !== "") {
+        setTrainingGroupScope("");
+      }
+      return;
+    }
+    const hasSelectedScope = groupOptions.some((group) => String(group) === trainingGroupScope);
+    if (!hasSelectedScope) {
+      setTrainingGroupScope(String(groupOptions[0]));
+    }
+  }, [groupOptions, trainingGroupScope]);
 
   const filtered = members.filter((m) => {
     if (!m.isActive) return false;
@@ -2714,8 +2734,8 @@ function AdminMembersPageContent() {
             >
               <option value="all">Всички ({activeMembersCount})</option>
               {groupOptions.map((g) => (
-                <option key={g} value={String(g)}>
-                  Набор {g}
+                <option key={g} value={String(g)} label={`${g} (${activeMembersByGroup[g] ?? 0})`}>
+                  {g} ({activeMembersByGroup[g] ?? 0})
                 </option>
               ))}
             </select>
