@@ -4156,7 +4156,7 @@ function AdminMembersPageContent() {
               </div>
               )}
               {trainingDaysEditorError && <p className="amp-confirm-error">{trainingDaysEditorError}</p>}
-              {isTrainingDaysScheduleUnchanged && !trainingDaysEditorError && trainingDaysEditorMode !== "createGroup" && (
+              {isTrainingDaysScheduleUnchanged && !trainingDaysEditorError && (
                 <p className="amp-confirm-error">Графикът е същият като предишния.</p>
               )}
               <div className="amp-modal-actions amp-modal-actions--end">
