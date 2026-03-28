@@ -3392,7 +3392,7 @@ function AdminMembersPageContent() {
                     ? "Зареждане..."
                     : trainingDaysEditorOpen
                       ? "Скрий настройка"
-                      : "Задай тренировки"}
+                      : "Насрочи тренировки"}
                 </button>
                 <button
                   className="amp-btn amp-btn--primary"

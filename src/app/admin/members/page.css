@@ -7,6 +7,10 @@
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
+.amp-page button {
+  color: #ffffff !important;
+}
+
 .amp-dot-grid {
   position: fixed;
   inset: 0;
