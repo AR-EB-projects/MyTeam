@@ -1159,12 +1159,19 @@ function AdminMembersPageContent() {
   const [trainingNoteSaving, setTrainingNoteSaving] = useState(false);
   const [trainingNoteTargetDates, setTrainingNoteTargetDates] = useState<string[]>([]);
   const [trainingBulkNoteOpen, setTrainingBulkNoteOpen] = useState(false);
+  const [trainingNoteSuccessOpen, setTrainingNoteSuccessOpen] = useState(false);
+  const [trainingNoteSuccessMessage, setTrainingNoteSuccessMessage] = useState("");
+  const [trainingNotesByDate, setTrainingNotesByDate] = useState<Record<string, string>>({});
+  const [trainingNoteComparisonLoading, setTrainingNoteComparisonLoading] = useState(false);
   const [trainingDayDetailsOpen, setTrainingDayDetailsOpen] = useState(false);
   const [trainingDayDetailsOpening, setTrainingDayDetailsOpening] = useState(false);
   const [trainingDaysEditorOpen, setTrainingDaysEditorOpen] = useState(false);
   const [trainingDaysEditorLoading, setTrainingDaysEditorLoading] = useState(false);
   const [trainingDaysEditorSaving, setTrainingDaysEditorSaving] = useState(false);
   const [trainingDaysEditorError, setTrainingDaysEditorError] = useState("");
+  const [trainingDaysInitialDates, setTrainingDaysInitialDates] = useState<string[]>([]);
+  const [trainingDaysSuccessOpen, setTrainingDaysSuccessOpen] = useState(false);
+  const [trainingDaysSuccessMessage, setTrainingDaysSuccessMessage] = useState("");
   const [trainingDaysEditorMode, setTrainingDaysEditorMode] = useState<"teamGroup" | "createGroup" | "trainingGroup">("teamGroup");
   const [trainingDaysEditorGroups, setTrainingDaysEditorGroups] = useState<string[]>([]);
   const [trainingDaysEditorGroupName, setTrainingDaysEditorGroupName] = useState("");
@@ -1197,6 +1204,26 @@ function AdminMembersPageContent() {
   const trainingUpcomingByDate = new Map(trainingUpcomingDates.map((item) => [item.date, item]));
   const trainingAttendanceCalendarMonths = buildCalendarMonths(trainingUpcomingDates.map((item) => item.date));
   const todayIsoDate = getTodayIsoDate();
+  const trainingNoteTeamGroupFilter = parseSelectedTeamGroup(trainingGroupScope);
+  const trainingNoteScopeKey =
+    trainingAttendanceView === "trainingGroups"
+      ? `trainingGroup:${selectedTrainingGroupId || "-"}`
+      : `teamGroup:${trainingNoteTeamGroupFilter === null ? "all" : String(trainingNoteTeamGroupFilter)}`;
+  const effectiveTrainingNoteTargetDates =
+    trainingNoteTargetDates.length > 0
+      ? trainingNoteTargetDates
+      : trainingAttendanceDate
+        ? [trainingAttendanceDate]
+        : [];
+  const effectiveTrainingNoteTargetDatesKey = effectiveTrainingNoteTargetDates.join("|");
+  const isTrainingNoteSameAsExisting =
+    effectiveTrainingNoteTargetDates.length > 0 &&
+    effectiveTrainingNoteTargetDates.every((date) =>
+      Object.prototype.hasOwnProperty.call(trainingNotesByDate, `${trainingNoteScopeKey}|${date}`),
+    ) &&
+    effectiveTrainingNoteTargetDates.every(
+      (date) => (trainingNotesByDate[`${trainingNoteScopeKey}|${date}`] ?? "").trim() === trainingNote.trim(),
+    );
 
   useEffect(() => {
     if (!clubId) return;
@@ -1735,6 +1762,17 @@ function AdminMembersPageContent() {
     selectedTeamGroup === null
       ? []
       : trainingScheduleGroups.filter((group) => group.teamGroups.includes(selectedTeamGroup));
+  const normalizedTrainingDaysSelection = schedulerForm.trainingDates
+    .map((value) => String(value ?? "").trim())
+    .filter((value) => schedulerCalendarDateSet.has(value))
+    .sort((a, b) => a.localeCompare(b));
+  const normalizedTrainingDaysInitial = trainingDaysInitialDates
+    .map((value) => String(value ?? "").trim())
+    .filter((value) => schedulerCalendarDateSet.has(value))
+    .sort((a, b) => a.localeCompare(b));
+  const isTrainingDaysScheduleUnchanged =
+    trainingDaysEditorMode !== "createGroup" &&
+    normalizedTrainingDaysSelection.join("|") === normalizedTrainingDaysInitial.join("|");
   const activeMembersCount = members.filter((m) => m.isActive).length;
   const inactiveMembers = members.filter((m) => !m.isActive);
 
@@ -2090,6 +2128,7 @@ function AdminMembersPageContent() {
     setTrainingDaysEditorGroupName("");
     setTrainingDaysEditorCreateOpen(true);
     setTrainingDaysEditorError("");
+    setTrainingDaysInitialDates([]);
     setTrainingDaysEditorLoading(true);
     const loadedGroups = await loadTrainingScheduleGroups();
     try {
@@ -2109,6 +2148,7 @@ function AdminMembersPageContent() {
           ...prev,
           trainingDates: nextWindowDates,
         }));
+        setTrainingDaysInitialDates(nextWindowDates);
         setTrainingDaysEditorOpen(true);
         return;
       }
@@ -2125,6 +2165,15 @@ function AdminMembersPageContent() {
         throw new Error(payload?.error || "Неуспешно зареждане на графика.");
       }
       const payload = await response.json();
+      const resolvedTrainingDates =
+        mode === "createGroup"
+          ? []
+          : Array.isArray(payload.trainingDates)
+            ? payload.trainingDates
+                .map((value: unknown) => String(value ?? "").trim())
+                .filter((value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value))
+                .sort((a: string, b: string) => a.localeCompare(b))
+            : [];
       setSchedulerForm({
         reminderDay: String(payload.reminderDay ?? 25),
         overdueDay: String(payload.overdueDay ?? 1),
@@ -2132,16 +2181,9 @@ function AdminMembersPageContent() {
         reminderMinute: String(payload.reminderMinute ?? 0),
         overdueHour: String(payload.overdueHour ?? 10),
         overdueMinute: String(payload.overdueMinute ?? 0),
-        trainingDates:
-          mode === "createGroup"
-            ? []
-            : Array.isArray(payload.trainingDates)
-              ? payload.trainingDates
-                  .map((value: unknown) => String(value ?? "").trim())
-                  .filter((value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value))
-                  .sort((a: string, b: string) => a.localeCompare(b))
-              : [],
+        trainingDates: resolvedTrainingDates,
       });
+      setTrainingDaysInitialDates(resolvedTrainingDates);
       setTrainingDaysEditorOpen(true);
     } catch (error) {
       setTrainingDaysEditorError(error instanceof Error ? error.message : "Възникна грешка.");
@@ -2174,6 +2216,12 @@ function AdminMembersPageContent() {
     setTrainingDaysEditorGroupName("");
     setTrainingDaysEditorGroups([]);
     setTrainingDaysEditorOpen(false);
+    setTrainingDaysSuccessMessage(
+      schedulerForm.trainingDates.length > 1
+        ? `Промените по графика са изпратени успешно за ${schedulerForm.trainingDates.length} дни.`
+        : "Промените по графика са изпратени успешно.",
+    );
+    setTrainingDaysSuccessOpen(true);
     const refreshedGroups = await loadTrainingScheduleGroups();
     await fetchTrainingAttendance(trainingAttendanceDate);
     if (affectedTrainingGroupsSnapshot.length > 0) {
@@ -2201,6 +2249,9 @@ function AdminMembersPageContent() {
           .map((value) => String(value ?? "").trim())
           .filter((value) => schedulerCalendarDateSet.has(value))
           .sort((a, b) => a.localeCompare(b));
+        if (nextTrainingDates.join("|") === normalizedTrainingDaysInitial.join("|")) {
+          throw new Error("Графикът е същият като предишния.");
+        }
         const groupResponse = await fetch(
           `/api/admin/clubs/${encodeURIComponent(clubId)}/training-groups/${encodeURIComponent(selectedTrainingGroupId)}`,
           {
@@ -2221,9 +2272,18 @@ function AdminMembersPageContent() {
         await loadTrainingScheduleGroups();
         await fetchTrainingAttendance(trainingAttendanceDate);
         setTrainingDaysEditorOpen(false);
+        setTrainingDaysSuccessMessage(
+          nextTrainingDates.length > 1
+            ? `Промените по графика са изпратени успешно за ${nextTrainingDates.length} дни.`
+            : "Промените по графика са изпратени успешно.",
+        );
+        setTrainingDaysSuccessOpen(true);
         return;
       }
 
+      if (normalizedTrainingDaysSelection.join("|") === normalizedTrainingDaysInitial.join("|")) {
+        throw new Error("Графикът е същият като предишния.");
+      }
       if (selectedTeamGroupLinkedTrainingGroups.length > 0) {
         setPendingTeamGroupWarningGroups(affectedTrainingGroupsSnapshot);
         setTeamGroupWarningModalOpen(true);
@@ -2402,6 +2462,10 @@ function AdminMembersPageContent() {
         : [];
 
       const resolvedDate = String(payload?.trainingDate ?? date ?? "");
+      const resolvedScopeKey =
+        resolvedView === "trainingGroups"
+          ? `trainingGroup:${trainingGroupFilter || "-"}`
+          : `teamGroup:${teamGroupFilter === null ? "all" : String(teamGroupFilter)}`;
       setTrainingAttendanceDate(resolvedDate);
       setTrainingAttendancePlayers(players);
       setTrainingAttendanceStats({
@@ -2417,6 +2481,12 @@ function AdminMembersPageContent() {
       });
       setTrainingUpcomingDates(upcomingDates);
       setTrainingNote(typeof payload?.note === "string" ? payload.note : "");
+      if (resolvedDate) {
+        setTrainingNotesByDate((prev) => ({
+          ...prev,
+          [`${resolvedScopeKey}|${resolvedDate}`]: typeof payload?.note === "string" ? payload.note : "",
+        }));
+      }
       setTrainingNoteTargetDates((prev) => {
         const allowedSet = new Set(upcomingDates.map((item: TrainingUpcomingDateItem) => item.date));
         const filtered = prev.filter((item) => allowedSet.has(item));
@@ -2592,12 +2662,52 @@ function AdminMembersPageContent() {
       if (targetDates.length === 0) {
         throw new Error("Select at least one training day for note.");
       }
+      const nextNoteNormalized = trainingNote.trim();
+      const teamGroupFilter =
+        trainingAttendanceView === "teamGroup"
+          ? selectedTeamGroup
+          : null;
+      const existingNotesByDate = await Promise.all(
+        targetDates.map(async (targetDate) => {
+          const search = new URLSearchParams({ date: targetDate });
+          if (trainingAttendanceView === "trainingGroups") {
+            if (selectedTrainingGroupId) {
+              search.set("trainingGroupId", selectedTrainingGroupId);
+            }
+          } else if (teamGroupFilter !== null) {
+            search.set("teamGroup", String(teamGroupFilter));
+          }
+          const response = await fetch(
+            `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance?${search.toString()}`,
+            { cache: "no-store" },
+          );
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(
+              typeof payload?.error === "string" && payload.error.trim()
+                ? payload.error.trim()
+                : "Неуспешно зареждане на текущото описание.",
+            );
+          }
+          const payload = await response.json().catch(() => ({}));
+          return {
+            date: targetDate,
+            note: typeof payload?.note === "string" ? payload.note.trim() : "",
+          };
+        }),
+      );
+      const datesToSave = existingNotesByDate
+        .filter((item) => item.note !== nextNoteNormalized)
+        .map((item) => item.date);
+      if (datesToSave.length === 0) {
+        throw new Error("Описанието е същото като предишното за избраната дата.");
+      }
 
       const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          trainingDate: targetDates[0],
+          trainingDate: datesToSave[0],
           note: trainingNote,
           ...(trainingAttendanceView === "trainingGroups"
             ? { trainingGroupId: selectedTrainingGroupId || null }
@@ -2612,7 +2722,7 @@ function AdminMembersPageContent() {
             : "Неуспешно запазване на описание.",
         );
       }
-      for (const targetDate of targetDates.slice(1)) {
+      for (const targetDate of datesToSave.slice(1)) {
         const bulkResponse = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -2633,14 +2743,106 @@ function AdminMembersPageContent() {
           );
         }
       }
+      setTrainingNotesByDate((prev) => {
+        const next = { ...prev };
+        for (const date of datesToSave) {
+          next[`${trainingNoteScopeKey}|${date}`] = trainingNote;
+        }
+        return next;
+      });
       await fetchTrainingAttendance();
       setTrainingBulkNoteOpen(false);
+      setTrainingNoteSuccessMessage(
+        datesToSave.length > 1
+          ? `Промените са изпратени успешно за ${datesToSave.length} дни.`
+          : "Промените са изпратени успешно.",
+      );
+      setTrainingNoteSuccessOpen(true);
     } catch (error) {
       setTrainingAttendanceError(error instanceof Error ? error.message : "Възникна грешка.");
     } finally {
       setTrainingNoteSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (!trainingBulkNoteOpen || !clubId) {
+      setTrainingNoteComparisonLoading(false);
+      return;
+    }
+    const missingDates = effectiveTrainingNoteTargetDates.filter(
+      (date) => !Object.prototype.hasOwnProperty.call(trainingNotesByDate, `${trainingNoteScopeKey}|${date}`),
+    );
+    if (missingDates.length === 0) {
+      setTrainingNoteComparisonLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const loadMissingNotes = async () => {
+      setTrainingNoteComparisonLoading(true);
+      try {
+        const fetched = await Promise.all(
+          missingDates.map(async (targetDate) => {
+            const search = new URLSearchParams({ date: targetDate });
+            if (trainingAttendanceView === "trainingGroups") {
+              if (selectedTrainingGroupId) {
+                search.set("trainingGroupId", selectedTrainingGroupId);
+              }
+            } else if (trainingNoteTeamGroupFilter !== null) {
+              search.set("teamGroup", String(trainingNoteTeamGroupFilter));
+            }
+            const response = await fetch(
+              `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance?${search.toString()}`,
+              { cache: "no-store" },
+            );
+            if (!response.ok) {
+              const payload = await response.json().catch(() => ({}));
+              throw new Error(
+                typeof payload?.error === "string" && payload.error.trim()
+                  ? payload.error.trim()
+                  : "Неуспешно зареждане на текущото описание.",
+              );
+            }
+            const payload = await response.json().catch(() => ({}));
+            return [targetDate, typeof payload?.note === "string" ? payload.note : ""] as const;
+          }),
+        );
+        if (cancelled) {
+          return;
+        }
+        setTrainingNotesByDate((prev) => {
+          const next = { ...prev };
+          for (const [date, note] of fetched) {
+            next[`${trainingNoteScopeKey}|${date}`] = note;
+          }
+          return next;
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setTrainingAttendanceError(error instanceof Error ? error.message : "Възникна грешка.");
+        }
+      } finally {
+        if (!cancelled) {
+          setTrainingNoteComparisonLoading(false);
+        }
+      }
+    };
+
+    void loadMissingNotes();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    trainingBulkNoteOpen,
+    clubId,
+    trainingAttendanceView,
+    selectedTrainingGroupId,
+    trainingNoteTeamGroupFilter,
+    trainingNoteScopeKey,
+    effectiveTrainingNoteTargetDatesKey,
+    trainingNotesByDate,
+  ]);
 
   useEffect(() => {
     if (!trainingAttendanceOpen || !clubId || !trainingAttendanceDate) {
@@ -3954,6 +4156,9 @@ function AdminMembersPageContent() {
               </div>
               )}
               {trainingDaysEditorError && <p className="amp-confirm-error">{trainingDaysEditorError}</p>}
+              {isTrainingDaysScheduleUnchanged && !trainingDaysEditorError && trainingDaysEditorMode !== "createGroup" && (
+                <p className="amp-confirm-error">Графикът е същият като предишния.</p>
+              )}
               <div className="amp-modal-actions amp-modal-actions--end">
                 <button
                   type="button"
@@ -3971,7 +4176,11 @@ function AdminMembersPageContent() {
                   type="button"
                   className="amp-btn amp-btn--primary"
                   onClick={() => void (trainingDaysEditorMode === "createGroup" ? saveTrainingDaysForSelectedGroups() : saveTrainingDaysFromTrainingModal())}
-                  disabled={trainingDaysEditorSaving || trainingDaysEditorLoading}
+                  disabled={
+                    trainingDaysEditorSaving ||
+                    trainingDaysEditorLoading ||
+                    (trainingDaysEditorMode !== "createGroup" && isTrainingDaysScheduleUnchanged)
+                  }
                 >
                   {trainingDaysEditorSaving
                     ? "Запазване..."
@@ -3982,6 +4191,31 @@ function AdminMembersPageContent() {
               </div>
               </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {trainingDaysSuccessOpen && (
+        <div className="amp-overlay amp-overlay--confirm" onClick={() => setTrainingDaysSuccessOpen(false)}>
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="amp-modal-tint" aria-hidden="true" />
+            <h2 className="amp-modal-title">
+              <span className="amp-modal-title-gradient">Изпратено</span>
+              <button
+                className="amp-modal-close"
+                onClick={() => setTrainingDaysSuccessOpen(false)}
+                aria-label="Затвори"
+              >
+                <XIcon />
+              </button>
+            </h2>
+            <div className="amp-modal-body">
+              <p className="amp-confirm-text">{trainingDaysSuccessMessage}</p>
+              <div className="amp-modal-actions amp-modal-actions--end">
+                <button className="amp-btn amp-btn--primary" onClick={() => setTrainingDaysSuccessOpen(false)}>
+                  Добре
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4157,6 +4391,10 @@ function AdminMembersPageContent() {
                   disabled={trainingNoteSaving}
                 />
               </label>
+              {trainingAttendanceError && <p className="amp-confirm-error">{trainingAttendanceError}</p>}
+              {isTrainingNoteSameAsExisting && !trainingAttendanceError && (
+                <p className="amp-confirm-error">Описанието е същото като предишното за избраната дата.</p>
+              )}
               <div className="amp-modal-actions">
                 <button
                   className="amp-btn amp-btn--ghost"
@@ -4168,11 +4406,41 @@ function AdminMembersPageContent() {
                 <button
                   className="amp-btn amp-btn--primary"
                   onClick={() => void saveTrainingNote()}
-                  disabled={trainingNoteSaving || trainingNoteTargetDates.length === 0}
+                  disabled={
+                    trainingNoteSaving ||
+                    trainingNoteComparisonLoading ||
+                    effectiveTrainingNoteTargetDates.length === 0 ||
+                    isTrainingNoteSameAsExisting
+                  }
                 >
                   {trainingNoteSaving
                     ? "Запазване..."
-                    : `Запази описание за ${trainingNoteTargetDates.length} ден(дни)`}
+                    : `Запази описание за ${effectiveTrainingNoteTargetDates.length} ден(дни)`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {trainingNoteSuccessOpen && (
+        <div className="amp-overlay amp-overlay--confirm" onClick={() => setTrainingNoteSuccessOpen(false)}>
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="amp-modal-tint" aria-hidden="true" />
+            <h2 className="amp-modal-title">
+              <span className="amp-modal-title-gradient">Изпратено</span>
+              <button
+                className="amp-modal-close"
+                onClick={() => setTrainingNoteSuccessOpen(false)}
+                aria-label="Затвори"
+              >
+                <XIcon />
+              </button>
+            </h2>
+            <div className="amp-modal-body">
+              <p className="amp-confirm-text">{trainingNoteSuccessMessage}</p>
+              <div className="amp-modal-actions amp-modal-actions--end">
+                <button className="amp-btn amp-btn--primary" onClick={() => setTrainingNoteSuccessOpen(false)}>
+                  Добре
                 </button>
               </div>
             </div>

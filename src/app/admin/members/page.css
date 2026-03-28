@@ -1045,6 +1045,12 @@
   color: #9eff9e;
 }
 
+.amp-modal--training-note .amp-training-date-btn--selected {
+  border-color: rgba(245, 158, 11, 0.8);
+  background: rgba(245, 158, 11, 0.24);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.28);
+}
+
 .amp-training-date-btn--today {
   border-color: rgba(80,170,255,0.7);
   background: rgba(80,170,255,0.2);
