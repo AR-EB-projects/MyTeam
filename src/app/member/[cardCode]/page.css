@@ -812,7 +812,7 @@
   padding: 9px 12px;
   height: 36px;
   background-color: rgba(50,205,50,0.2);
-  color: #32cd32;
+  color: #ffffff;
   border: 1px solid rgba(50,205,50,0.3);
   border-radius: 6px;
   font-size: 14px;
@@ -885,6 +885,10 @@
 }
 
 .add-btn:hover { background-color: rgba(0,122,255,0.3); }
+
+.member-action-btn {
+  color: #ffffff;
+}
 
 /* ── Hint ── */
 .hint-text {

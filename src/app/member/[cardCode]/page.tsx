@@ -1474,7 +1474,7 @@ export default function MemberCardPage({
               Плати
             </button>
             <button
-              className="add-btn"
+              className="add-btn member-action-btn"
               onClick={() => {
                 setPauseError(null);
                 setSelectedPauseMonths([]);
@@ -1487,7 +1487,7 @@ export default function MemberCardPage({
             </button>
           </>)}
 
-          <button className="add-btn" onClick={() => void openTrainingModal()}>
+          <button className="add-btn member-action-btn" onClick={() => void openTrainingModal()}>
             Тренировъчен график
           </button>
 
