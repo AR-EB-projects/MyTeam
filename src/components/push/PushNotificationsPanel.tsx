@@ -35,6 +35,72 @@ async function registerServiceWorker() {
   return await navigator.serviceWorker.ready;
 }
 
+type NotificationPermissionState = PermissionState | "unsupported" | "unavailable";
+
+async function getNotificationPermissionState(): Promise<NotificationPermissionState> {
+  if (!("permissions" in navigator) || typeof navigator.permissions.query !== "function") {
+    return "unsupported";
+  }
+
+  try {
+    const result = await navigator.permissions.query({
+      name: "notifications" as PermissionName,
+    });
+    return result.state;
+  } catch {
+    return "unavailable";
+  }
+}
+
+async function getPushSubscribeDiagnostics(
+  registration: ServiceWorkerRegistration,
+  vapidPublicKey: string
+) {
+  const swState =
+    registration.active?.state ??
+    registration.installing?.state ??
+    registration.waiting?.state ??
+    "none";
+
+  return {
+    isSecureContext: window.isSecureContext,
+    notificationPermission: Notification.permission,
+    permissionApiState: await getNotificationPermissionState(),
+    isOnline: navigator.onLine,
+    visibilityState: document.visibilityState,
+    serviceWorkerController: Boolean(navigator.serviceWorker.controller),
+    serviceWorkerState: swState,
+    supportsPushManager: "PushManager" in window,
+    standaloneDisplayMode: isStandaloneMode(),
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    vapidPublicKeyLength: vapidPublicKey.length,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+async function reportPushClientError(payload: {
+  cardCode: string;
+  phase: "subscribe";
+  errorName: string;
+  errorMessage: string;
+  diagnostics: Awaited<ReturnType<typeof getPushSubscribeDiagnostics>>;
+}) {
+  try {
+    await fetch("/api/push/client-error", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch {
+    // Best-effort reporting only; user flow must continue.
+  }
+}
+
 interface PushNotificationsPanelProps {
   cardCode: string;
 }
@@ -146,14 +212,47 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
             applicationServerKey: urlBase64ToUint8Array(publicKey),
           });
         } catch (subscribeError) {
+          const diagnostics = await getPushSubscribeDiagnostics(registration, publicKey);
+
           if (
             subscribeError instanceof DOMException &&
             subscribeError.name === "AbortError"
           ) {
+            void reportPushClientError({
+              cardCode,
+              phase: "subscribe",
+              errorName: subscribeError.name,
+              errorMessage: subscribeError.message,
+              diagnostics,
+            });
+            console.error("Push subscribe AbortError diagnostics:", {
+              name: subscribeError.name,
+              message: subscribeError.message,
+              diagnostics,
+            });
             throw new Error(
               "Push subscription failed at browser push service. Disable ad blockers/privacy extensions for this site, avoid Incognito/Guest mode, and allow access to fcm.googleapis.com, then retry."
             );
           }
+
+          const fallbackErrorName =
+            subscribeError instanceof Error ? subscribeError.name : "UnknownError";
+          const fallbackErrorMessage =
+            subscribeError instanceof Error
+              ? subscribeError.message
+              : String(subscribeError);
+
+          void reportPushClientError({
+            cardCode,
+            phase: "subscribe",
+            errorName: fallbackErrorName,
+            errorMessage: fallbackErrorMessage,
+            diagnostics,
+          });
+          console.error("Push subscribe unexpected error diagnostics:", {
+            error: subscribeError,
+            diagnostics,
+          });
           throw subscribeError;
         }
       }
