@@ -109,6 +109,18 @@ interface TrainingScheduleGroup {
   trainingDates: string[];
 }
 
+interface TrainingTodaySessionItem {
+  id: string;
+  scopeType: "teamGroup" | "trainingGroup";
+  label: string;
+  teamGroups: number[];
+  stats: {
+    total: number;
+    attending: number;
+    optedOut: number;
+  };
+}
+
 interface MemberNotification {
   id: string;
   type: string;
@@ -216,6 +228,15 @@ function formatBirthDateForExport(value: string | null): string {
   }
 
   return parsed.toLocaleDateString("en-GB", { timeZone: "UTC" });
+}
+
+function formatIsoDateForDisplay(value: string): string {
+  const isoMatch = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!isoMatch) {
+    return value;
+  }
+  const [, year, month, day] = isoMatch;
+  return `${day}.${month}.${year}`;
 }
 
 function getNextTrainingCalendarDates(days = TRAINING_SELECTION_WINDOW_DAYS): string[] {
@@ -1512,7 +1533,7 @@ function AdminMembersPageContent() {
   const reminderTimeValue = `${schedulerForm.reminderHour.padStart(2, "0")}:${schedulerForm.reminderMinute.padStart(2, "0")}`;
   const overdueTimeValue = `${schedulerForm.overdueHour.padStart(2, "0")}:${schedulerForm.overdueMinute.padStart(2, "0")}`;
   const [trainingAttendanceOpen, setTrainingAttendanceOpen] = useState(false);
-  const [trainingAttendanceView, setTrainingAttendanceView] = useState<"teamGroup" | "trainingGroups">("teamGroup");
+  const [trainingAttendanceView, setTrainingAttendanceView] = useState<"teamGroup" | "trainingGroups" | "today">("teamGroup");
   const [trainingAttendanceLoading, setTrainingAttendanceLoading] = useState(false);
   const [trainingAttendanceError, setTrainingAttendanceError] = useState("");
   const [trainingAttendanceDate, setTrainingAttendanceDate] = useState(getTodayIsoDate());
@@ -1523,6 +1544,10 @@ function AdminMembersPageContent() {
     optedOut: 0,
   });
   const [trainingUpcomingDates, setTrainingUpcomingDates] = useState<TrainingUpcomingDateItem[]>([]);
+  const [trainingTodayLoading, setTrainingTodayLoading] = useState(false);
+  const [trainingTodayDate, setTrainingTodayDate] = useState(getTodayIsoDate());
+  const [trainingTodayNote, setTrainingTodayNote] = useState("");
+  const [trainingTodaySessions, setTrainingTodaySessions] = useState<TrainingTodaySessionItem[]>([]);
   const [trainingNote, setTrainingNote] = useState("");
   const [trainingNoteSaving, setTrainingNoteSaving] = useState(false);
   const [trainingNoteTargetDates, setTrainingNoteTargetDates] = useState<string[]>([]);
@@ -3222,6 +3247,64 @@ function AdminMembersPageContent() {
     }
   };
 
+  const fetchTrainingTodaySessions = async () => {
+    if (!clubId) return;
+    setTrainingTodayLoading(true);
+    setTrainingAttendanceError("");
+    try {
+      const response = await fetch(
+        `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance/today`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof payload?.error === "string" && payload.error.trim()
+            ? payload.error.trim()
+            : "Неуспешно зареждане на тренировките за днес.",
+        );
+      }
+      const payload = await response.json();
+      const sessions = Array.isArray(payload?.sessions)
+        ? payload.sessions.map((item: unknown) => {
+            const raw = typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
+            const rawStats =
+              typeof raw.stats === "object" && raw.stats !== null
+                ? (raw.stats as Record<string, unknown>)
+                : {};
+            return {
+              id: String(raw.id ?? ""),
+              scopeType: raw.scopeType === "trainingGroup" ? "trainingGroup" : "teamGroup",
+              label: String(raw.label ?? ""),
+              teamGroups: Array.isArray(raw.teamGroups)
+                ? raw.teamGroups
+                    .map((value) => Number(value))
+                    .filter((value) => Number.isInteger(value))
+                : [],
+              stats: {
+                total: Number(rawStats.total ?? 0),
+                attending: Number(rawStats.attending ?? 0),
+                optedOut: Number(rawStats.optedOut ?? 0),
+              },
+            } satisfies TrainingTodaySessionItem;
+          })
+        : [];
+      setTrainingTodaySessions(sessions);
+      setTrainingTodayDate(
+        typeof payload?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(payload.date)
+          ? payload.date
+          : getTodayIsoDate(),
+      );
+      setTrainingTodayNote(typeof payload?.note === "string" ? payload.note : "");
+    } catch (error) {
+      setTrainingTodaySessions([]);
+      setTrainingTodayNote("");
+      setTrainingAttendanceError(error instanceof Error ? error.message : "Възникна грешка.");
+    } finally {
+      setTrainingTodayLoading(false);
+    }
+  };
+
   const openTrainingAttendance = async () => {
     if (!clubId) return;
     setTrainingAttendanceOpen(true);
@@ -3253,7 +3336,7 @@ function AdminMembersPageContent() {
     await fetchTrainingAttendance(undefined, nextScope);
   };
 
-  const handleTrainingAttendanceViewChange = async (nextView: "teamGroup" | "trainingGroups") => {
+  const handleTrainingAttendanceViewChange = async (nextView: "teamGroup" | "trainingGroups" | "today") => {
     setTrainingAttendanceView(nextView);
     if (!trainingAttendanceOpen) {
       return;
@@ -3264,6 +3347,11 @@ function AdminMembersPageContent() {
     setTrainingDaysEditorError("");
     setTrainingAttendanceError("");
     setTrainingNoteTargetDates([]);
+
+    if (nextView === "today") {
+      await fetchTrainingTodaySessions();
+      return;
+    }
 
     if (nextView === "teamGroup") {
       await fetchTrainingAttendance(undefined, trainingGroupScope, undefined, "teamGroup");
@@ -3560,7 +3648,7 @@ function AdminMembersPageContent() {
   ]);
 
   useEffect(() => {
-    if (!trainingAttendanceOpen || !clubId || !trainingAttendanceDate) {
+    if (!trainingAttendanceOpen || !clubId || !trainingAttendanceDate || trainingAttendanceView === "today") {
       return;
     }
 
@@ -4221,7 +4309,61 @@ function AdminMembersPageContent() {
                 >
                   Сборни отбори
                 </button>
+                <button
+                  type="button"
+                  className="amp-btn amp-btn--ghost"
+                  onClick={() => void handleTrainingAttendanceViewChange("today")}
+                  style={{
+                    borderRadius: "999px",
+                    minWidth: "100px",
+                    fontWeight: 700,
+                    borderColor: trainingAttendanceView === "today" ? "rgba(50,205,50,0.62)" : "rgba(255,255,255,0.2)",
+                    background: trainingAttendanceView === "today"
+                      ? "linear-gradient(135deg, rgba(50,205,50,0.24), rgba(50,205,50,0.12))"
+                      : "rgba(255,255,255,0.04)",
+                    color: trainingAttendanceView === "today" ? "#cfffcc" : "#ffffff",
+                    boxShadow: trainingAttendanceView === "today" ? "0 0 18px rgba(50,205,50,0.2)" : undefined,
+                  }}
+                  disabled={trainingAttendanceLoading || trainingTodayLoading || trainingNoteSaving || trainingDaysEditorSaving}
+                >
+                  Днес
+                </button>
               </div>
+              {trainingAttendanceView === "today" ? (
+                <div className="amp-training-today-panel">
+                  <div className="amp-training-stats">
+                    <span>Дата: {formatIsoDateForDisplay(trainingTodayDate || todayIsoDate)}</span>
+                    <span>Тренировки: {trainingTodaySessions.length}</span>
+                  </div>
+                  {trainingTodayLoading ? (
+                    <p className="amp-empty amp-empty--modal">Зареждане...</p>
+                  ) : trainingTodaySessions.length === 0 ? (
+                    <p className="amp-empty amp-empty--modal">Няма насрочени тренировки за днес.</p>
+                  ) : (
+                    <div className="amp-training-today-list">
+                      {trainingTodaySessions.map((session) => (
+                        <article key={session.id} className="amp-training-today-item">
+                          <h3>{session.label}</h3>
+                          <div className="amp-training-today-meta">
+                            <span>
+                              {session.scopeType === "trainingGroup" ? "Набори" : "Отбор"}:{" "}
+                              {session.teamGroups.length > 0 ? session.teamGroups.join(", ") : "-"}
+                            </span>
+                            <span>
+                              Присъствие: {session.stats.attending}/{session.stats.total}
+                            </span>
+                            <span>Отказали: {session.stats.optedOut}</span>
+                          </div>
+                          <p className="amp-training-today-note">
+                            {trainingTodayNote.trim() ? `Описание: ${trainingTodayNote}` : "Описание: няма"}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
               {trainingAttendanceView === "teamGroup" ? (
               <label className="amp-edit-field" style={{ marginBottom: "12px" }}>
                 <span className="amp-lbl">Набор</span>
@@ -4538,6 +4680,8 @@ function AdminMembersPageContent() {
                   </table>
                 )}
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -5150,7 +5294,7 @@ function AdminMembersPageContent() {
             </h2>
             <div className="amp-modal-body">
               <div className="amp-training-stats">
-                <span>Дата: {trainingAttendanceDate || "-"}</span>
+                <span>Дата: {trainingAttendanceDate ? formatIsoDateForDisplay(trainingAttendanceDate) : "-"}</span>
                 <span>Общо: {trainingAttendanceStats.total}</span>
                 <span>Присъстват: {trainingAttendanceStats.attending}</span>
                 <span>Отказали: {trainingAttendanceStats.optedOut}</span>

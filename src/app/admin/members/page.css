@@ -1306,6 +1306,47 @@
   color: rgba(255,255,255,0.8);
 }
 
+.amp-training-today-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.amp-training-today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.amp-training-today-item {
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  padding: 10px 12px;
+}
+
+.amp-training-today-item h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.amp-training-today-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.82);
+}
+
+.amp-training-today-note {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  line-height: 1.4;
+}
+
 .amp-training-note-targets {
   display: flex;
   flex-wrap: wrap;
