@@ -3823,25 +3823,21 @@ function AdminMembersPageContent() {
               ) : (
                 <>
                   <div className="amp-notification-filters">
-                    <label className="amp-notification-filter">
+                    <label className="amp-notification-filter amp-notification-filter--date">
                       <span>{"\u0414\u0430\u0442\u0430"}</span>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <div className="amp-notification-date-row">
                         <button
                           type="button"
-                          className="amp-btn amp-btn--ghost"
-                          style={{
-                            padding: "8px 10px",
-                            fontSize: "12px",
-                            borderColor: clubNotificationsDateFilter ? "rgba(255,255,255,0.2)" : "rgba(50,205,50,0.6)",
-                            color: clubNotificationsDateFilter ? "rgba(255,255,255,0.85)" : "#32cd32",
-                          }}
+                          className={`amp-btn amp-btn--ghost amp-notification-date-all-btn${
+                            clubNotificationsDateFilter ? "" : " amp-notification-date-all-btn--active"
+                          }`}
                           onClick={() => setClubNotificationsDateFilter("")}
                         >
                           {"\u0412\u0441\u0438\u0447\u043a\u0438"}
                         </button>
                         <input
                           type="date"
-                          className="amp-edit-input"
+                          className="amp-edit-input amp-notification-date-input"
                           value={clubNotificationsDateFilter}
                           max={todayIsoDate}
                           onChange={(event) => setClubNotificationsDateFilter(event.target.value)}
