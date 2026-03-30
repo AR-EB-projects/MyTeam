@@ -6,6 +6,10 @@ export async function register() {
     return;
   }
 
+  if (process.env.VERCEL === "1") {
+    return;
+  }
+
   if (process.env.LOCAL_SCHEDULER !== "true") {
     return;
   }
