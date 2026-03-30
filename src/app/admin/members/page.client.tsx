@@ -1888,7 +1888,7 @@ function AdminMembersPageContent() {
       }
 
       setIsClubPushSubscribed(true);
-      setClubPushStatusMessage("звестията за треньори са активирани за този отбор.");
+      setClubPushStatusMessage("Известията за треньори са активирани за този отбор.");
     } catch (error) {
       console.error("Enable club notifications error:", error);
       setClubPushErrorMessage(error instanceof Error ? error.message : "Неуспешно активиране на известията.");
@@ -1931,7 +1931,7 @@ function AdminMembersPageContent() {
       }
 
       setIsClubPushSubscribed(false);
-      setClubPushStatusMessage("звестията за треньори са изключени за този отбор.");
+      setClubPushStatusMessage("Известията за треньори са изключени за този отбор.");
     } catch (error) {
       console.error("Disable club notifications error:", error);
       setClubPushErrorMessage(error instanceof Error ? error.message : "Неуспешно изключване на известията.");
