@@ -247,8 +247,14 @@
 .amp-club-info {
   display: flex;
   align-items: center;
-  gap: 12px;
   margin-bottom: 24px;
+  justify-content: space-between;
+}
+
+.amp-club-info-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .amp-club-icon {
@@ -2504,6 +2510,96 @@
 .amp-btn--compact:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ── Bell (notify) button ── */
+.bell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  width: 100%;
+  padding: 9px 12px;
+  height: 36px;
+  background-color: rgba(255,255,255,0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.bell-btn:hover { background-color: rgba(255,255,255,0.2); }
+
+.spin-icon {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.bell-btn--disable {
+  background-color: rgba(224,53,53,0.15);
+  color: #ffffff;
+  border: 1px solid rgba(224,53,53,0.35);
+}
+
+.bell-btn--disable:hover {
+  background-color: rgba(224,53,53,0.24);
+}
+
+/* ── Add to home button ── */
+.add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  height: 36px;
+  background-color: rgba(0,122,255,0.2);
+  color: #4da3ff;
+  border: 1px solid rgba(0,122,255,0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.add-btn:hover { background-color: rgba(0,122,255,0.3); }
+
+/* ── Hint ── */
+.hint-text {
+  font-size: 12px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Push enabled banner ── */
+.push-enabled-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  margin-top: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(50,205,50,0.35);
+  background: rgba(50,205,50,0.12);
+  color: #d7ffd7;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .amp-btn--compact svg {
