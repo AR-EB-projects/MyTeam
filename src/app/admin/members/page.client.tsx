@@ -4191,7 +4191,7 @@ function AdminMembersPageContent() {
             </>
           )}
         </div>
-        {isClubPushSupported && clubId && (
+        {isClubPushSupported && clubId && (isAdmin || isCoach) && (
           <>
             {isClubPushSubscribed && (
               <div className="push-enabled-banner">
@@ -4222,14 +4222,36 @@ function AdminMembersPageContent() {
             )}
             {isClubIPhone && !isClubStandalone && (
               <>
-                <button className="add-btn" onClick={() => setShowClubIphoneGuide((v) => !v)}>
+                <button className="add-btn add-btn--white-text" onClick={() => setShowClubIphoneGuide((v) => !v)}>
                   <ShareIcon size={16} />
                   Добавете към начален екран
                 </button>
+
+                <p className="hint-text">
+                  За да активирате известията на iPhone, натиснете бутона Share и изберете &ldquo;Добавяне към начален екран&rdquo;.
+                </p>
+
                 {showClubIphoneGuide && (
-                  <p className="hint-text">
-                    За да активирате известията на iPhone, натиснете бутона Share и изберете "Добавяне към начален екран".
-                  </p>
+                  <div className="instr-box">
+                    <button className="instr-close" onClick={() => setShowClubIphoneGuide(false)} aria-label="Затвори">
+                      <XIcon />
+                    </button>
+                    <p className="instr-heading">Как да активирате известия на iPhone:</p>
+                    <ol className="instr-list">
+                      <li>
+                        <span className="step-badge">1</span>
+                        <span>Натиснете бутона <ShareIcon size={14} /> <strong>Share</strong> в долната лента на Safari</span>
+                      </li>
+                      <li>
+                        <span className="step-badge">2</span>
+                        <span>Превъртете надолу и изберете <PlusIcon /> <strong>&ldquo;Добавяне към начален екран&rdquo;</strong></span>
+                      </li>
+                      <li>
+                        <span className="step-badge">3</span>
+                        <span>Отворете приложението от началния екран и натиснете <strong>&ldquo;Активиране на известия&rdquo;</strong></span>
+                      </li>
+                    </ol>
+                  </div>
                 )}
               </>
             )}
