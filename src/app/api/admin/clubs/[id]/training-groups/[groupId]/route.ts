@@ -7,6 +7,10 @@ import {
   isIsoDate,
   isoDateToUtcMidnight,
 } from "@/lib/training";
+import {
+  sendTrainingScheduleNotifications,
+  shouldNotifyForTrainingDatesChange,
+} from "@/lib/push/trainingScheduleNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -128,6 +132,7 @@ export async function PATCH(
         id: true,
         name: true,
         teamGroups: true,
+        trainingDates: true,
       },
     });
 
@@ -198,7 +203,20 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json(updated);
+    let notifications = null;
+    if (
+      hasTrainingDatesField &&
+      shouldNotifyForTrainingDatesChange(group.trainingDates ?? [], updated.trainingDates ?? [])
+    ) {
+      notifications = await sendTrainingScheduleNotifications({
+        clubId,
+        teamGroups: updated.teamGroups,
+        previousDates: group.trainingDates ?? [],
+        trainingDates: updated.trainingDates,
+      });
+    }
+
+    return NextResponse.json({ ...updated, notifications });
   } catch (error) {
     console.error("Training groups PATCH error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

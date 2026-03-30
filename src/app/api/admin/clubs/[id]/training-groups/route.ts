@@ -7,6 +7,10 @@ import {
   isIsoDate,
   isoDateToUtcMidnight,
 } from "@/lib/training";
+import {
+  sendTrainingScheduleNotifications,
+  shouldNotifyForTrainingDatesChange,
+} from "@/lib/push/trainingScheduleNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -189,7 +193,17 @@ export async function POST(
       return created;
     });
 
-    return NextResponse.json(group, { status: 201 });
+    let notifications = null;
+    if (shouldNotifyForTrainingDatesChange([], group.trainingDates ?? [])) {
+      notifications = await sendTrainingScheduleNotifications({
+        clubId: id,
+        teamGroups: group.teamGroups,
+        previousDates: [],
+        trainingDates: group.trainingDates,
+      });
+    }
+
+    return NextResponse.json({ ...group, notifications }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "CLUB_NOT_FOUND") {
       return NextResponse.json({ error: "Club not found." }, { status: 404 });

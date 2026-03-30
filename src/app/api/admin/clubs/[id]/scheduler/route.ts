@@ -8,6 +8,10 @@ import {
   isIsoDate,
   isoDateToUtcMidnight,
 } from "@/lib/training";
+import {
+  sendTrainingScheduleNotifications,
+  shouldNotifyForTrainingDatesChange,
+} from "@/lib/push/trainingScheduleNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -212,6 +216,20 @@ export async function PUT(
     new Set(trainingDates.map((date) => getWeekdayMondayFirst(date, FIXED_TIME_ZONE)).filter((value) => value >= 1 && value <= 7)),
   ).sort((a, b) => a - b);
 
+  const previousGroupSchedule = teamGroup === null
+    ? null
+    : await prisma.clubTrainingGroupSchedule.findUnique({
+        where: {
+          clubId_teamGroup: {
+            clubId: id,
+            teamGroup,
+          },
+        },
+        select: {
+          trainingDates: true,
+        },
+      });
+
   const updated = await prisma.club.update({
     where: { id },
     data: {
@@ -296,6 +314,29 @@ export async function PUT(
         },
       });
     }
+
+    let notifications = null;
+    if (
+      shouldNotifyForTrainingDatesChange(
+        previousGroupSchedule?.trainingDates ?? [],
+        trainingDates,
+      )
+    ) {
+      notifications = await sendTrainingScheduleNotifications({
+        clubId: id,
+        teamGroups: [teamGroup],
+        previousDates: previousGroupSchedule?.trainingDates ?? [],
+        trainingDates,
+      });
+    }
+
+    return NextResponse.json({
+      ...updated,
+      teamGroup,
+      trainingDates,
+      trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
+      notifications,
+    });
   }
 
   return NextResponse.json({
