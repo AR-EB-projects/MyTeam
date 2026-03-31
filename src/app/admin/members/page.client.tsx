@@ -1576,7 +1576,8 @@ function AdminMembersPageContent() {
   const [lastHandledCoachPushOpenTs, setLastHandledCoachPushOpenTs] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState("all");
+  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
   const [trainingGroupScope, setTrainingGroupScope] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<Member | null>(null);
@@ -4056,8 +4057,19 @@ function AdminMembersPageContent() {
       <div className="amp-dot-grid" aria-hidden="true" />
 
       <div className="amp-inner">
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px" }}>
-          <AdminLogoutButton />
+        <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+          {isAdmin && (
+            <button
+              className="amp-back-btn amp-btn--compact"
+              onClick={() => router.push("/admin/players")}
+            >
+              <ArrowLeftIcon />
+              <span>Назад</span>
+            </button>
+          )}
+          <div style={{ marginLeft: "auto" }}>
+            <AdminLogoutButton />
+          </div>
         </div>
 
         {/* ── Page header ── */}
@@ -4102,17 +4114,6 @@ function AdminMembersPageContent() {
         {/* ── Nav row ── */}
         <div className="amp-nav-row">
           <div className="amp-nav-left">
-            {isAdmin && (
-              <div className="amp-nav-back">
-                <button
-                  className="amp-back-btn amp-btn--compact"
-                  onClick={() => router.push("/admin/players")}
-                >
-                  <ArrowLeftIcon />
-                  <span>Назад</span>
-                </button>
-              </div>
-            )}
             <button className="amp-add-btn" onClick={() => router.push(`/admin/members/add?clubId=${encodeURIComponent(clubId)}`)}>
               <PlusIcon />
               Добави играч
@@ -4269,21 +4270,30 @@ function AdminMembersPageContent() {
         <div className="amp-content">
 
           {/* Group filter dropdown */}
-          <label className="amp-edit-field" style={{ marginBottom: "10px" }}>
-            <select
+          <div className="amp-edit-field" style={{ marginBottom: "10px", padding: "0", position: "relative" }}>
+            <div
               className="amp-edit-input amp-edit-input-text-center"
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}
+              onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
             >
-              <option value="" disabled hidden>Набор</option>
-              <option value="all">Всички ({activeMembersCount})</option>
-              {groupOptions.map((g) => (
-                <option key={g} value={String(g)} label={`${g} (${activeMembersByGroup[g] ?? 0})`}>
-                  {g} ({activeMembersByGroup[g] ?? 0})
-                </option>
-              ))}
-            </select>
-          </label>
+              {selectedGroup === "all" ? `Всички (${activeMembersCount})` : `${selectedGroup} (${(activeMembersByGroup as any)[selectedGroup] ?? 0})`}
+            </div>
+            {isGroupDropdownOpen && (
+              <>
+                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} onClick={() => setIsGroupDropdownOpen(false)} />
+                <div className="amp-custom-dropdown-menu" style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: "4px", backgroundColor: "#1e1e1e", border: "1px solid rgba(255, 255, 255, 0.15)", borderRadius: "10px", zIndex: 999, overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                  <div className={`amp-custom-dropdown-item ${selectedGroup === "all" ? "active" : ""}`} onClick={() => { setSelectedGroup("all"); setIsGroupDropdownOpen(false); }}>
+                    Всички ({activeMembersCount})
+                  </div>
+                  {groupOptions.map((g) => (
+                    <div key={g} className={`amp-custom-dropdown-item ${selectedGroup === String(g) ? "active" : ""}`} onClick={() => { setSelectedGroup(String(g)); setIsGroupDropdownOpen(false); }}>
+                      {g} ({(activeMembersByGroup as any)[g] ?? 0})
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Search */}
           <div className="amp-search-wrap">
@@ -4313,9 +4323,7 @@ function AdminMembersPageContent() {
                 <PlayerCard key={m.id} member={m} onClick={() => setSelectedMember(m)} />
               ))}
               {filtered.length === 0 && (
-                <p className="amp-empty">
-                  {selectedGroup === "" ? "Изберете набор, за да видите играчите" : "Няма намерени играчи"}
-                </p>
+                <p className="amp-empty">Няма намерени играчи</p>
               )}
             </div>
           )}
