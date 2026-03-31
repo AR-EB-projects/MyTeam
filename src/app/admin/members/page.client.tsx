@@ -1576,7 +1576,7 @@ function AdminMembersPageContent() {
   const [lastHandledCoachPushOpenTs, setLastHandledCoachPushOpenTs] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState("all");
+  const [selectedGroup, setSelectedGroup] = useState("");
   const [trainingGroupScope, setTrainingGroupScope] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<Member | null>(null);
@@ -4270,12 +4270,12 @@ function AdminMembersPageContent() {
 
           {/* Group filter dropdown */}
           <label className="amp-edit-field" style={{ marginBottom: "10px" }}>
-            <span className="amp-lbl">Набор</span>
             <select
-              className="amp-edit-input"
+              className="amp-edit-input amp-edit-input-text-center"
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
             >
+              <option value="" disabled hidden>Набор</option>
               <option value="all">Всички ({activeMembersCount})</option>
               {groupOptions.map((g) => (
                 <option key={g} value={String(g)} label={`${g} (${activeMembersByGroup[g] ?? 0})`}>
@@ -4313,7 +4313,9 @@ function AdminMembersPageContent() {
                 <PlayerCard key={m.id} member={m} onClick={() => setSelectedMember(m)} />
               ))}
               {filtered.length === 0 && (
-                <p className="amp-empty">Няма намерени играчи</p>
+                <p className="amp-empty">
+                  {selectedGroup === "" ? "Изберете набор, за да видите играчите" : "Няма намерени играчи"}
+                </p>
               )}
             </div>
           )}
