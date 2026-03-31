@@ -17,6 +17,13 @@ export const dynamic = "force-dynamic";
 
 const FIXED_TIME_ZONE = "Europe/Sofia";
 const TRAINING_SELECTION_WINDOW_DAYS = 30;
+const OPT_OUT_REASON_LABELS_BG = {
+  injury: "Контузия",
+  sick: "Болен",
+  other: "Друго",
+} as const;
+
+type OptOutReasonCode = keyof typeof OPT_OUT_REASON_LABELS_BG;
 
 function normalizeStoredTrainingDateTimes(raw: unknown, trainingDates: string[]): Record<string, string> {
   if (!raw || typeof raw !== "object") {
@@ -60,12 +67,21 @@ function buildCoachAttendancePayload(input: {
   playerName: string;
   trainingDate: string;
   optedOut: boolean;
+  optOutReasonCode?: OptOutReasonCode | null;
+  optOutReasonText?: string | null;
 }): PushNotificationPayload {
   const formattedDate = formatBgDate(input.trainingDate);
+  const reasonLabel = input.optOutReasonCode ? OPT_OUT_REASON_LABELS_BG[input.optOutReasonCode] : null;
+  const reasonText = input.optOutReasonCode === "other" ? input.optOutReasonText?.trim() ?? "" : "";
+  const reasonSuffix = input.optedOut && reasonLabel
+    ? input.optOutReasonCode === "other" && reasonText
+      ? ` Причина: ${reasonText}.`
+      : ` Причина: ${reasonLabel}.`
+    : "";
   return {
     title: "Промяна в присъствието",
     body: input.optedOut
-      ? `${input.playerName} отбеляза отсъствие за тренировка на ${formattedDate}.`
+      ? `${input.playerName} отбеляза отсъствие за тренировка на ${formattedDate}.${reasonSuffix}`
       : `${input.playerName} потвърди присъствие за тренировка на ${formattedDate}.`,
     url: `/admin/members?clubId=${encodeURIComponent(input.clubId)}`,
     icon: "/logo.png",
@@ -76,8 +92,33 @@ function buildCoachAttendancePayload(input: {
       clubId: input.clubId,
       trainingDate: input.trainingDate,
       optedOut: input.optedOut,
+      optOutReasonCode: input.optOutReasonCode ?? null,
+      optOutReasonText: input.optOutReasonText ?? null,
     },
   };
+}
+
+function parseOptOutReason(
+  rawCode: unknown,
+  rawText: unknown,
+): { code: OptOutReasonCode; text: string | null } | { error: string } {
+  const code = String(rawCode ?? "").trim().toLowerCase();
+  if (code !== "injury" && code !== "sick" && code !== "other") {
+    return { error: "Invalid opt-out reason." };
+  }
+
+  const text = String(rawText ?? "").trim();
+  if (code === "other") {
+    if (text.length === 0) {
+      return { error: "Reason text is required when reason is 'other'." };
+    }
+    if (text.length > 200) {
+      return { error: "Reason text must be at most 200 characters." };
+    }
+    return { code, text };
+  }
+
+  return { code, text: null };
 }
 
 async function getMemberTrainingContext(cardCode: string) {
@@ -227,6 +268,8 @@ export async function GET(
       },
       select: {
         trainingDate: true,
+        reasonCode: true,
+        reasonText: true,
       },
     }),
     prisma.trainingNote.findMany({
@@ -242,7 +285,15 @@ export async function GET(
       },
     }),
   ]);
-  const optedOutSet = new Set(optOutRows.map((item) => utcDateToIsoDate(item.trainingDate)));
+  const optedOutByDate = new Map(
+    optOutRows.map((item) => [
+      utcDateToIsoDate(item.trainingDate),
+      {
+        reasonCode: item.reasonCode,
+        reasonText: item.reasonText,
+      },
+    ] as const),
+  );
   const noteByDate = new Map(
     noteRows
       .map((item) => [utcDateToIsoDate(item.trainingDate), item.note?.trim() ?? ""] as const)
@@ -257,7 +308,9 @@ export async function GET(
     dates: context.upcomingDates.map((date) => ({
       date,
       weekday: getWeekdayMondayFirst(date, FIXED_TIME_ZONE),
-      optedOut: optedOutSet.has(date),
+      optedOut: optedOutByDate.has(date),
+      optOutReasonCode: optedOutByDate.get(date)?.reasonCode ?? null,
+      optOutReasonText: optedOutByDate.get(date)?.reasonText ?? null,
       trainingTime: context.trainingDateTimes[date] ?? context.fallbackTrainingTime ?? "",
       note: noteByDate.get(date) ?? "",
     })),
@@ -277,12 +330,19 @@ export async function POST(
 
   const body = await request.json().catch(() => ({}));
   const trainingDate = String((body as { trainingDate?: unknown }).trainingDate ?? "").trim();
+  const parsedReason = parseOptOutReason(
+    (body as { reasonCode?: unknown }).reasonCode,
+    (body as { reasonText?: unknown }).reasonText,
+  );
 
   if (!isIsoDate(trainingDate)) {
     return NextResponse.json({ error: "Invalid trainingDate" }, { status: 400 });
   }
   if (!context.upcomingDates.includes(trainingDate)) {
     return NextResponse.json({ error: "Date is outside configured training window" }, { status: 400 });
+  }
+  if ("error" in parsedReason) {
+    return NextResponse.json({ error: parsedReason.error }, { status: 400 });
   }
 
   await prisma.trainingOptOut.upsert({
@@ -292,10 +352,15 @@ export async function POST(
         trainingDate: isoDateToUtcMidnight(trainingDate),
       },
     },
-    update: {},
+    update: {
+      reasonCode: parsedReason.code,
+      reasonText: parsedReason.text,
+    },
     create: {
       playerId: context.playerId,
       trainingDate: isoDateToUtcMidnight(trainingDate),
+      reasonCode: parsedReason.code,
+      reasonText: parsedReason.text,
     },
   });
 
@@ -305,6 +370,8 @@ export async function POST(
     playerName: context.playerName,
     trainingDate,
     optedOut: true,
+    optOutReasonCode: parsedReason.code,
+    optOutReasonText: parsedReason.text,
   });
 
   try {
@@ -324,7 +391,14 @@ export async function POST(
     console.error("Coach attendance push send error (opt-out):", error);
   }
 
-  return NextResponse.json({ success: true, trainingDate, optedOut: true, coachPush });
+  return NextResponse.json({
+    success: true,
+    trainingDate,
+    optedOut: true,
+    reasonCode: parsedReason.code,
+    reasonText: parsedReason.text,
+    coachPush,
+  });
 }
 
 export async function DELETE(

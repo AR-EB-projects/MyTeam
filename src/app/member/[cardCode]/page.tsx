@@ -45,9 +45,13 @@ interface TrainingDayStatus {
   date: string;
   weekday: number;
   optedOut: boolean;
+  optOutReasonCode?: TrainingOptOutReasonCode | null;
+  optOutReasonText?: string | null;
   trainingTime?: string;
   note: string;
 }
+
+type TrainingOptOutReasonCode = "injury" | "sick" | "other";
 
 const SPEED_LINES = [8, 16, 24, 33, 42, 54, 65, 76, 85, 93];
 
@@ -288,6 +292,8 @@ export default function MemberCardPage({
   const [trainingAttendancePopupOpen, setTrainingAttendancePopupOpen] = useState(false);
   const [trainingConfirmModalOpen, setTrainingConfirmModalOpen] = useState(false);
   const [trainingConfirmAction, setTrainingConfirmAction] = useState<"attend" | "optOut" | null>(null);
+  const [trainingOptOutReasonCode, setTrainingOptOutReasonCode] = useState<TrainingOptOutReasonCode | "">("");
+  const [trainingOptOutReasonText, setTrainingOptOutReasonText] = useState("");
   const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
 
   // ── Derived: paid months set ─────────────────────────
@@ -497,6 +503,11 @@ export default function MemberCardPage({
               date: String(raw.date ?? ""),
               weekday: Number(raw.weekday ?? 0),
               optedOut: Boolean(raw.optedOut),
+              optOutReasonCode:
+                raw.optOutReasonCode === "injury" || raw.optOutReasonCode === "sick" || raw.optOutReasonCode === "other"
+                  ? raw.optOutReasonCode
+                  : null,
+              optOutReasonText: String(raw.optOutReasonText ?? "").trim() || null,
               trainingTime: String(raw.trainingTime ?? "").trim(),
               note: String(raw.note ?? ""),
             } satisfies TrainingDayStatus;
@@ -1222,10 +1233,19 @@ export default function MemberCardPage({
   const canManagePayments = isAdmin || isCoach;
   const canPublicEdit = !isAdmin && !isCoach;
   const canUseNotifications = !isAdmin && !isCoach;
+  const isOptOutReasonReady =
+    trainingConfirmAction !== "optOut"
+      ? true
+      : trainingOptOutReasonCode !== "" &&
+        (trainingOptOutReasonCode !== "other" || trainingOptOutReasonText.trim().length > 0);
 
   const handleTrainingAttendanceConfirm = async (
     action: "attend" | "optOut",
     item: TrainingDayStatus,
+    reason?: {
+      reasonCode: TrainingOptOutReasonCode;
+      reasonText: string | null;
+    },
   ) => {
     if (trainingSavingDate) {
       return;
@@ -1233,13 +1253,25 @@ export default function MemberCardPage({
     setTrainingSavingDate(item.date);
     setTrainingError(null);
     try {
+      const requestBody =
+        action === "optOut"
+          ? {
+              trainingDate: item.date,
+              reasonCode: reason?.reasonCode ?? "",
+              reasonText: reason?.reasonText ?? "",
+            }
+          : { trainingDate: item.date };
       const response = await fetch(`/api/members/${normalizedCardCode}/training`, {
         method: action === "optOut" ? "POST" : "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trainingDate: item.date }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        if (typeof payload?.error === "string" && payload.error.trim().length > 0) {
+          throw new Error(payload.error.trim());
+        }
         throw new Error(
           action === "optOut" ? "Неуспешно отказване на присъствие." : "Неуспешно потвърждаване на присъствие.",
         );
@@ -1251,6 +1283,8 @@ export default function MemberCardPage({
             ? {
               ...entry,
               optedOut: action === "optOut",
+              optOutReasonCode: action === "optOut" ? reason?.reasonCode ?? null : null,
+              optOutReasonText: action === "optOut" ? reason?.reasonText ?? null : null,
             }
             : entry,
         ),
@@ -1822,6 +1856,8 @@ export default function MemberCardPage({
                           type="button"
                           onClick={() => {
                             if (!trainingDetailsItem.optedOut) return;
+                            setTrainingOptOutReasonCode("");
+                            setTrainingOptOutReasonText("");
                             setTrainingConfirmAction("attend");
                             setTrainingConfirmModalOpen(true);
                           }}
@@ -1834,6 +1870,8 @@ export default function MemberCardPage({
                           type="button"
                           onClick={() => {
                             if (trainingDetailsItem.optedOut) return;
+                            setTrainingOptOutReasonCode("");
+                            setTrainingOptOutReasonText("");
                             setTrainingConfirmAction("optOut");
                             setTrainingConfirmModalOpen(true);
                           }}
@@ -1875,6 +1913,8 @@ export default function MemberCardPage({
               e.stopPropagation();
               setTrainingConfirmModalOpen(false);
               setTrainingConfirmAction(null);
+              setTrainingOptOutReasonCode("");
+              setTrainingOptOutReasonText("");
             }}
           >
             <div className="pm-modal member-training-confirm-modal" onClick={(e) => e.stopPropagation()}>
@@ -1887,6 +1927,42 @@ export default function MemberCardPage({
                   ? `Сигурни ли сте, че искате да потвърдите присъствие за ${new Date(`${trainingDetailsItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", { day: "2-digit", month: "2-digit", year: "numeric" })}?`
                   : `Сигурни ли сте, че искате да откажете присъствие за ${new Date(`${trainingDetailsItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", { day: "2-digit", month: "2-digit", year: "numeric" })}?`}
               </p>
+              {trainingConfirmAction === "optOut" && (
+                <div className="training-confirm-reason-fields">
+                  <label className="training-confirm-reason-label">
+                    <span className="pm-info-lbl">Причина (задължително)</span>
+                    <select
+                      className="training-confirm-reason-control"
+                      value={trainingOptOutReasonCode}
+                      onChange={(event) => {
+                        const nextReason = event.target.value as TrainingOptOutReasonCode | "";
+                        setTrainingOptOutReasonCode(nextReason);
+                        if (nextReason !== "other") {
+                          setTrainingOptOutReasonText("");
+                        }
+                      }}
+                    >
+                      <option value="">Избери причина</option>
+                      <option value="injury">Контузия</option>
+                      <option value="sick">Болен</option>
+                      <option value="other">Друго</option>
+                    </select>
+                  </label>
+                  {trainingOptOutReasonCode === "other" && (
+                    <label className="training-confirm-reason-label">
+                      <span className="pm-info-lbl">Опиши причината (задължително)</span>
+                      <textarea
+                        className="training-confirm-reason-control training-confirm-reason-textarea"
+                        value={trainingOptOutReasonText}
+                        onChange={(event) => setTrainingOptOutReasonText(event.target.value)}
+                        maxLength={200}
+                        rows={3}
+                        placeholder="Въведи причина..."
+                      />
+                    </label>
+                  )}
+                </div>
+              )}
               <div className="pm-actions training-confirm-actions">
                 <button
                   className="pm-btn pm-btn--cancel"
@@ -1894,6 +1970,8 @@ export default function MemberCardPage({
                   onClick={() => {
                     setTrainingConfirmModalOpen(false);
                     setTrainingConfirmAction(null);
+                    setTrainingOptOutReasonCode("");
+                    setTrainingOptOutReasonText("");
                   }}
                   disabled={trainingSavingDate === trainingDetailsItem.date}
                 >
@@ -1904,11 +1982,35 @@ export default function MemberCardPage({
                   type="button"
                   onClick={async () => {
                     if (!trainingConfirmAction || !trainingDetailsItem) return;
+                    if (trainingConfirmAction === "optOut") {
+                      if (!trainingOptOutReasonCode) {
+                        setTrainingError("Избери причина за отсъствие.");
+                        return;
+                      }
+                      if (trainingOptOutReasonCode === "other" && trainingOptOutReasonText.trim().length === 0) {
+                        setTrainingError("Въведи причина в полето Друго.");
+                        return;
+                      }
+                    }
                     setTrainingConfirmModalOpen(false);
-                    await handleTrainingAttendanceConfirm(trainingConfirmAction, trainingDetailsItem);
+                    await handleTrainingAttendanceConfirm(
+                      trainingConfirmAction,
+                      trainingDetailsItem,
+                      trainingConfirmAction === "optOut" && trainingOptOutReasonCode
+                        ? {
+                            reasonCode: trainingOptOutReasonCode,
+                            reasonText:
+                              trainingOptOutReasonCode === "other"
+                                ? trainingOptOutReasonText.trim()
+                                : null,
+                          }
+                        : undefined,
+                    );
                     setTrainingConfirmAction(null);
+                    setTrainingOptOutReasonCode("");
+                    setTrainingOptOutReasonText("");
                   }}
-                  disabled={trainingSavingDate === trainingDetailsItem.date}
+                  disabled={trainingSavingDate === trainingDetailsItem.date || !isOptOutReasonReady}
                 >
                   {trainingSavingDate === trainingDetailsItem.date ? "Запазване..." : "Потвърди"}
                 </button>

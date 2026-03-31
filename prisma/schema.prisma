@@ -131,6 +131,8 @@ model TrainingOptOut {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   playerId     String   @map("player_id") @db.Uuid
   trainingDate DateTime @map("training_date") @db.Date
+  reasonCode   String?  @map("reason_code")
+  reasonText   String?  @map("reason_text")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 

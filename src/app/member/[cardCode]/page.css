@@ -838,6 +838,47 @@
   padding: 10px 16px !important;
 }
 
+.training-confirm-reason-fields {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.training-confirm-reason-label {
+  display: grid;
+  gap: 6px;
+}
+
+.training-confirm-reason-control {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.training-confirm-reason-control:focus {
+  border-color: rgba(50, 205, 50, 0.65);
+  box-shadow: 0 0 0 2px rgba(50, 205, 50, 0.2);
+}
+
+.training-confirm-reason-control option {
+  background: #1b1f27;
+  color: #ffffff;
+}
+
+.training-confirm-reason-control:invalid {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.training-confirm-reason-textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
 .member-notifications-scroll {
   max-height: 400px;
   overflow-y: auto;
