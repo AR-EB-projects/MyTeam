@@ -111,18 +111,52 @@ export default function Home() {
                 <span className="phone-back-arrow">‹</span>
                 <BellSVG />
               </div>
-              <div className="phone-player-area">
-                <img src="./footballer-phone.jpg" alt="" />
+
+              <div className="phone-scroll-content">
+                <div className="phone-player-area">
+                  <img src="./footballer-phone.jpg" alt="" />
+                </div>
+                <div className="phone-name">Moozuk</div>
+
+                <div className="status-btn">
+                  <span className="status-btn-text">ПЛАТЕНО</span>
+                </div>
+
+                {/* Additional content to enable scrolling */}
+                <div className="phone-extra-content">
+                  <div className="phone-stat-item">
+                    <span>МИНУТИ</span>
+                    <strong>1,240</strong>
+                  </div>
+                  <div className="phone-stat-item">
+                    <span>ГОЛОВЕ</span>
+                    <strong>12</strong>
+                  </div>
+                  <div className="phone-stat-item">
+                    <span>АСИСТЕНЦИИ</span>
+                    <strong>8</strong>
+                  </div>
+                  <div className="phone-stat-item">
+                    <span>РЕЙТИНГ</span>
+                    <strong>8.5</strong>
+                  </div>
+                  <div className="phone-stat-item">
+                    <span>МАЧОВЕ</span>
+                    <strong>24</strong>
+                  </div>
+                </div>
               </div>
-              <div className="phone-name">Moozuk</div>
-              {/* <div className="phone-stats-row">
-                <span className="phone-stat"><ClockSVG />&nbsp;5.9ТТ.Ш</span>
-                <div className="phone-stat-divider" />
-                <span className="phone-stat">NV5</span>
-              </div> */}
-              <div className="status-btn">
-                {/* <span className="status-btn-label">STATUS</span> */}
-                <span className="status-btn-text">ПЛАТЕНО</span>
+            </div>
+            {/* Scroll hint overlay — animates once then vanishes */}
+            <div className="phone-scroll-hint" aria-hidden="true">
+              <div className="scroll-hint-finger">
+                <svg viewBox="0 0 24 40" width="20" height="33" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="8" y="0" width="8" height="14" rx="4" fill="rgba(255,255,255,0.9)"/>
+                  <rect x="2" y="10" width="20" height="28" rx="10" fill="rgba(255,255,255,0.9)"/>
+                </svg>
+              </div>
+              <div className="scroll-hint-arrows">
+                <span /><span /><span />
               </div>
             </div>
           </div>
@@ -189,8 +223,8 @@ function FootballerSVG({ variant }: { variant: "card" | "phone" }) {
           <stop offset="100%" stopColor={glowColor2} stopOpacity="0" />
         </radialGradient>
         <filter id={`blur-${variant}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="1.8" result="b"/>
-          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          <feGaussianBlur stdDeviation="1.8" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
       </defs>
 
@@ -272,14 +306,14 @@ function PieSVG() {
     <svg viewBox="0 0 54 54" width="54" height="54" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="pie-bg" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stopColor="#95d3ae" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#2d5038" stopOpacity="0"    />
+          <stop offset="0%" stopColor="#95d3ae" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#2d5038" stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle cx="27" cy="27" r="25" fill="url(#pie-bg)" />
       <path d="M27,27 L27,5 A22,22 0 1,1 6.2,36 Z" fill="rgba(48,120,68,0.92)" />
       <path d="M27,27 L6.2,36 A22,22 0 0,1 27,5 Z" fill="rgba(149,211,100,0.90)" />
-      <line x1="27" y1="27" x2="27"  y2="5"  stroke="rgba(4,10,6,0.88)" strokeWidth="2" />
+      <line x1="27" y1="27" x2="27" y2="5" stroke="rgba(4,10,6,0.88)" strokeWidth="2" />
       <line x1="27" y1="27" x2="6.2" y2="36" stroke="rgba(4,10,6,0.88)" strokeWidth="2" />
       <circle cx="27" cy="27" r="8" fill="rgba(8,10,20,0.95)" />
       <circle cx="27" cy="27" r="22" fill="none" stroke="rgba(149,211,174,0.14)" strokeWidth="1" />
@@ -292,8 +326,8 @@ function ShieldSVG() {
     <svg viewBox="0 0 54 54" width="54" height="54" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="sh-bg" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stopColor="#95d3ae" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="#2d5038" stopOpacity="0"    />
+          <stop offset="0%" stopColor="#95d3ae" stopOpacity="0.20" />
+          <stop offset="100%" stopColor="#2d5038" stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle cx="27" cy="27" r="25" fill="url(#sh-bg)" />
@@ -312,8 +346,8 @@ function OrgSVG() {
     <svg viewBox="0 0 54 54" width="54" height="54" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="org-bg" cx="50%" cy="50%" r="50%">
-          <stop offset="0%"   stopColor="#95d3ae" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="#2d5038" stopOpacity="0"    />
+          <stop offset="0%" stopColor="#95d3ae" stopOpacity="0.20" />
+          <stop offset="100%" stopColor="#2d5038" stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle cx="27" cy="27" r="25" fill="url(#org-bg)" />
@@ -322,11 +356,11 @@ function OrgSVG() {
       <line x1="13" y1="31" x2="13" y2="38" stroke="rgba(149,211,120,0.66)" strokeWidth="1.5" />
       <line x1="27" y1="31" x2="27" y2="38" stroke="rgba(149,211,120,0.66)" strokeWidth="1.5" />
       <line x1="41" y1="31" x2="41" y2="38" stroke="rgba(149,211,120,0.66)" strokeWidth="1.5" />
-      <circle cx="27" cy="13.5" r="5"   fill="rgba(149,211,140,0.88)" />
+      <circle cx="27" cy="13.5" r="5" fill="rgba(149,211,140,0.88)" />
       <circle cx="27" cy="13.5" r="2.8" fill="rgba(7,10,18,0.88)" />
       {([13, 27, 41] as number[]).map((x) => (
         <g key={x}>
-          <circle cx={x} cy="44" r="5"   fill="rgba(110,175,110,0.84)" />
+          <circle cx={x} cy="44" r="5" fill="rgba(110,175,110,0.84)" />
           <circle cx={x} cy="44" r="2.8" fill="rgba(7,10,18,0.88)" />
         </g>
       ))}
@@ -338,7 +372,7 @@ function ClockSVG() {
   return (
     <svg viewBox="0 0 12 12" width="9" height="9" xmlns="http://www.w3.org/2000/svg">
       <circle cx="6" cy="6" r="5" fill="none" stroke="rgba(149,211,174,0.60)" strokeWidth="1.2" />
-      <line x1="6" y1="3" x2="6" y2="6"     stroke="rgba(149,211,174,0.85)" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="6" y1="3" x2="6" y2="6" stroke="rgba(149,211,174,0.85)" strokeWidth="1.2" strokeLinecap="round" />
       <line x1="6" y1="6" x2="8.5" y2="7.5" stroke="rgba(149,211,174,0.85)" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
@@ -350,7 +384,7 @@ function BatterySVG() {
       <rect x="0.5" y="0.5" width="11" height="7" rx="1.5"
         fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="0.8" />
       <rect x="11.5" y="2.5" width="2" height="3" rx="0.5" fill="rgba(255,255,255,0.28)" />
-      <rect x="1.5"  y="1.5" width="7.5" height="5" rx="0.8" fill="rgba(149,211,174,0.60)" />
+      <rect x="1.5" y="1.5" width="7.5" height="5" rx="0.8" fill="rgba(149,211,174,0.60)" />
     </svg>
   );
 }
