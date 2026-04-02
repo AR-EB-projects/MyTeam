@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { publishMemberUpdated } from "@/lib/memberEvents";
 import { verifyAdminToken } from "@/lib/adminAuth";
+import { publishTrainingAttendanceUpdated } from "@/lib/trainingAttendanceEvents";
 import {
   getConfiguredTrainingDates,
   getWeekdayMondayFirst,
@@ -456,6 +457,7 @@ export async function PUT(
     for (const cardCode of affectedCardCodes) {
       publishMemberUpdated(cardCode, "training-updated");
     }
+    publishTrainingAttendanceUpdated(id, trainingDate);
     return NextResponse.json({
       success: true,
       trainingDate,
@@ -493,6 +495,7 @@ export async function PUT(
   for (const cardCode of affectedCardCodes) {
     publishMemberUpdated(cardCode, "training-updated");
   }
+  publishTrainingAttendanceUpdated(id, trainingDate);
 
     return NextResponse.json({
       success: true,

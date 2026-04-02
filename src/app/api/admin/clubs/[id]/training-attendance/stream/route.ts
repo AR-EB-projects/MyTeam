@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
-import { isIsoDate, isoDateToUtcMidnight } from "@/lib/training";
+import { isIsoDate } from "@/lib/training";
+import { subscribeTrainingAttendanceEvents } from "@/lib/trainingAttendanceEvents";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const CHECK_INTERVAL_MS = 3000;
 
 function isTransientPrismaConnectionError(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -41,71 +40,6 @@ async function verifySession(request: NextRequest) {
   return token ? await verifyAdminToken(token) : null;
 }
 
-async function getAttendanceSignature(
-  clubId: string,
-  trainingDate: Date,
-  teamGroup: number | null,
-  trainingGroupId: string | null,
-) {
-  const trainingGroup = trainingGroupId
-    ? await prisma.clubTrainingScheduleGroup.findFirst({
-        where: {
-          id: trainingGroupId,
-          clubId,
-        },
-        select: {
-          id: true,
-          teamGroups: true,
-        },
-      })
-    : null;
-  const playerScope = {
-    clubId,
-    isActive: true,
-    ...(trainingGroup ? { teamGroup: { in: trainingGroup.teamGroups } } : {}),
-    ...(teamGroup !== null ? { teamGroup } : {}),
-  };
-
-  const [optOutCount, optOutAggregate, note] = await Promise.all([
-    prisma.trainingOptOut.count({
-      where: {
-        trainingDate,
-        player: {
-          ...playerScope,
-        },
-      },
-    }),
-    prisma.trainingOptOut.aggregate({
-      where: {
-        trainingDate,
-        player: {
-          ...playerScope,
-        },
-      },
-      _max: {
-        createdAt: true,
-      },
-    }),
-    prisma.trainingNote.findUnique({
-      where: {
-        clubId_trainingDate: {
-          clubId,
-          trainingDate,
-        },
-      },
-      select: {
-        updatedAt: true,
-        note: true,
-      },
-    }),
-  ]);
-
-  const maxOptOutCreatedAt = optOutAggregate._max.createdAt?.getTime() ?? 0;
-  const noteUpdatedAt = note?.updatedAt?.getTime() ?? 0;
-  const noteLength = note?.note?.length ?? 0;
-  return `${optOutCount}:${maxOptOutCreatedAt}:${noteUpdatedAt}:${noteLength}`;
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -131,14 +65,41 @@ export async function GET(
   if (!isIsoDate(dateParam)) {
     return new Response("Invalid date query parameter", { status: 400 });
   }
-  const trainingDate = isoDateToUtcMidnight(dateParam);
-
-  const encoder = new TextEncoder();
-  let previousSignature = "";
+  const trainingDateIso = dateParam;
   try {
-    previousSignature = await getAttendanceSignature(id, trainingDate, teamGroup, trainingGroupId);
+    if (trainingGroupId) {
+      const trainingGroup = await prisma.clubTrainingScheduleGroup.findFirst({
+        where: {
+          id: trainingGroupId,
+          clubId: id,
+        },
+        select: { id: true },
+      });
+      if (!trainingGroup) {
+        return new Response("Training group not found", { status: 404 });
+      }
+    }
+
+    if (teamGroup !== null) {
+      await prisma.player.findFirst({
+        where: {
+          clubId: id,
+          isActive: true,
+          teamGroup,
+        },
+        select: { id: true },
+      });
+    }
+
+    const club = await prisma.club.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!club) {
+      return new Response("Club not found", { status: 404 });
+    }
   } catch (error) {
-    console.error("Training attendance stream init error:", error);
+    console.error("Training attendance stream validation error:", error);
     if (isTransientPrismaConnectionError(error)) {
       return new Response("Database temporarily unavailable. Please retry in a few seconds.", {
         status: 503,
@@ -147,19 +108,25 @@ export async function GET(
     return new Response("Internal Server Error", { status: 500 });
   }
 
+  const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
       let isClosed = false;
-      let interval: ReturnType<typeof setInterval> | null = null;
+      let keepAlive: ReturnType<typeof setInterval> | null = null;
+      let unsubscribe: (() => void) | null = null;
 
       const closeStream = () => {
         if (isClosed) {
           return;
         }
         isClosed = true;
-        if (interval) {
-          clearInterval(interval);
-          interval = null;
+        if (keepAlive) {
+          clearInterval(keepAlive);
+          keepAlive = null;
+        }
+        if (unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
         }
         try {
           controller.close();
@@ -180,29 +147,19 @@ export async function GET(
         }
       };
 
-      sendEvent("connected", { date: dateParam });
+      sendEvent("connected", { date: trainingDateIso });
 
-      interval = setInterval(async () => {
-        if (isClosed) {
+      unsubscribe = subscribeTrainingAttendanceEvents(id, (event) => {
+        if (event.trainingDate !== trainingDateIso) {
           return;
         }
-        if (request.signal.aborted) {
-          closeStream();
-          return;
-        }
+        sendEvent("attendance-update", { date: event.trainingDate, at: event.timestamp });
+      });
 
-        try {
-          const nextSignature = await getAttendanceSignature(id, trainingDate, teamGroup, trainingGroupId);
-          if (nextSignature !== previousSignature) {
-            previousSignature = nextSignature;
-            sendEvent("attendance-update", { date: dateParam, at: Date.now() });
-          } else {
-            sendEvent("heartbeat", { at: Date.now() });
-          }
-        } catch {
-          sendEvent("stream-error", { at: Date.now() });
-        }
-      }, CHECK_INTERVAL_MS);
+      // Keep the connection warm through proxies without database polling.
+      keepAlive = setInterval(() => {
+        sendEvent("heartbeat", { at: Date.now() });
+      }, 30000);
 
       request.signal.addEventListener("abort", () => {
         closeStream();

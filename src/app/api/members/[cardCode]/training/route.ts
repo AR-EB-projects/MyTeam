@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { sendPushToClubAdmins } from "@/lib/push/adminService";
 import { saveAdminNotificationHistory } from "@/lib/push/adminHistory";
 import type { PushNotificationPayload } from "@/lib/push/types";
+import { publishTrainingAttendanceUpdated } from "@/lib/trainingAttendanceEvents";
 import {
   getConfiguredTrainingDates,
   getWeekdayMondayFirst,
@@ -390,6 +391,7 @@ export async function POST(
   } catch (error) {
     console.error("Coach attendance push send error (opt-out):", error);
   }
+  publishTrainingAttendanceUpdated(context.clubId, trainingDate);
 
   return NextResponse.json({
     success: true,
@@ -450,6 +452,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Coach attendance push send error (opt-in):", error);
   }
+  publishTrainingAttendanceUpdated(context.clubId, trainingDate);
 
   return NextResponse.json({ success: true, trainingDate, optedOut: false, coachPush });
 }
