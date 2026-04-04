@@ -191,6 +191,13 @@ export default function Home() {
           <span className="powered-by-brand">Moozuk22 OS</span>
         </div>
 
+        {/* ── LEGAL LINKS ── */}
+        <div className="footer-legal">
+          <a href="/privacy">Политика за поверителност</a>
+          <span>•</span>
+          <a href="/terms">Общи условия</a>
+        </div>
+
       </div>
     </main>
   );
