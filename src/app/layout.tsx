@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaClientBootstrap } from "@/components/pwa/PwaClientBootstrap";
+import { GDPRConsent } from "@/components/GDPR/GDPRConsent";
 
 export const metadata: Metadata = {
   applicationName: "My Team",
@@ -39,6 +40,7 @@ export default function RootLayout({
     <html lang="bg">
       <body>
         <PwaClientBootstrap />
+        <GDPRConsent />
         {children}
       </body>
     </html>
