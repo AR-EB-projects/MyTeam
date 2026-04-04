@@ -770,6 +770,26 @@ body {
   color: #b4dfb1;
 }
 
+.footer-legal {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 11px;
+  color: rgba(180, 223, 177, 0.4);
+}
+
+.footer-legal a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-legal a:hover {
+  color: #b4dfb1;
+  text-decoration: underline;
+}
+
 @media (max-width: 400px) {
   .club-card {
     width: 200px;
