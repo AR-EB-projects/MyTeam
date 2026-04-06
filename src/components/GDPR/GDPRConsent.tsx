@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import "./GDPRConsent.css";
 
 export const GDPRConsent: React.FC = () => {
+    const pathname = usePathname();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -19,6 +21,7 @@ export const GDPRConsent: React.FC = () => {
         setIsVisible(false);
     };
 
+    if (pathname === "/privacy" || pathname === "/terms") return null;
     if (!isVisible) return null;
 
     return (
@@ -36,8 +39,8 @@ export const GDPRConsent: React.FC = () => {
                     </p>
                     <p className="text-secondary text-small">
                         С натискането на бутона "Приемам", Вие се съгласявате с нашата{" "}
-                        <Link href="/privacy" className="legal-link">Политика за поверителност</Link> и{" "}
-                        <Link href="/terms" className="legal-link">Общи условия</Link>, регулирани от Българското законодателство (ЗЗЛД) и Регламент (ЕС) 2016/679 (GDPR).
+                        <Link href="/privacy" className="legal-link" target="_blank" rel="noopener noreferrer">Политика за поверителност</Link> и{" "}
+                        <Link href="/terms" className="legal-link" target="_blank" rel="noopener noreferrer">Общи условия</Link>, регулирани от Българското законодателство (ЗЗЛД) и Регламент (ЕС) 2016/679 (GDPR).
                     </p>
                     <div className="gdpr-actions">
                         <button onClick={handleAccept} className="btn btn-primary w-full">
