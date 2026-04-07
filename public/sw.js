@@ -96,7 +96,16 @@ self.addEventListener("notificationclick", (event) => {
   if (isAdminTarget) {
     destinationUrl.searchParams.set("openCoachNotifications", "1");
   } else {
-    destinationUrl.searchParams.set("openBell", "1");
+    const notifType =
+      event.notification?.data &&
+      typeof event.notification.data.type === "string"
+        ? event.notification.data.type
+        : null;
+    if (notifType === "training_reminder") {
+      destinationUrl.searchParams.set("openTraining", "1");
+    } else {
+      destinationUrl.searchParams.set("openBell", "1");
+    }
   }
   destinationUrl.searchParams.set("pushOpenTs", String(Date.now()));
   const destination = destinationUrl.toString();

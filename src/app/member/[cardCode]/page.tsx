@@ -729,48 +729,57 @@ export default function MemberCardPage({
     }
 
     const pushOpenTs = searchParams.get("pushOpenTs");
-    const shouldOpenNotificationsFromPush =
-      searchParams.get("fromPush") === "1" &&
-      searchParams.get("openBell") === "1" &&
-      Boolean(pushOpenTs);
+    const fromPush = searchParams.get("fromPush") === "1" && Boolean(pushOpenTs);
+    const shouldOpenBell = fromPush && searchParams.get("openBell") === "1";
+    const shouldOpenTraining = fromPush && searchParams.get("openTraining") === "1";
 
-    if (!shouldOpenNotificationsFromPush || !pushOpenTs || pushOpenTs === lastHandledPushOpenTs) {
+    if ((!shouldOpenBell && !shouldOpenTraining) || !pushOpenTs || pushOpenTs === lastHandledPushOpenTs) {
       return;
     }
 
     setLastHandledPushOpenTs(pushOpenTs);
-    setNotificationsPanelOpen(true);
-    void (async () => {
-      setLoadingNotifications(true);
-      try {
-        const response = await fetch(`/api/members/${normalizedCardCode}/notifications`, { cache: "no-store" });
-        if (response.ok) {
-          const data = await response.json();
-          setNotifications(data.notifications || []);
-          setUnreadCount(data.unreadCount || 0);
-        }
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-      } finally {
-        setLoadingNotifications(false);
-      }
 
-      try {
-        const response = await fetch(`/api/members/${normalizedCardCode}/notifications/read`, {
-          method: "POST",
-        });
-        if (response.ok) {
-          setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
-          setUnreadCount(0);
+    if (shouldOpenTraining) {
+      setTrainingError(null);
+      setTrainingNotePopupOpen(false);
+      setTrainingModalOpen(true);
+    }
+
+    if (shouldOpenBell) {
+      setNotificationsPanelOpen(true);
+      void (async () => {
+        setLoadingNotifications(true);
+        try {
+          const response = await fetch(`/api/members/${normalizedCardCode}/notifications`, { cache: "no-store" });
+          if (response.ok) {
+            const data = await response.json();
+            setNotifications(data.notifications || []);
+            setUnreadCount(data.unreadCount || 0);
+          }
+        } catch (error) {
+          console.error("Failed to fetch notifications:", error);
+        } finally {
+          setLoadingNotifications(false);
         }
-      } catch (error) {
-        console.error("Failed to mark notifications as read:", error);
-      }
-    })();
+
+        try {
+          const response = await fetch(`/api/members/${normalizedCardCode}/notifications/read`, {
+            method: "POST",
+          });
+          if (response.ok) {
+            setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+            setUnreadCount(0);
+          }
+        } catch (error) {
+          console.error("Failed to mark notifications as read:", error);
+        }
+      })();
+    }
 
     const cleanedParams = new URLSearchParams(searchParams.toString());
     cleanedParams.delete("fromPush");
     cleanedParams.delete("openBell");
+    cleanedParams.delete("openTraining");
     cleanedParams.delete("pushOpenTs");
     const cleanedQuery = cleanedParams.toString();
     const cleanPath = `/member/${encodeURIComponent(normalizedCardCode)}`;
