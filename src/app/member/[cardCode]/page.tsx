@@ -1783,6 +1783,81 @@ export default function MemberCardPage({
           </div>
         </div>
 
+        {/* ── Sport Depot discount modal ── */}
+        {sportDepotModalOpen && (
+          <div className="pm-overlay sd-overlay" onClick={() => setSportDepotModalOpen(false)}>
+            <div className="sd-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="pm-close sd-modal-close" onClick={() => setSportDepotModalOpen(false)} aria-label="Затвори">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+
+              {/* Header */}
+              <div className="sd-modal-header">
+                <img src="/sd-logo.png" alt="Absolute Teamsport" className="sd-modal-logo" />
+                <div className="sd-modal-title-wrap">
+                  <p className="sd-modal-eyebrow">Партньорска програма</p>
+                  <h2 className="sd-modal-title">Вашата клубна отстъпка</h2>
+                </div>
+              </div>
+
+              <div className="sd-modal-divider" />
+
+              {/* Discount highlights */}
+              <div className="sd-highlights">
+                <div className="sd-highlight">
+                  <span className="sd-highlight-value">-10%</span>
+                  <span className="sd-highlight-label">на редовна цена</span>
+                </div>
+                <div className="sd-highlight sd-highlight--red">
+                  <span className="sd-highlight-value">-5%</span>
+                  <span className="sd-highlight-label">на намалени (онлайн)</span>
+                </div>
+              </div>
+
+              {/* Code + validity — tap to copy */}
+              <button
+                className={`sd-code-row${codeCopied ? " sd-code-row--copied" : ""}`}
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText("ATS_MYTEAM").then(() => {
+                    setCodeCopied(true);
+                    setTimeout(() => setCodeCopied(false), 2000);
+                  });
+                }}
+                aria-label="Копирай код ATS_MYTEAM"
+              >
+                <span className="sd-code-lbl">{codeCopied ? "Копирано!" : "Код:"}</span>
+                <span className="sd-code">{codeCopied ? "✓" : "ATS_MYTEAM"}</span>
+                {!codeCopied && (
+                  <svg className="sd-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                )}
+              </button>
+              <p className="sd-validity">Валиден: 02.04.2026 – 01.10.2026</p>
+
+              {/* QR code */}
+              <div className="sd-qr-wrap">
+                <img src="/QR.png" alt="QR код за отстъпка" className="sd-qr" />
+                <p className="sd-qr-hint">Покажи QR кода на касата или въведи кода онлайн на{" "}<a href="https://www.absolute-teamsport.bg" target="_blank" rel="noopener noreferrer" className="sd-store-link">absolute-teamsport.bg</a></p>
+              </div>
+
+              <div className="sd-modal-divider" />
+
+              {/* Terms */}
+              <div className="sd-terms">
+                <p className="sd-terms-title">Условия</p>
+                <ul className="sd-terms-list">
+                  <li>Важи в магазини <strong>ABSOLUTE TEAMSPORT</strong> и онлайн</li>
+                  <li>Не може да се комбинира с промоции или ваучери</li>
+                  <li>Не важи за артикули на ПФК „Левски", външни артикули с удължен срок и ваучери за подарък</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Innline Dragon Body discount modal ── */}
         {idbModalOpen && (
           <div className="pm-overlay sd-overlay" onClick={() => setIdbModalOpen(false)}>
