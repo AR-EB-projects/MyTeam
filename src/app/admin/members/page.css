@@ -67,7 +67,7 @@
   margin-bottom: 24px;
 }
 
-.amp-buttons-grid > button {
+.amp-buttons-grid>button {
   flex: 1 1 calc(50% - 4px);
   justify-content: center;
 }
@@ -1235,7 +1235,7 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
-.amp-edit-grid > .amp-scheduler-section-title:first-child {
+.amp-edit-grid>.amp-scheduler-section-title:first-child {
   border-top: none;
   padding-top: 0;
 }
@@ -1944,6 +1944,7 @@
   font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
   display: block;
+  text-align: center;
 }
 
 .rd-select-wrap {
@@ -1962,7 +1963,7 @@
 
 .rd-select {
   appearance: none;
-  padding: 8px 28px;
+  padding: 0 12px 0 12px;
   height: 36px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1983,6 +1984,7 @@
 .rd-select option {
   background: #1a1a1a;
   color: #ffffff;
+  text-align: center;
 }
 
 .rd-select option:hover,
@@ -3064,6 +3066,7 @@
   outline: none;
   transition: border-color 0.15s;
   width: 200px;
+  text-align: center;
 }
 
 .acd-search-input::placeholder {
@@ -3094,7 +3097,7 @@
 .acd-search-result {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   padding: 8px 12px;
   font-size: 13px;
@@ -3116,7 +3119,7 @@
 .rd-date-input {
   appearance: none;
   height: 36px;
-  padding: 0 10px;
+  padding: 0 12px 0 36px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);
@@ -3126,10 +3129,21 @@
   outline: none;
   transition: border-color 0.15s;
   color-scheme: dark;
+  text-align: center;
 }
 
 .rd-date-input:focus {
   border-color: rgba(50, 205, 50, 0.4);
+}
+
+.rd-date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  opacity: 0 !important;
+  cursor: pointer;
+  z-index: 2;
 }
 
 @media (max-width: 640px) {
@@ -3159,5 +3173,89 @@
   .acd-td-name {
     min-width: 100px;
     max-width: 130px;
+  }
+}
+
+/* ── Print Media Queries ── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .acd-dialog,
+  .acd-dialog * {
+    visibility: visible;
+  }
+
+  .acd-dialog {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .rd-overlay {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+    padding: 0;
+  }
+
+  .rd-close,
+  .rd-filters,
+  .rd-footer {
+    display: none !important;
+  }
+
+  .acd-table-wrap {
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    margin-top: 0;
+  }
+
+  .acd-table {
+    width: 100%;
+  }
+
+  .acd-table th,
+  .acd-table td {
+    color: #000 !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+
+  .acd-table thead th {
+    background: #f5f5f5 !important;
+    position: static;
+    color: #000 !important;
+    border-bottom: 2px solid #ccc !important;
+  }
+
+  .rd-title {
+    color: #000 !important;
+    margin-bottom: 20px;
+  }
+
+  .acd-th-name,
+  .acd-td-name {
+    position: static;
+    background: none !important;
+    color: #000 !important;
+  }
+
+  .acd-cell--present {
+    color: #008000 !important;
+  }
+
+  .acd-cell--absent {
+    color: #cc0000 !important;
   }
 }

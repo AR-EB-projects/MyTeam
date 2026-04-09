@@ -613,7 +613,7 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(todayIso);
   const [scopeType, setScopeType] = useState<"group" | "player">("group");
-  const [groupScope, setGroupScope] = useState("all");
+  const [groupScope, setGroupScope] = useState("");
   const [playerSearch, setPlayerSearch] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -664,32 +664,32 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
           const payload: unknown = await groupsRes.json();
           const groups: TrainingScheduleGroup[] = Array.isArray(payload)
             ? payload
-                .map((item) => {
-                  const raw =
-                    typeof item === "object" && item !== null
-                      ? (item as Record<string, unknown>)
-                      : {};
-                  const tg = Array.isArray(raw.teamGroups)
-                    ? raw.teamGroups
-                        .map((v) => Number.parseInt(String(v), 10))
-                        .filter((v) => Number.isInteger(v))
-                        .sort((a, b) => a - b)
-                    : [];
-                  const td = Array.isArray(raw.trainingDates)
-                    ? raw.trainingDates
-                        .map((v) => String(v ?? "").trim())
-                        .filter((v) => /^\d{4}-\d{2}-\d{2}$/.test(v))
-                    : [];
-                  return {
-                    id: String(raw.id ?? ""),
-                    name: String(raw.name ?? "").trim(),
-                    teamGroups: tg,
-                    trainingDates: td,
-                    trainingTime: typeof raw.trainingTime === "string" ? raw.trainingTime.trim() : null,
-                    trainingDateTimes: null,
-                  } satisfies TrainingScheduleGroup;
-                })
-                .filter((g) => g.id && g.teamGroups.length >= 2)
+              .map((item) => {
+                const raw =
+                  typeof item === "object" && item !== null
+                    ? (item as Record<string, unknown>)
+                    : {};
+                const tg = Array.isArray(raw.teamGroups)
+                  ? raw.teamGroups
+                    .map((v) => Number.parseInt(String(v), 10))
+                    .filter((v) => Number.isInteger(v))
+                    .sort((a, b) => a - b)
+                  : [];
+                const td = Array.isArray(raw.trainingDates)
+                  ? raw.trainingDates
+                    .map((v) => String(v ?? "").trim())
+                    .filter((v) => /^\d{4}-\d{2}-\d{2}$/.test(v))
+                  : [];
+                return {
+                  id: String(raw.id ?? ""),
+                  name: String(raw.name ?? "").trim(),
+                  teamGroups: tg,
+                  trainingDates: td,
+                  trainingTime: typeof raw.trainingTime === "string" ? raw.trainingTime.trim() : null,
+                  trainingDateTimes: null,
+                } satisfies TrainingScheduleGroup;
+              })
+              .filter((g) => g.id && g.teamGroups.length >= 2)
             : [];
           setScheduleGroups(groups);
         }
@@ -698,8 +698,22 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
       }
     };
     void fetchOptions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clubId]);
+
+  useEffect(() => {
+    if (scopeType === "group" && !groupScope && (scheduleGroups.length > 0 || availableGroups.length > 0)) {
+      if (scheduleGroups.length > 0) {
+        setGroupScope(`tg:${scheduleGroups[0].id}`);
+      } else if (availableGroups.length > 0) {
+        const trainingGroupYears = new Set(scheduleGroups.flatMap((g) => g.teamGroups));
+        const standalone = availableGroups.filter((g) => !trainingGroupYears.has(g));
+        if (standalone.length > 0) {
+          setGroupScope(`year:${standalone[0]}`);
+        }
+      }
+    }
+  }, [scheduleGroups, availableGroups, scopeType, groupScope]);
 
   useEffect(() => {
     if (!from || !to || from > to) return;
@@ -746,7 +760,7 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
       clearTimeout(timer);
       controller.abort();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to, scopeType, groupScope, selectedPlayerId, clubId]);
 
   const formatDateHeader = (iso: string): string => {
@@ -769,8 +783,8 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
 
   const filteredSearchPlayers = playerSearch.length >= 1 && !selectedPlayerId
     ? allPlayers.filter((p) =>
-        p.fullName.toLowerCase().includes(playerSearch.toLowerCase()),
-      ).slice(0, 10)
+      p.fullName.toLowerCase().includes(playerSearch.toLowerCase()),
+    ).slice(0, 10)
     : [];
 
   return (
@@ -790,24 +804,30 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
         <div className="rd-filters">
           <div className="rd-field">
             <label className="rd-label">От</label>
-            <input
-              type="date"
-              className="rd-date-input"
-              value={from}
-              max={to}
-              onChange={(e) => setFrom(e.target.value)}
-            />
+            <div className="rd-select-wrap">
+              <input
+                type="date"
+                className="rd-date-input"
+                value={from}
+                max={to}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+              <CalendarIcon size={16} />
+            </div>
           </div>
           <div className="rd-field">
             <label className="rd-label">До</label>
-            <input
-              type="date"
-              className="rd-date-input"
-              value={to}
-              min={from}
-              max={todayIso}
-              onChange={(e) => setTo(e.target.value)}
-            />
+            <div className="rd-select-wrap">
+              <input
+                type="date"
+                className="rd-date-input"
+                value={to}
+                min={from}
+                max={todayIso}
+                onChange={(e) => setTo(e.target.value)}
+              />
+              <CalendarIcon size={16} />
+            </div>
           </div>
           <div className="rd-field">
             <label className="rd-label">Вид</label>
@@ -841,7 +861,6 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
                   value={groupScope}
                   onChange={(e) => setGroupScope(e.target.value)}
                 >
-                  <option value="all">Всички</option>
                   {scheduleGroups.map((g) => (
                     <option key={g.id} value={`tg:${g.id}`}>
                       {g.name}
@@ -958,15 +977,15 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
                                 className="acd-cell acd-cell--absent"
                                 title={
                                   cell.reasonCode === "injury" ? "Контузия" :
-                                  cell.reasonCode === "sick" ? "Болен" :
-                                  cell.reasonCode === "other" ? "Друга причина" :
-                                  cell.reasonCode ? `Причина: ${cell.reasonCode}` : "Отказал се"
+                                    cell.reasonCode === "sick" ? "Болен" :
+                                      cell.reasonCode === "other" ? "Друга причина" :
+                                        cell.reasonCode ? `Причина: ${cell.reasonCode}` : "Отказал се"
                                 }
                               >
                                 {cell.reasonCode === "injury" ? "Конт" :
-                                 cell.reasonCode === "sick" ? "Болен" :
-                                 cell.reasonCode === "other" ? "Друго" :
-                                 cell.reasonCode ? cell.reasonCode.slice(0, 4) : "✗"}
+                                  cell.reasonCode === "sick" ? "Болен" :
+                                    cell.reasonCode === "other" ? "Друго" :
+                                      cell.reasonCode ? cell.reasonCode.slice(0, 4) : "✗"}
                               </td>
                             );
                           })}
@@ -1016,6 +1035,17 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
               ? "Изберете играч за да видите присъствията."
               : "Няма данни за избрания период."}
           </p>
+        )}
+
+        {data && data.players.length > 0 && data.trainingDates.length > 0 && (
+          <div className="rd-footer" style={{ marginTop: "4px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <button
+              className="rd-footer-btn"
+              onClick={() => window.print()}
+            >
+              <PrinterIcon /> Отпечатай
+            </button>
+          </div>
         )}
       </div>
     </div>
