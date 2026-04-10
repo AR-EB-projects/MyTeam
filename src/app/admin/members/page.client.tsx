@@ -5380,6 +5380,7 @@ function AdminMembersPageContent() {
                         className="amp-btn amp-btn--primary"
                         onClick={openTrainingGroupCreateModal}
                         disabled={trainingNoteSaving || trainingGroupCreateSaving}
+                        style={{ width: "100%" }}
                       >
                         {trainingGroupCreateSaving ? "Запазване..." : "Създай сборен отбор"}
                       </button>
