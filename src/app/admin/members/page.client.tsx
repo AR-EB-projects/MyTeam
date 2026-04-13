@@ -102,6 +102,7 @@ interface TrainingAttendancePlayer {
 interface TrainingUpcomingDateItem {
   date: string;
   weekday: number;
+  trainingTime?: string | null;
   stats: {
     total: number;
     attending: number;
@@ -4261,6 +4262,10 @@ function AdminMembersPageContent() {
             return {
               date: String(raw.date ?? ""),
               weekday: Number(raw.weekday ?? 0),
+              trainingTime:
+                typeof raw.trainingTime === "string" && TRAINING_TIME_REGEX.test(raw.trainingTime.trim())
+                  ? raw.trainingTime.trim()
+                  : null,
               stats: {
                 total: Number(rawStats.total ?? 0),
                 attending: Number(rawStats.attending ?? 0),
@@ -5617,6 +5622,7 @@ function AdminMembersPageContent() {
 
                               const isActive = trainingAttendanceDate === date;
                               const isToday = todayIsoDate === date;
+                              const trainingTimeLabel = dateData.trainingTime?.trim() ?? "";
                               return (
                                 <button
                                   key={date}
@@ -5626,6 +5632,9 @@ function AdminMembersPageContent() {
                                   disabled={trainingAttendanceLoading || trainingNoteSaving || trainingDayDetailsOpening}
                                 >
                                   <span className="amp-training-day-number">{dayNumber}</span>
+                                  {trainingTimeLabel && (
+                                    <span className="amp-training-day-time">{trainingTimeLabel}</span>
+                                  )}
                                   <span className="amp-training-day-meta">
                                     {dateData.stats.attending}/{dateData.stats.total}
                                   </span>
@@ -6649,6 +6658,7 @@ function AdminMembersPageContent() {
 
                           const isSelected = trainingNoteTargetDates.includes(date);
                           const isToday = todayIsoDate === date;
+                          const trainingTimeLabel = dateData.trainingTime?.trim() ?? "";
                           return (
                             <button
                               key={date}
@@ -6658,6 +6668,9 @@ function AdminMembersPageContent() {
                               disabled={trainingNoteSaving}
                             >
                               <span className="amp-training-day-number">{dayNumber}</span>
+                              {trainingTimeLabel && (
+                                <span className="amp-training-day-time">{trainingTimeLabel}</span>
+                              )}
                               <span className="amp-training-day-meta">
                                 {dateData.stats.attending}/{dateData.stats.total}
                               </span>

@@ -1345,6 +1345,13 @@
   font-weight: 700;
 }
 
+.amp-training-day-time {
+  font-size: 7px;
+  font-weight: 700;
+  opacity: 0.88;
+  line-height: 1;
+}
+
 .amp-training-day-meta {
   font-size: 8px;
   font-weight: 700;
@@ -1367,6 +1374,12 @@
   gap: 1px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.amp-training-date-btn--training {
+  min-height: 30px;
+  padding: 2px 1px;
+  justify-content: space-between;
 }
 
 .amp-training-date-btn:hover:not(:disabled) {
@@ -2518,11 +2531,25 @@
     border-radius: 5px;
   }
 
+  .amp-modal--training-attendance .amp-training-date-btn--training,
+  .amp-modal--training-day-details .amp-training-date-btn--training,
+  .amp-modal--training-note .amp-training-date-btn--training {
+    min-height: 26px;
+    padding: 2px 1px;
+  }
+
   .amp-modal--training-attendance .amp-training-day-number,
   .amp-modal--training-days-editor .amp-training-day-number,
   .amp-modal--training-day-details .amp-training-day-number,
   .amp-modal--training-note .amp-training-day-number {
     font-size: 9px;
+  }
+
+  .amp-modal--training-attendance .amp-training-day-time,
+  .amp-modal--training-days-editor .amp-training-day-time,
+  .amp-modal--training-day-details .amp-training-day-time,
+  .amp-modal--training-note .amp-training-day-time {
+    font-size: 6px;
   }
 
   .amp-modal--training-attendance .amp-training-day-meta,

@@ -8,6 +8,7 @@ import {
   getWeekdayMondayFirst,
   isIsoDate,
   isoDateToUtcMidnight,
+  normalizeTrainingTime,
   utcDateToIsoDate,
 } from "@/lib/training";
 
@@ -16,6 +17,33 @@ export const dynamic = "force-dynamic";
 
 const FIXED_TIME_ZONE = "Europe/Sofia";
 const TRAINING_SELECTION_WINDOW_DAYS = 30;
+
+function safeNormalizeTrainingTime(raw: unknown): string | null {
+  try {
+    return normalizeTrainingTime(raw);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeStoredTrainingDateTimes(raw: unknown, trainingDates: string[]): Record<string, string> {
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
+  const source = raw as Record<string, unknown>;
+  const allowedDates = new Set(trainingDates);
+  const result: Record<string, string> = {};
+  for (const [date, value] of Object.entries(source)) {
+    if (!allowedDates.has(date)) {
+      continue;
+    }
+    const normalized = safeNormalizeTrainingTime(value);
+    if (normalized) {
+      result[date] = normalized;
+    }
+  }
+  return result;
+}
 
 function isTransientPrismaConnectionError(error: unknown) {
   if (!error || typeof error !== "object") {
@@ -84,6 +112,8 @@ export async function GET(
       id: true,
       name: true,
       trainingDates: true,
+      trainingTime: true,
+      trainingDateTimes: true,
       trainingWeekdays: true,
       trainingWindowDays: true,
     },
@@ -102,6 +132,8 @@ export async function GET(
           id: true,
           teamGroups: true,
           trainingDates: true,
+          trainingTime: true,
+          trainingDateTimes: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
         },
@@ -122,6 +154,8 @@ export async function GET(
         },
         select: {
           trainingDates: true,
+          trainingTime: true,
+          trainingDateTimes: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
         },
@@ -143,27 +177,44 @@ export async function GET(
         },
         select: {
           trainingDates: true,
+          trainingTime: true,
+          trainingDateTimes: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
         },
       })
     : null;
 
+  const resolvedTrainingDates =
+    trainingGroup
+      ? trainingGroup.trainingDates ?? []
+      : trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? club.trainingDates ?? [];
+  const resolvedTrainingWeekdays =
+    trainingGroup
+      ? trainingGroup.trainingWeekdays ?? []
+      : trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? club.trainingWeekdays ?? [];
+  const resolvedTrainingWindowDays =
+    trainingGroup?.trainingWindowDays ??
+    trainingGroupOverride?.trainingWindowDays ??
+    groupSchedule?.trainingWindowDays ??
+    club.trainingWindowDays ??
+    TRAINING_SELECTION_WINDOW_DAYS;
+  const resolvedTrainingDateTimes = normalizeStoredTrainingDateTimes(
+    trainingGroup
+      ? trainingGroup.trainingDateTimes
+      : trainingGroupOverride?.trainingDateTimes ?? groupSchedule?.trainingDateTimes ?? club.trainingDateTimes,
+    resolvedTrainingDates,
+  );
+  const resolvedDefaultTrainingTime = safeNormalizeTrainingTime(
+    trainingGroup
+      ? trainingGroup.trainingTime
+      : trainingGroupOverride?.trainingTime ?? groupSchedule?.trainingTime ?? club.trainingTime,
+  );
+
   const upcomingDates = getConfiguredTrainingDates({
-    trainingDates:
-      trainingGroup
-        ? trainingGroup.trainingDates ?? []
-        : trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? club.trainingDates ?? [],
-    weekdays:
-      trainingGroup
-        ? trainingGroup.trainingWeekdays ?? []
-        : trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? club.trainingWeekdays ?? [],
-    windowDays:
-      trainingGroup?.trainingWindowDays ??
-      trainingGroupOverride?.trainingWindowDays ??
-      groupSchedule?.trainingWindowDays ??
-      club.trainingWindowDays ??
-      TRAINING_SELECTION_WINDOW_DAYS,
+    trainingDates: resolvedTrainingDates,
+    weekdays: resolvedTrainingWeekdays,
+    windowDays: resolvedTrainingWindowDays,
     timeZone: FIXED_TIME_ZONE,
     maxDays: TRAINING_SELECTION_WINDOW_DAYS,
   });
@@ -270,6 +321,7 @@ export async function GET(
       trainingGroupId: trainingGroup?.id ?? null,
       trainingDate,
       weekday: getWeekdayMondayFirst(trainingDate, FIXED_TIME_ZONE),
+      trainingTime: resolvedTrainingDateTimes[trainingDate] ?? resolvedDefaultTrainingTime,
       note: note?.note ?? "",
       stats: {
         total: totalPlayers,
@@ -280,6 +332,7 @@ export async function GET(
       upcomingDates: upcomingDates.map((date) => ({
         date,
         weekday: getWeekdayMondayFirst(date, FIXED_TIME_ZONE),
+        trainingTime: resolvedTrainingDateTimes[date] ?? resolvedDefaultTrainingTime,
         stats: {
           total: totalPlayers,
           optedOut: optedOutCountByDate.get(date) ?? 0,
