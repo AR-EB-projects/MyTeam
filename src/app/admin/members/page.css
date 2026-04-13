@@ -3531,6 +3531,72 @@
   margin-right: 4px;
 }
 
+/* ── Photo import additions ── */
+.amp-import-stat--error {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.06);
+}
+
+.amp-import-stat--error .amp-import-stat-num {
+  color: #f87171;
+}
+
+.amp-import-stat--warning {
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.amp-import-stat--warning .amp-import-stat-num {
+  color: #fbbf24;
+}
+
+.amp-import-result-stats--wrap {
+  flex-wrap: wrap;
+}
+
+.amp-import-result-stats--wrap .amp-import-stat {
+  min-width: 100px;
+}
+
+.amp-import-errors--warning {
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.amp-import-errors--warning .amp-import-errors-toggle {
+  color: #fbbf24;
+}
+
+.amp-import-confirm-hint {
+  margin: 12px 0 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.amp-import-overwrite-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.amp-import-folder-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 12px;
+}
+
+.amp-import-folder-name svg {
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
 /* ── Print Media Queries ── */
 @media print {
   body * {

@@ -19,8 +19,11 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const folderId = searchParams.get("folderId") || "root";
+  const mode = searchParams.get("mode");
   const fileTypeFilter =
-    "(mimeType='application/vnd.google-apps.spreadsheet' or mimeType='application/vnd.google-apps.folder')";
+    mode === "photos"
+      ? "mimeType='application/vnd.google-apps.folder'"
+      : "(mimeType='application/vnd.google-apps.spreadsheet' or mimeType='application/vnd.google-apps.folder')";
   const query =
     folderId === "root"
       ? `trashed=false and ${fileTypeFilter} and ('root' in parents or sharedWithMe=true)`
