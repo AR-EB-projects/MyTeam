@@ -259,6 +259,7 @@ export default function MemberCardPage({
   const [nikoCodeCopied, setNikoCodeCopied] = useState(false);
   const [dalidaModalOpen, setDalidaModalOpen] = useState(false);
   const [dalidaCodeCopied, setDalidaCodeCopied] = useState(false);
+  const [allDiscountsModalOpen, setAllDiscountsModalOpen] = useState(false);
   const [isIPhoneDevice, setIsIPhoneDevice] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -1514,23 +1515,8 @@ export default function MemberCardPage({
             <div className="divider divider--mt" />
 
             {/* ── Partner discount buttons — admin/coach preview only ── */}
-            {(isAdmin || isCoach) && (
+            {(!isAdmin && !isCoach) && (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
-                {/* Dalida Dance */}
-                <button
-                  className="dalida-discount-btn"
-                  style={{ marginTop: 0 }}
-                  onClick={() => setDalidaModalOpen(true)}
-                  type="button"
-                  aria-label="Dalida Dance отстъпка"
-                >
-                  <div className="sd-discount-logo-wrap">
-                    <img src="/logo-dalida.png" alt="Dalida Dance" className="sd-discount-logo dalida-logo-fix" />
-                  </div>
-                  <span className="sd-discount-label">Dalida Dance</span>
-                  <span className="sd-discount-badge dalida-discount-badge">10-30%</span>
-                </button>
-
                 {/* Sport Depot */}
                 <button
                   className="sd-discount-btn"
@@ -1546,32 +1532,30 @@ export default function MemberCardPage({
                   <span className="sd-discount-badge">-10%</span>
                 </button>
 
-                {/* Innline Dragon Body */}
-                <button
-                  className="idb-discount-btn"
-                  onClick={() => setIdbModalOpen(true)}
-                  type="button"
-                  aria-label="Innline Dragon Body отстъпка"
+                <button 
+                  onClick={() => setAllDiscountsModalOpen(true)} 
+                  style={{ 
+                    background: "rgba(255,255,255,0.05)", 
+                    border: "1px solid rgba(255,255,255,0.1)", 
+                    color: "rgba(255,255,255,0.8)", 
+                    padding: "12px", 
+                    borderRadius: "10px", 
+                    marginTop: "2px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+                    e.currentTarget.style.transform = "scale(1.01)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
                 >
-                  <div className="sd-discount-logo-wrap">
-                    <img src="/idb-logo.svg" alt="Innline Dragon Body" className="sd-discount-logo idb-logo-fix" />
-                  </div>
-                  <span className="sd-discount-label">Innline Dragon Body</span>
-                  <span className="sd-discount-badge">-10%</span>
-                </button>
-
-                {/* Mebeli Niko */}
-                <button
-                  className="niko-discount-btn"
-                  onClick={() => setNikoModalOpen(true)}
-                  type="button"
-                  aria-label="Mebeli Niko отстъпка"
-                >
-                  <div className="sd-discount-logo-wrap">
-                    <img src="/niko-logo.png" alt="Mebeli Niko" className="sd-discount-logo niko-logo-fix" />
-                  </div>
-                  <span className="sd-discount-label">Мебели Нико</span>
-                  <span className="sd-discount-badge">-10%</span>
+                  Виж всички оферти
                 </button>
               </div>
             )}
@@ -2055,6 +2039,88 @@ export default function MemberCardPage({
                   <li>Необходима е предварителна резервация</li>
                   <li>Важи при представяне на промоционалния код</li>
                 </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* All Discounts Modal */}
+        {allDiscountsModalOpen && (
+          <div className="pm-overlay" onClick={() => setAllDiscountsModalOpen(false)}>
+            <div className="pm-modal" onClick={(e) => e.stopPropagation()} style={{ padding: "24px 20px" }}>
+              <button className="pm-close" onClick={() => setAllDiscountsModalOpen(false)} aria-label="Затвори">
+                <XIcon size={16} />
+              </button>
+
+              <div className="pm-header">
+                <span className="member-training-modal-title-gradient">Партньори</span>
+                <div>
+                  <h2 className="pm-title">Всички оферти</h2>
+                </div>
+              </div>
+
+              <div className="pm-divider" />
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto", maxHeight: "60vh", paddingRight: "4px" }}>
+                {/* Sport Depot */}
+                <button
+                  className="sd-discount-btn"
+                  style={{ marginTop: 0 }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setSportDepotModalOpen(true); }}
+                  type="button"
+                  aria-label="Absolute Teamsport отстъпка"
+                >
+                  <div className="sd-discount-logo-wrap">
+                    <img src="/sd-logo.png" alt="Sport Depot" className="sd-discount-logo" />
+                  </div>
+                  <span className="sd-discount-label">Sport Depot</span>
+                  <span className="sd-discount-badge">-10%</span>
+                </button>
+
+                {/* Dalida Dance */}
+                <button
+                  className="dalida-discount-btn"
+                  style={{ marginTop: 0 }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setDalidaModalOpen(true); }}
+                  type="button"
+                  aria-label="Dalida Dance отстъпка"
+                >
+                  <div className="sd-discount-logo-wrap">
+                    <img src="/logo-dalida.png" alt="Dalida Dance" className="sd-discount-logo dalida-logo-fix" />
+                  </div>
+                  <span className="sd-discount-label">Dalida Dance</span>
+                  <span className="sd-discount-badge dalida-discount-badge">10-30%</span>
+                </button>
+
+                {/* Innline Dragon Body */}
+                <button
+                  className="idb-discount-btn"
+                  style={{ marginTop: 0 }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setIdbModalOpen(true); }}
+                  type="button"
+                  aria-label="Innline Dragon Body отстъпка"
+                >
+                  <div className="sd-discount-logo-wrap">
+                    <img src="/idb-logo.svg" alt="Innline Dragon Body" className="sd-discount-logo idb-logo-fix" />
+                  </div>
+                  <span className="sd-discount-label">Innline Dragon Body</span>
+                  <span className="sd-discount-badge">-10%</span>
+                </button>
+
+                {/* Mebeli Niko */}
+                <button
+                  className="niko-discount-btn"
+                  style={{ marginTop: 0 }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setNikoModalOpen(true); }}
+                  type="button"
+                  aria-label="Mebeli Niko отстъпка"
+                >
+                  <div className="sd-discount-logo-wrap">
+                    <img src="/niko-logo.png" alt="Mebeli Niko" className="sd-discount-logo niko-logo-fix" />
+                  </div>
+                  <span className="sd-discount-label">Мебели Нико</span>
+                  <span className="sd-discount-badge">-10%</span>
+                </button>
               </div>
             </div>
           </div>
