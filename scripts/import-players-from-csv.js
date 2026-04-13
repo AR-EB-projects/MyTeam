@@ -55,41 +55,44 @@ function normalizeHeader(value) {
   return value.replace(/\uFEFF/g, "").trim().toLowerCase();
 }
 
+function findColumnIndex(headers, candidates) {
+  const normalized = headers.map(normalizeHeader);
+  for (const candidate of candidates) {
+    const idx = normalized.indexOf(candidate.toLowerCase());
+    if (idx >= 0) {
+      return idx;
+    }
+  }
+  return -1;
+}
+
+const NAME_CANDIDATES = ["Име, фамилия", "име, фамилия", "ime, familiya", "fullName", "fullname"];
+const BORN_CANDIDATES = ["роден", "родена", "born", "birthdate", "birth_date", "дата на раждане"];
+const KIT_CANDIDATES = ["№", "#", "kit", "jersey", "number", "номер"];
+
 function resolveRowsAndDelimiter(content) {
   const commaRows = parseCsv(content, ",");
   const semicolonRows = parseCsv(content, ";");
 
-  const nameCandidates = [
-    "Име, фамилия",
-    "име, фамилия",
-    "име фамилия",
-    "fullName",
-    "fullname",
-  ];
-  const teamCandidates = ["отбор", "teamgroup", "team_group"];
-
   const commaHeaders = commaRows[0] || [];
   const semicolonHeaders = semicolonRows[0] || [];
 
-  const commaName = findColumnIndex(commaHeaders, nameCandidates);
-  const commaTeam = findColumnIndex(commaHeaders, teamCandidates);
-  const semicolonName = findColumnIndex(semicolonHeaders, nameCandidates);
-  const semicolonTeam = findColumnIndex(semicolonHeaders, teamCandidates);
+  const commaName = findColumnIndex(commaHeaders, NAME_CANDIDATES);
+  const commaBorn = findColumnIndex(commaHeaders, BORN_CANDIDATES);
+  const semicolonName = findColumnIndex(semicolonHeaders, NAME_CANDIDATES);
+  const semicolonBorn = findColumnIndex(semicolonHeaders, BORN_CANDIDATES);
 
-  if (semicolonName >= 0 && semicolonTeam >= 0) {
+  if (semicolonName >= 0 && semicolonBorn >= 0) {
     return { rows: semicolonRows, delimiter: ";" };
   }
 
-  if (commaName >= 0 && commaTeam >= 0) {
+  if (commaName >= 0 && commaBorn >= 0) {
     return { rows: commaRows, delimiter: "," };
   }
 
-  const chosen =
-    (semicolonHeaders.length > commaHeaders.length
-      ? { rows: semicolonRows, delimiter: ";" }
-      : { rows: commaRows, delimiter: "," });
-
-  return chosen;
+  return semicolonHeaders.length > commaHeaders.length
+    ? { rows: semicolonRows, delimiter: ";" }
+    : { rows: commaRows, delimiter: "," };
 }
 
 function decodeCandidates(buffer) {
@@ -104,30 +107,22 @@ function decodeCandidates(buffer) {
 }
 
 function resolveParsedInput(buffer) {
-  const nameCandidates = [
-    "Име, фамилия",
-    "име, фамилия",
-    "име фамилия",
-    "fullName",
-    "fullname",
-  ];
-  const teamCandidates = ["отбор", "teamgroup", "team_group"];
-
   const decoded = decodeCandidates(buffer);
 
   for (const candidate of decoded) {
     const { rows, delimiter } = resolveRowsAndDelimiter(candidate.text);
     const headers = rows[0] || [];
-    const nameIndex = findColumnIndex(headers, nameCandidates);
-    const teamGroupIndex = findColumnIndex(headers, teamCandidates);
-    if (nameIndex >= 0 && teamGroupIndex >= 0) {
+    const nameIndex = findColumnIndex(headers, NAME_CANDIDATES);
+    const bornIndex = findColumnIndex(headers, BORN_CANDIDATES);
+    if (nameIndex >= 0 && bornIndex >= 0) {
       return {
         rows,
         delimiter,
         encoding: candidate.encoding,
         headers,
         nameIndex,
-        teamGroupIndex,
+        bornIndex,
+        kitIndex: findColumnIndex(headers, KIT_CANDIDATES),
       };
     }
   }
@@ -139,20 +134,30 @@ function resolveParsedInput(buffer) {
     delimiter: fallback.delimiter,
     encoding: decoded[0].encoding,
     headers,
-    nameIndex: findColumnIndex(headers, nameCandidates),
-    teamGroupIndex: findColumnIndex(headers, teamCandidates),
+    nameIndex: findColumnIndex(headers, NAME_CANDIDATES),
+    bornIndex: findColumnIndex(headers, BORN_CANDIDATES),
+    kitIndex: findColumnIndex(headers, KIT_CANDIDATES),
   };
 }
 
-function findColumnIndex(headers, candidates) {
-  const normalized = headers.map(normalizeHeader);
-  for (const candidate of candidates) {
-    const idx = normalized.indexOf(candidate.toLowerCase());
-    if (idx >= 0) {
-      return idx;
-    }
-  }
-  return -1;
+/**
+ * Parse a date string in EU format dd.mm.yyyy into a Date object (UTC midnight).
+ * Returns null if the value is empty or unparseable.
+ */
+function parseBirthDate(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!match) return null;
+
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const year = parseInt(match[3], 10);
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 async function resolveClubId(inputClubId) {
@@ -182,7 +187,7 @@ async function resolveClubId(inputClubId) {
   return clubs[0].id;
 }
 
-async function createPlayerWithCard({ clubId, fullName, teamGroup }) {
+async function createPlayerWithCard({ clubId, fullName, birthDate, teamGroup, jerseyNumber }) {
   let lastError = null;
 
   for (let i = 0; i < 5; i += 1) {
@@ -194,7 +199,9 @@ async function createPlayerWithCard({ clubId, fullName, teamGroup }) {
           clubId,
           fullName,
           status: "warning",
-          teamGroup,
+          birthDate: birthDate ?? undefined,
+          teamGroup: teamGroup ?? undefined,
+          jerseyNumber: jerseyNumber ?? undefined,
           cards: {
             create: {
               cardCode,
@@ -235,14 +242,9 @@ async function main() {
   }
 
   const rawBuffer = fs.readFileSync(csvPath);
-  const {
-    rows,
-    delimiter,
-    encoding,
-    headers,
-    nameIndex,
-    teamGroupIndex,
-  } = resolveParsedInput(rawBuffer);
+  const { rows, delimiter, encoding, headers, nameIndex, bornIndex, kitIndex } =
+    resolveParsedInput(rawBuffer);
+
   if (rows.length < 2) {
     throw new Error("CSV has no data rows.");
   }
@@ -253,9 +255,9 @@ async function main() {
     );
   }
 
-  if (teamGroupIndex < 0) {
+  if (bornIndex < 0) {
     throw new Error(
-      `Missing column: "отбор". Parsed encoding: "${encoding}", delimiter: "${delimiter}". Parsed headers: ${headers.join(" | ")}`
+      `Missing column: "Роден". Parsed encoding: "${encoding}", delimiter: "${delimiter}". Parsed headers: ${headers.join(" | ")}`
     );
   }
 
@@ -268,30 +270,26 @@ async function main() {
   for (let i = 1; i < rows.length; i += 1) {
     const row = rows[i];
     const fullName = String(row[nameIndex] || "").trim();
-    const teamRaw = String(row[teamGroupIndex] || "").trim();
+    const bornRaw = String(row[bornIndex] || "").trim();
+    const kitRaw = kitIndex >= 0 ? String(row[kitIndex] || "").trim() : "";
 
     if (!fullName) {
       skipped += 1;
       continue;
     }
 
-    let teamGroup = null;
-    if (teamRaw) {
-      const parsed = Number.parseInt(teamRaw, 10);
-      if (Number.isNaN(parsed)) {
-        console.warn(`Row ${i + 1}: invalid team group "${teamRaw}", skipped.`);
-        failed += 1;
-        continue;
-      }
-      teamGroup = parsed;
+    const birthDate = parseBirthDate(bornRaw);
+    if (!birthDate && bornRaw) {
+      console.warn(`Row ${i + 1}: invalid birth date "${bornRaw}" for "${fullName}", skipped.`);
+      failed += 1;
+      continue;
     }
 
+    const teamGroup = birthDate ? birthDate.getUTCFullYear() : null;
+    const jerseyNumber = kitRaw || null;
+
     try {
-      await createPlayerWithCard({
-        clubId,
-        fullName,
-        teamGroup,
-      });
+      await createPlayerWithCard({ clubId, fullName, birthDate, teamGroup, jerseyNumber });
       created += 1;
     } catch (error) {
       failed += 1;
