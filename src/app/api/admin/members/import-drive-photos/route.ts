@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
+import { getGoogleServiceAccountToken } from "@/lib/googleAuth";
 import { randomUUID } from "crypto";
 import { cloudinary } from "@/lib/cloudinary";
 import { transliterateBG } from "@/lib/transliterate";
@@ -42,39 +43,29 @@ function getPlayerUploadPublicId(name: string): string {
   return `${folder}/${slug || fallbackSlug}-${shortId}`;
 }
 
-async function fetchDriveFileBuffer(fileId: string, apiKey: string): Promise<Buffer> {
-  const attempts = [
-    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&key=${encodeURIComponent(apiKey)}`,
-    `https://drive.google.com/uc?export=view&id=${encodeURIComponent(fileId)}`,
-  ];
+async function fetchDriveFileBuffer(fileId: string, accessToken: string): Promise<Buffer> {
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`;
 
-  let lastError = "Unknown Google Drive download error";
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+    redirect: "follow",
+  });
 
-  for (const url of attempts) {
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      redirect: "follow",
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      lastError = `Google Drive file download failed (${response.status}): ${errorBody || "no details"}`;
-      continue;
-    }
-
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().startsWith("image/")) {
-      const errorBody = await response.text().catch(() => "");
-      lastError = `Google Drive download returned non-image content (${contentType || "unknown"}): ${errorBody.slice(0, 200) || "no details"}`;
-      continue;
-    }
-
-    const bytes = await response.arrayBuffer();
-    return Buffer.from(bytes);
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new Error(`Google Drive file download failed (${response.status}): ${errorBody || "no details"}`);
   }
 
-  throw new Error(lastError);
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith("image/")) {
+    const errorBody = await response.text().catch(() => "");
+    throw new Error(`Google Drive download returned non-image content (${contentType || "unknown"}): ${errorBody.slice(0, 200) || "no details"}`);
+  }
+
+  const bytes = await response.arrayBuffer();
+  return Buffer.from(bytes);
 }
 
 async function uploadPlayerImageToCloudinary(buffer: Buffer, playerName: string): Promise<string> {
@@ -111,7 +102,7 @@ async function uploadPlayerImageToCloudinary(buffer: Buffer, playerName: string)
   return extractUploadPathFromCloudinaryUrl(result.secure_url);
 }
 
-async function fetchDriveFilesFromFolder(folderId: string, apiKey: string): Promise<DriveFile[]> {
+async function fetchDriveFilesFromFolder(folderId: string, accessToken: string): Promise<DriveFile[]> {
   const files: DriveFile[] = [];
   let pageToken = "";
 
@@ -122,7 +113,6 @@ async function fetchDriveFilesFromFolder(folderId: string, apiKey: string): Prom
       pageSize: "1000",
       includeItemsFromAllDrives: "true",
       supportsAllDrives: "true",
-      key: apiKey,
     });
     if (pageToken) {
       params.set("pageToken", pageToken);
@@ -130,6 +120,7 @@ async function fetchDriveFilesFromFolder(folderId: string, apiKey: string): Prom
 
     const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
       method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
     });
 
@@ -157,11 +148,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const apiKey = process.env.GOOGLE_DRIVE_API_KEY?.trim() ?? "";
-  if (!apiKey) {
+  let accessToken: string;
+  try {
+    accessToken = await getGoogleServiceAccountToken();
+  } catch (err) {
     return NextResponse.json(
-      { error: "GOOGLE_DRIVE_API_KEY is not configured" },
-      { status: 500 },
+      { error: err instanceof Error ? err.message : "Google credentials error" },
+      { status: 503 },
     );
   }
 
@@ -180,7 +173,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "folderId is required" }, { status: 400 });
     }
 
-    const driveFiles = await fetchDriveFilesFromFolder(folderId, apiKey);
+    const driveFiles = await fetchDriveFilesFromFolder(folderId, accessToken);
     const players = (await prisma.player.findMany({
       where: {
         ...(clubId ? { clubId } : {}),
@@ -247,7 +240,7 @@ export async function POST(request: NextRequest) {
 
       let nextImagePath = "";
       try {
-        const fileBuffer = await fetchDriveFileBuffer(file.id, apiKey);
+        const fileBuffer = await fetchDriveFileBuffer(file.id, accessToken);
         const cloudinaryName = player.fullName.trim() || file.name;
         nextImagePath = await uploadPlayerImageToCloudinary(fileBuffer, cloudinaryName);
       } catch (uploadError) {

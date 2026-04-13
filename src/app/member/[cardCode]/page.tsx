@@ -1619,6 +1619,7 @@ export default function MemberCardPage({
                       }
 
                       const isSaving = trainingSavingDate === trainingItem.date;
+                      const trainingTimeLabel = trainingItem.trainingTime?.trim() ?? "";
                       const dateLabel = new Date(`${trainingItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", {
                         day: "2-digit",
                         month: "2-digit",
@@ -1633,10 +1634,13 @@ export default function MemberCardPage({
                           }}
                           disabled={Boolean(trainingSavingDate)}
                           type="button"
-                          aria-label={`${TRAINING_WEEKDAY_LABELS_BG[trainingItem.weekday] ?? "-"} ${dateLabel}`}
+                          aria-label={`${TRAINING_WEEKDAY_LABELS_BG[trainingItem.weekday] ?? "-"} ${dateLabel}${trainingTimeLabel ? ` ${trainingTimeLabel}` : ""}`}
                           aria-pressed={!trainingItem.optedOut}
                         >
                           <span className="training-calendar-day-number">{dayNumber}</span>
+                          {trainingTimeLabel && (
+                            <span className="training-calendar-time">{trainingTimeLabel}</span>
+                          )}
                           <span className="training-calendar-mark">{isSaving ? "..." : trainingItem.optedOut ? "x" : "✓"}</span>
                         </button>
                       );
@@ -2113,6 +2117,7 @@ export default function MemberCardPage({
                                 }
 
                                 const isOptedOut = trainingItem.optedOut;
+                                const trainingTimeLabel = trainingItem.trainingTime?.trim() ?? "";
                                 const dateLabel = new Date(`${trainingItem.date}T12:00:00.000Z`).toLocaleDateString("bg-BG", {
                                   day: "2-digit",
                                   month: "2-digit",
@@ -2127,10 +2132,13 @@ export default function MemberCardPage({
                                     }}
                                     disabled={Boolean(trainingSavingDate)}
                                     type="button"
-                                    aria-label={`${TRAINING_WEEKDAY_LABELS_BG[trainingItem.weekday] ?? "-"} ${dateLabel}`}
+                                    aria-label={`${TRAINING_WEEKDAY_LABELS_BG[trainingItem.weekday] ?? "-"} ${dateLabel}${trainingTimeLabel ? ` ${trainingTimeLabel}` : ""}`}
                                     aria-pressed={!isOptedOut}
                                   >
                                     <span className="training-calendar-day-number">{dayNumber}</span>
+                                    {trainingTimeLabel && (
+                                      <span className="training-calendar-time">{trainingTimeLabel}</span>
+                                    )}
                                     <span className="training-calendar-mark">{isOptedOut ? "x" : "✓"}</span>
                                   </button>
                                 );
