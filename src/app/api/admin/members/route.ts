@@ -93,8 +93,13 @@ export async function POST(request: NextRequest) {
       return Number.isNaN(parsed.getTime()) ? null : parsed;
     };
 
-    const birthDate = parseDate(body.birthDate);
-    if (body.birthDate && !birthDate) {
+    const birthDateRaw = String(body.birthDate ?? "").trim();
+    if (!birthDateRaw) {
+      return NextResponse.json({ error: "birthDate is required" }, { status: 400 });
+    }
+
+    const birthDate = parseDate(birthDateRaw);
+    if (!birthDate) {
       return NextResponse.json({ error: "Invalid birthDate" }, { status: 400 });
     }
 
@@ -103,13 +108,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid lastPaymentDate" }, { status: 400 });
     }
 
-    const teamGroup =
-      body.teamGroup === null || body.teamGroup === undefined || body.teamGroup === ""
-        ? null
-        : Number.parseInt(String(body.teamGroup), 10);
-    if (teamGroup !== null && Number.isNaN(teamGroup)) {
-      return NextResponse.json({ error: "Invalid teamGroup" }, { status: 400 });
-    }
+    const teamGroup = birthDate.getUTCFullYear();
 
     let createdPlayer = null;
     let lastError: unknown = null;

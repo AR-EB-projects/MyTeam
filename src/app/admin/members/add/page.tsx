@@ -21,8 +21,7 @@ function AddMemberPageContent() {
   const [clubData, setClubData] = useState<ClubData | null>(null);
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [teamGroup, setTeamGroup] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarUrl] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,6 +30,8 @@ function AddMemberPageContent() {
   const [isValidatingClubId, setIsValidatingClubId] = useState(true);
   const router = useRouter();
   const returnUrl = `/admin/members?clubId=${encodeURIComponent(clubId)}`;
+  const parsedBirthDate = birthDate.trim() ? new Date(`${birthDate}T00:00:00.000Z`) : null;
+  const derivedTeamGroup = parsedBirthDate && !Number.isNaN(parsedBirthDate.getTime()) ? String(parsedBirthDate.getUTCFullYear()) : "";
 
   useEffect(() => {
     let isActive = true;
@@ -110,6 +111,10 @@ function AddMemberPageContent() {
     if (!isClubValidated) {
       return;
     }
+    if (!birthDate.trim()) {
+      setError("Birth date is required.");
+      return;
+    }
     setIsSubmitting(true);
     setError("");
 
@@ -132,11 +137,10 @@ function AddMemberPageContent() {
         fullName: fullName.trim(),
         status,
         clubId,
+        birthDate: birthDate.trim(),
       };
 
       if (jerseyNumber.trim()) payload.jerseyNumber = jerseyNumber.trim();
-      if (birthDate.trim()) payload.birthDate = birthDate.trim();
-      if (teamGroup.trim()) payload.teamGroup = teamGroup.trim();
       if (resolvedAvatarUrl) payload.avatarUrl = resolvedAvatarUrl;
       if (resolvedImagePath) payload.imageUrl = resolvedImagePath;
       if (resolvedImagePublicId) payload.imagePublicId = resolvedImagePublicId;
@@ -267,6 +271,7 @@ function AddMemberPageContent() {
               <label className="add-member-label">Дата на раждане</label>
               <input
                 type="date"
+                required
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
                 className="add-member-input"
@@ -279,10 +284,10 @@ function AddMemberPageContent() {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={teamGroup}
-                onChange={(e) => setTeamGroup(e.target.value.replace(/\D/g, ""))}
+                value={derivedTeamGroup}
+                readOnly
+                disabled
                 className="add-member-input"
-                placeholder="По желание"
               />
             </div>
 
