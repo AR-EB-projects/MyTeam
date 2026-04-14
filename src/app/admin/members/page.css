@@ -1346,7 +1346,7 @@
 }
 
 .amp-training-day-time {
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 700;
   opacity: 0.88;
   line-height: 1;
@@ -2586,7 +2586,7 @@
   .amp-modal--training-days-editor .amp-training-day-time,
   .amp-modal--training-day-details .amp-training-day-time,
   .amp-modal--training-note .amp-training-day-time {
-    font-size: 6px;
+    font-size: 7px;
   }
 
   .amp-modal--training-attendance .amp-training-day-meta,
