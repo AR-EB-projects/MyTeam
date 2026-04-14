@@ -125,6 +125,7 @@ model Player {
   club               Club                 @relation(fields: [clubId], references: [id], onDelete: Cascade)
   pushSubscriptions  PushSubscription[]
   trainingOptOuts    TrainingOptOut[]
+  discountUsages     PartnerDiscountUsage[]
 
   @@index([clubId])
   @@map("players")
@@ -272,6 +273,21 @@ model CronJobRun {
 
   @@unique([jobName, runYear, runMonth])
   @@map("cron_job_runs")
+}
+
+model PartnerDiscountUsage {
+  id        String   @id @default(uuid()) @db.Uuid
+  playerId  String   @map("player_id") @db.Uuid
+  partner   String
+  action    String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([date])
+  @@index([partner, date])
+  @@map("partner_discount_usage")
 }
 
 enum PlayerStatus {

@@ -1,0 +1,273 @@
+/* ── Page ── */
+.ds-page {
+  min-height: 100dvh;
+  background: linear-gradient(135deg, #0d0d0d 0%, #0a0a0a 50%, #0d0d0d 100%);
+  padding: 40px 16px;
+  position: relative;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.ds-dot-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0px);
+  background-size: 40px 40px;
+}
+
+.ds-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Header ── */
+.ds-header { margin-bottom: 32px; }
+
+.ds-title {
+  font-size: 32px;
+  font-weight: 900;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: linear-gradient(90deg, #32cd32 0%, #7fff00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ds-subtitle {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 8px;
+}
+
+.ds-title-line {
+  height: 2px;
+  width: 80px;
+  background: linear-gradient(to right, #32cd32, transparent);
+  border-radius: 9999px;
+}
+
+/* ── Back button ── */
+.ds-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 0 14px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-decoration: none;
+}
+.ds-back-btn:hover { background: rgba(255,255,255,0.08); }
+
+/* ── Filters ── */
+.ds-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.ds-filter-select {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+.ds-filter-select:focus { border-color: rgba(50,205,50,0.5); }
+.ds-filter-select option {
+  background: #1a1a1a;
+  color: rgba(255,255,255,0.85);
+}
+
+.ds-filter-input {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  outline: none;
+}
+.ds-filter-input:focus { border-color: rgba(50,205,50,0.5); }
+
+
+/* ── Summary cards ── */
+.ds-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 580px) {
+  .ds-summary { grid-template-columns: 1fr; }
+}
+
+.ds-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  padding: 18px 20px;
+}
+
+.ds-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 12px;
+}
+
+.ds-card-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.ds-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ds-stat-value {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+}
+
+.ds-stat-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 500;
+}
+
+/* ── Table ── */
+.ds-table-wrap {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+
+.ds-table-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ds-table th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.35);
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.ds-table td {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.ds-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ds-table tr:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
+.ds-partner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ds-badge-sd {
+  background: rgba(220, 38, 38, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.ds-badge-idb {
+  background: rgba(234, 177, 38, 0.15);
+  color: #eab126;
+  border: 1px solid rgba(234, 177, 38, 0.25);
+}
+
+.ds-badge-niko {
+  background: rgba(0, 84, 166, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.ds-badge-dalida {
+  background: rgba(212, 175, 55, 0.15);
+  color: rgb(201, 168, 76);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.ds-action-view {
+  color: rgba(255,255,255,0.6);
+}
+
+.ds-action-copy {
+  color: #32cd32;
+  font-weight: 600;
+}
+
+.ds-count {
+  font-weight: 700;
+  color: #fff;
+}
+
+.ds-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255,255,255,0.35);
+  font-size: 14px;
+}
+
+.ds-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255,255,255,0.4);
+  font-size: 14px;
+}

@@ -567,6 +567,14 @@ export default function MemberCardPage({
     setTrainingModalOpen(false);
   };
 
+  const trackDiscount = (partner: string, action: "view" | "copy") => {
+    void fetch(`/api/members/${normalizedCardCode}/discount-usage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partner, action }),
+    }).catch(() => {});
+  };
+
   // Fetch member
   useEffect(() => {
     const fetchMember = async () => {
@@ -1517,11 +1525,11 @@ export default function MemberCardPage({
             {/* ── Partner discount buttons — admin/coach preview only ── */}
             {(!isAdmin && !isCoach) && (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "14px" }}>
-                {/* Sport Depot */}
+                {/* Sport Depot — always visible */}
                 <button
                   className="sd-discount-btn"
                   style={{ marginTop: 0 }}
-                  onClick={() => setSportDepotModalOpen(true)}
+                  onClick={() => { setSportDepotModalOpen(true); trackDiscount("SPORT_DEPOT", "view"); }}
                   type="button"
                   aria-label="Absolute Teamsport отстъпка"
                 >
@@ -1532,19 +1540,20 @@ export default function MemberCardPage({
                   <span className="sd-discount-badge">-10%</span>
                 </button>
 
-                <button 
-                  onClick={() => setAllDiscountsModalOpen(true)} 
-                  style={{ 
-                    background: "rgba(255,255,255,0.05)", 
-                    border: "1px solid rgba(255,255,255,0.1)", 
-                    color: "rgba(255,255,255,0.8)", 
-                    padding: "12px", 
-                    borderRadius: "10px", 
+                {/* All offers button */}
+                <button
+                  onClick={() => setAllDiscountsModalOpen(true)}
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "rgba(255,255,255,0.8)",
+                    padding: "12px",
+                    borderRadius: "10px",
                     marginTop: "2px",
                     cursor: "pointer",
                     fontSize: "13px",
                     fontWeight: 600,
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(255,255,255,0.1)";
@@ -1554,6 +1563,7 @@ export default function MemberCardPage({
                     e.currentTarget.style.background = "rgba(255,255,255,0.05)";
                     e.currentTarget.style.transform = "scale(1)";
                   }}
+                  type="button"
                 >
                   Виж всички оферти
                 </button>
@@ -1841,6 +1851,7 @@ export default function MemberCardPage({
                 onClick={() => {
                   void navigator.clipboard.writeText("ATS_MYTEAM").then(() => {
                     setCodeCopied(true);
+                    trackDiscount("SPORT_DEPOT", "copy");
                     setTimeout(() => setCodeCopied(false), 2000);
                   });
                 }}
@@ -1910,6 +1921,7 @@ export default function MemberCardPage({
                 onClick={() => {
                   void navigator.clipboard.writeText("IDB_MYTEAM").then(() => {
                     setIdbCodeCopied(true);
+                    trackDiscount("IDB", "copy");
                     setTimeout(() => setIdbCodeCopied(false), 2000);
                   });
                 }}
@@ -1961,6 +1973,7 @@ export default function MemberCardPage({
                 onClick={() => {
                   void navigator.clipboard.writeText("NIKO_MYTEAM").then(() => {
                     setNikoCodeCopied(true);
+                    trackDiscount("NIKO", "copy");
                     setTimeout(() => setNikoCodeCopied(false), 2000);
                   });
                 }}
@@ -1980,7 +1993,7 @@ export default function MemberCardPage({
           </div>
         )}
 
-        {/* Dalida Dance discount modal */}
+        {/* ── Dalida Dance discount modal ── */}
         {dalidaModalOpen && (
           <div className="pm-overlay sd-overlay" onClick={() => setDalidaModalOpen(false)}>
             <div className="dalida-modal" onClick={(e) => e.stopPropagation()}>
@@ -1991,35 +2004,34 @@ export default function MemberCardPage({
               <div className="sd-modal-header" style={{ marginBottom: "16px" }}>
                 <img src="/logo-dalida.png" alt="Dalida Dance" className="sd-modal-logo" style={{ transform: "scale(1.2)" }} />
                 <div className="sd-modal-title-wrap">
-                  <p className="sd-modal-eyebrow" style={{ color: "#d4af37" }}>Партньорска програма</p>
+                  <p className="sd-modal-eyebrow" style={{ color: "rgb(201, 168, 76)" }}>Партньорска програма</p>
                   <h2 className="sd-modal-title">Dalida Dance</h2>
                 </div>
               </div>
 
-              <div className="sd-modal-divider" style={{ background: "linear-gradient(to right, transparent, #d4af37, transparent)", opacity: 0.3 }} />
+              <div className="sd-modal-divider" style={{ background: "linear-gradient(to right, transparent, rgb(201, 168, 76), transparent)", opacity: 0.3 }} />
 
               <div className="sd-highlights">
-                <div className="dalida-highlight" style={{ width: '100%', padding: '24px 16px' }}>
-                  <span className="dalida-highlight-value" style={{ fontSize: '32px' }}>10% – 30%</span>
-                  <span className="sd-highlight-label" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                    отстъпка за шоу програми и събития
-                  </span>
+                <div className="dalida-highlight">
+                  <span className="dalida-highlight-value">-10%</span>
+                  <span className="sd-highlight-label">на шоу програми</span>
                 </div>
               </div>
 
               <button
                 className={`sd-code-row${dalidaCodeCopied ? " sd-code-row--copied" : ""}`}
-                style={dalidaCodeCopied ? { borderColor: "#d4af37", background: "rgba(212, 175, 55, 0.12)" } : {}}
+                style={dalidaCodeCopied ? { borderColor: "rgb(201, 168, 76)", background: "rgba(212, 175, 55, 0.12)" } : {}}
                 type="button"
                 onClick={() => {
                   void navigator.clipboard.writeText("DALIDA_MYTEAM").then(() => {
                     setDalidaCodeCopied(true);
+                    trackDiscount("DALIDA", "copy");
                     setTimeout(() => setDalidaCodeCopied(false), 2000);
                   });
                 }}
               >
-                <span className="sd-code-lbl" style={dalidaCodeCopied ? { color: "#d4af37" } : {}}>{dalidaCodeCopied ? "Копирано!" : "Код:"}</span>
-                <span className="dalida-code" style={{ color: "#d4af37" }}>{dalidaCodeCopied ? "✓" : "DALIDA_MYTEAM"}</span>
+                <span className="sd-code-lbl" style={dalidaCodeCopied ? { color: "rgb(201, 168, 76)" } : {}}>{dalidaCodeCopied ? "Копирано!" : "Код:"}</span>
+                <span className="dalida-code">{dalidaCodeCopied ? "✓" : "DALIDA_MYTEAM"}</span>
                 {!dalidaCodeCopied && (
                   <svg className="sd-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
                 )}
@@ -2027,10 +2039,10 @@ export default function MemberCardPage({
               <p className="sd-validity">Валиден: 2026</p>
 
               <div className="sd-qr-wrap">
-                <p className="sd-qr-hint">Посетете ги онлайн на{" "}<a href="https://dalidadance.com" target="_blank" rel="noopener noreferrer" className="sd-store-link" style={{ color: "#d4af37" }}>dalidadance.com</a></p>
+                <p className="sd-qr-hint">Посетете ги онлайн на{" "}<a href="https://dalidadance.com" target="_blank" rel="noopener noreferrer" className="sd-store-link" style={{ color: "rgb(201, 168, 76)" }}>dalidadance.com</a></p>
               </div>
 
-              <div className="sd-modal-divider" style={{ background: "linear-gradient(to right, transparent, #d4af37, transparent)", opacity: 0.3 }} />
+              <div className="sd-modal-divider" style={{ background: "linear-gradient(to right, transparent, rgb(201, 168, 76), transparent)", opacity: 0.3 }} />
 
               <div className="sd-terms">
                 <p className="sd-terms-title">Условия</p>
@@ -2044,29 +2056,29 @@ export default function MemberCardPage({
           </div>
         )}
 
-        {/* All Discounts Modal */}
+        {/* ── All Discounts modal ── */}
         {allDiscountsModalOpen && (
-          <div className="pm-overlay" onClick={() => setAllDiscountsModalOpen(false)}>
-            <div className="pm-modal" onClick={(e) => e.stopPropagation()} style={{ padding: "24px 20px" }}>
-              <button className="pm-close" onClick={() => setAllDiscountsModalOpen(false)} aria-label="Затвори">
-                <XIcon size={16} />
+          <div className="pm-overlay sd-overlay" onClick={() => setAllDiscountsModalOpen(false)}>
+            <div className="sd-modal" onClick={(e) => e.stopPropagation()} style={{ padding: "24px 20px" }}>
+              <button className="pm-close sd-modal-close" onClick={() => setAllDiscountsModalOpen(false)} aria-label="Затвори">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
 
-              <div className="pm-header">
-                <span className="member-training-modal-title-gradient">Партньори</span>
-                <div>
-                  <h2 className="pm-title">Всички оферти</h2>
+              <div className="sd-modal-header" style={{ marginBottom: "16px" }}>
+                <div className="sd-modal-title-wrap">
+                  <p className="sd-modal-eyebrow" style={{ color: "rgb(201, 168, 76)" }}>Партньорска програма</p>
+                  <h2 className="sd-modal-title">Всички оферти</h2>
                 </div>
               </div>
 
-              <div className="pm-divider" />
+              <div className="sd-modal-divider" style={{ background: "linear-gradient(to right, transparent, rgba(201, 168, 76, 0.5), transparent)" }} />
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto", maxHeight: "60vh", paddingRight: "4px" }}>
                 {/* Sport Depot */}
                 <button
                   className="sd-discount-btn"
                   style={{ marginTop: 0 }}
-                  onClick={() => { setAllDiscountsModalOpen(false); setSportDepotModalOpen(true); }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setSportDepotModalOpen(true); trackDiscount("SPORT_DEPOT", "view"); }}
                   type="button"
                   aria-label="Absolute Teamsport отстъпка"
                 >
@@ -2081,7 +2093,7 @@ export default function MemberCardPage({
                 <button
                   className="dalida-discount-btn"
                   style={{ marginTop: 0 }}
-                  onClick={() => { setAllDiscountsModalOpen(false); setDalidaModalOpen(true); }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setDalidaModalOpen(true); trackDiscount("DALIDA", "view"); }}
                   type="button"
                   aria-label="Dalida Dance отстъпка"
                 >
@@ -2089,14 +2101,14 @@ export default function MemberCardPage({
                     <img src="/logo-dalida.png" alt="Dalida Dance" className="sd-discount-logo dalida-logo-fix" />
                   </div>
                   <span className="sd-discount-label">Dalida Dance</span>
-                  <span className="sd-discount-badge dalida-discount-badge">10-30%</span>
+                  <span className="sd-discount-badge dalida-discount-badge">-10%</span>
                 </button>
 
                 {/* Innline Dragon Body */}
                 <button
                   className="idb-discount-btn"
                   style={{ marginTop: 0 }}
-                  onClick={() => { setAllDiscountsModalOpen(false); setIdbModalOpen(true); }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setIdbModalOpen(true); trackDiscount("IDB", "view"); }}
                   type="button"
                   aria-label="Innline Dragon Body отстъпка"
                 >
@@ -2111,7 +2123,7 @@ export default function MemberCardPage({
                 <button
                   className="niko-discount-btn"
                   style={{ marginTop: 0 }}
-                  onClick={() => { setAllDiscountsModalOpen(false); setNikoModalOpen(true); }}
+                  onClick={() => { setAllDiscountsModalOpen(false); setNikoModalOpen(true); trackDiscount("NIKO", "view"); }}
                   type="button"
                   aria-label="Mebeli Niko отстъпка"
                 >

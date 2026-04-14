@@ -230,6 +230,20 @@ export default function AdminPlayersPage() {
           <div className="mp-title-line" />
         </div>
 
+        <button
+          className="mp-reports-btn"
+          type="button"
+          onClick={() => router.push("/admin/discount-stats")}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v18h18" />
+            <path d="M18 17V9" />
+            <path d="M13 17V5" />
+            <path d="M8 17v-3" />
+          </svg>
+          Партньорски отстъпки
+        </button>
+
         <div className="mp-demo-box">
           <p className="mp-demo-label">DEMO ACTIONS</p>
           <div className="mp-demo-picker" ref={demoPickerRef}>
