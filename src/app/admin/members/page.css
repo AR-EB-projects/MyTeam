@@ -3060,6 +3060,35 @@
   color: rgba(255, 255, 255, 0.2);
 }
 
+.acd-cell--editable {
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.acd-cell--editable:hover {
+  opacity: 0.6;
+}
+
+.acd-cell--pending {
+  outline: 1px solid rgba(251, 191, 36, 0.7);
+  outline-offset: -2px;
+}
+
+.rd-footer-btn--save {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #86efac;
+}
+
+.rd-footer-btn--save:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.rd-footer-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .acd-pct--good {
   color: #32cd32;
 }

@@ -646,6 +646,11 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
   const [error, setError] = useState("");
   const [availableGroups, setAvailableGroups] = useState<number[]>([]);
   const [scheduleGroups, setScheduleGroups] = useState<TrainingScheduleGroup[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  // key: "playerId|date", value: optedOut boolean (desired new state)
+  const [pendingChanges, setPendingChanges] = useState<Map<string, boolean>>(new Map());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -748,6 +753,9 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
       setLoading(true);
       setError("");
       setData(null);
+      setEditMode(false);
+      setPendingChanges(new Map());
+      setSaveError("");
       try {
         const search = new URLSearchParams({ from, to });
         if (scopeType === "player") {
@@ -809,6 +817,86 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
       p.fullName.toLowerCase().includes(playerSearch.toLowerCase()),
     ).slice(0, 10)
     : [];
+
+  const handleCellClick = (playerId: string, date: string) => {
+    if (saving) return;
+    const key = `${playerId}|${date}`;
+    const originalOptedOut = !(data?.players.find((p) => p.id === playerId)?.attendance[date]?.present ?? true);
+    const currentOptedOut = pendingChanges.has(key) ? pendingChanges.get(key)! : originalOptedOut;
+    const newOptedOut = !currentOptedOut;
+
+    setPendingChanges((prev) => {
+      const next = new Map(prev);
+      if (newOptedOut === originalOptedOut) {
+        next.delete(key);
+      } else {
+        next.set(key, newOptedOut);
+      }
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    if (pendingChanges.size === 0 || saving) return;
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await Promise.all(
+        Array.from(pendingChanges.entries()).map(async ([key, optedOut]) => {
+          const separatorIdx = key.indexOf("|");
+          const playerId = key.slice(0, separatorIdx);
+          const trainingDate = key.slice(separatorIdx + 1);
+          const res = await fetch(
+            `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ playerId, trainingDate, optedOut }),
+            },
+          );
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            throw new Error((json as { error?: string }).error ?? "Грешка при запис.");
+          }
+        }),
+      );
+
+      // Commit pending changes into the data state
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          players: prev.players.map((p) => {
+            const updatedAttendance = { ...p.attendance };
+            for (const [key, optedOut] of pendingChanges.entries()) {
+              const sepIdx = key.indexOf("|");
+              if (key.slice(0, sepIdx) !== p.id) continue;
+              const date = key.slice(sepIdx + 1);
+              updatedAttendance[date] = {
+                present: !optedOut,
+                reasonCode: optedOut ? "other" : null,
+              };
+            }
+            return { ...p, attendance: updatedAttendance };
+          }),
+        };
+      });
+
+      setPendingChanges(new Map());
+      setEditMode(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Грешка при запис.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setPendingChanges(new Map());
+    setEditMode(false);
+    setSaveError("");
+  };
 
   const printAttendance = () => {
     if (!data || typeof window === "undefined" || typeof document === "undefined") return;
@@ -1102,25 +1190,33 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
                                 </td>
                               );
                             }
-                            return cell.present ? (
-                              <td key={d} className="acd-cell acd-cell--present" title="Присъства">
-                                ✓
-                              </td>
-                            ) : (
+                            const cellKey = `${player.id}|${d}`;
+                            const hasPending = pendingChanges.has(cellKey);
+                            const displayOptedOut = hasPending ? pendingChanges.get(cellKey)! : !cell.present;
+                            const displayPresent = !displayOptedOut;
+                            const editTitle = displayPresent
+                              ? "Клик за отбелязване на отсъствие"
+                              : "Клик за отбелязване на присъствие";
+                            const viewTitle = displayPresent
+                              ? "Присъства"
+                              : !hasPending && cell.reasonCode === "injury" ? "Контузия"
+                              : !hasPending && cell.reasonCode === "sick" ? "Болен"
+                              : !hasPending && cell.reasonCode === "other" ? "Друга причина"
+                              : !hasPending && cell.reasonCode ? `Причина: ${cell.reasonCode}` : "Отказал се";
+                            const displayReasonCode = hasPending ? (displayOptedOut ? "other" : null) : cell.reasonCode;
+                            return (
                               <td
                                 key={d}
-                                className="acd-cell acd-cell--absent"
-                                title={
-                                  cell.reasonCode === "injury" ? "Контузия" :
-                                    cell.reasonCode === "sick" ? "Болен" :
-                                      cell.reasonCode === "other" ? "Друга причина" :
-                                        cell.reasonCode ? `Причина: ${cell.reasonCode}` : "Отказал се"
-                                }
+                                className={`acd-cell ${displayPresent ? "acd-cell--present" : "acd-cell--absent"}${editMode ? " acd-cell--editable" : ""}${hasPending ? " acd-cell--pending" : ""}`}
+                                title={editMode ? editTitle : viewTitle}
+                                onClick={editMode && !saving ? () => handleCellClick(player.id, d) : undefined}
                               >
-                                {cell.reasonCode === "injury" ? "Конт" :
-                                  cell.reasonCode === "sick" ? "Болен" :
-                                    cell.reasonCode === "other" ? "Друго" :
-                                      cell.reasonCode ? cell.reasonCode.slice(0, 4) : "✗"}
+                                {displayPresent ? "✓" : (
+                                  displayReasonCode === "injury" ? "Конт" :
+                                    displayReasonCode === "sick" ? "Болен" :
+                                      displayReasonCode === "other" ? "Друго" :
+                                        displayReasonCode ? displayReasonCode.slice(0, 4) : "✗"
+                                )}
                               </td>
                             );
                           })}
@@ -1172,14 +1268,44 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
           </p>
         )}
 
+        {saveError && <p className="acd-error">{saveError}</p>}
+
         {data && data.players.length > 0 && data.trainingDates.length > 0 && (
           <div className="rd-footer" style={{ marginTop: "4px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-            <button
-              className="rd-footer-btn"
-              onClick={printAttendance}
-            >
-              <PrinterIcon /> Отпечатай
-            </button>
+            {!editMode && (
+              <button className="rd-footer-btn" onClick={printAttendance} type="button">
+                <PrinterIcon /> Отпечатай
+              </button>
+            )}
+            {!editMode ? (
+              <button
+                type="button"
+                className="rd-footer-btn"
+                onClick={() => { setEditMode(true); setSaveError(""); }}
+              >
+                <PencilIcon size={14} /> Редактирай
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="rd-footer-btn rd-footer-btn--save"
+                  disabled={pendingChanges.size === 0 || saving}
+                  onClick={handleSave}
+                >
+                  {saving ? <SpinnerIcon size={14} /> : <PencilIcon size={14} />}
+                  {saving ? "Запис..." : `Запази${pendingChanges.size > 0 ? ` (${pendingChanges.size})` : ""}`}
+                </button>
+                <button
+                  type="button"
+                  className="rd-footer-btn"
+                  disabled={saving}
+                  onClick={handleCancelEdit}
+                >
+                  Отмени
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
