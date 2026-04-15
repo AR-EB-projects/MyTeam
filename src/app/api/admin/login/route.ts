@@ -55,18 +55,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 
-    const defaultClub =
-      matchedUser.roles.includes("coach") && !matchedUser.roles.includes("admin")
-        ? await prisma.club.findFirst({
-            select: { id: true },
-            orderBy: { createdAt: "asc" },
-          })
-        : null;
-
     const token = await createAdminToken({
       userId: matchedUser.id,
       roles: matchedUser.roles,
-      defaultClubId: defaultClub?.id ?? null,
+      defaultClubId: null,
     });
 
     const response = NextResponse.json({ success: true });

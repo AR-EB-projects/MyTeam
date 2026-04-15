@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   const lastClubIdRaw = request.cookies.get("admin_last_club_id")?.value ?? "";
 
   const SECRET = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET || "default_secret_for_safety");
-  const COACH_ALLOWED_ADMIN_PAGE_PREFIXES = ["/admin/members"];
+  const COACH_ALLOWED_ADMIN_PAGE_PREFIXES = ["/admin/members", "/admin/coach-home"];
   const COACH_ALLOWED_ADMIN_API_PREFIXES = ["/api/admin/members", "/api/admin/clubs"];
   const COACH_ALLOWED_ADMIN_API_EXACT = new Set(["/api/admin/check-session", "/api/admin/logout"]);
   const requestedNextRaw = request.nextUrl.searchParams.get("next") ?? "";
@@ -54,14 +54,7 @@ export async function middleware(request: NextRequest) {
           }
 
           if (roles.includes("coach")) {
-            const defaultClubId =
-              typeof payload.defaultClubId === "string" && payload.defaultClubId.trim()
-                ? payload.defaultClubId.trim()
-                : "";
-            const coachPath = defaultClubId
-              ? `/admin/members?clubId=${encodeURIComponent(defaultClubId)}`
-              : "/admin/members";
-            return NextResponse.redirect(new URL(safeRequestedNext || lastClubPath || coachPath, request.url));
+            return NextResponse.redirect(new URL(safeRequestedNext || lastClubPath || "/admin/coach-home", request.url));
           }
 
           const response = NextResponse.next();
@@ -100,14 +93,6 @@ export async function middleware(request: NextRequest) {
       }
 
       if (roles.includes("coach")) {
-        const defaultClubId =
-          typeof payload.defaultClubId === "string" && payload.defaultClubId.trim()
-            ? payload.defaultClubId.trim()
-            : "";
-        const coachHomePath = defaultClubId
-          ? `/admin/members?clubId=${encodeURIComponent(defaultClubId)}`
-          : "/admin/members";
-
         if (pathname.startsWith("/api/admin")) {
           if (COACH_ALLOWED_ADMIN_API_EXACT.has(pathname)) {
             return NextResponse.next();
@@ -122,7 +107,7 @@ export async function middleware(request: NextRequest) {
           return NextResponse.next();
         }
 
-        return NextResponse.redirect(new URL(coachHomePath, request.url));
+        return NextResponse.redirect(new URL(safeRequestedNext || lastClubPath || "/admin/coach-home", request.url));
       }
 
       return NextResponse.next();
