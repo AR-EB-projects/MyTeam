@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { publishMemberUpdated } from "@/lib/memberEvents";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { publishTrainingAttendanceUpdated } from "@/lib/trainingAttendanceEvents";
+import { sendPushToMember } from "@/lib/push/service";
 import {
   getConfiguredTrainingDates,
   getWeekdayMondayFirst,
@@ -557,6 +558,124 @@ export async function PUT(
     });
   } catch (error) {
     console.error("Training attendance PUT error:", error);
+    if (isTransientPrismaConnectionError(error)) {
+      return NextResponse.json(
+        { error: "Database temporarily unavailable. Please retry in a few seconds." },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+function formatBgDate(isoDate: string) {
+  return new Date(`${isoDate}T00:00:00.000Z`).toLocaleDateString("bg-BG", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await verifySession(request);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: clubId } = await params;
+  const body = await request.json().catch(() => ({}));
+  const playerId = String((body as { playerId?: unknown }).playerId ?? "").trim();
+  const trainingDate = String((body as { trainingDate?: unknown }).trainingDate ?? "").trim();
+  const optedOut = (body as { optedOut?: unknown }).optedOut;
+
+  if (!playerId) {
+    return NextResponse.json({ error: "Missing playerId" }, { status: 400 });
+  }
+  if (!isIsoDate(trainingDate)) {
+    return NextResponse.json({ error: "Invalid trainingDate" }, { status: 400 });
+  }
+  if (typeof optedOut !== "boolean") {
+    return NextResponse.json({ error: "optedOut must be a boolean" }, { status: 400 });
+  }
+
+  try {
+    const player = await prisma.player.findFirst({
+      where: { id: playerId, clubId },
+      select: {
+        id: true,
+        fullName: true,
+        cards: {
+          where: { isActive: true },
+          select: { cardCode: true },
+        },
+      },
+    });
+    if (!player) {
+      return NextResponse.json({ error: "Player not found" }, { status: 404 });
+    }
+
+    const trainingDateAsDate = isoDateToUtcMidnight(trainingDate);
+
+    if (optedOut) {
+      await prisma.trainingOptOut.upsert({
+        where: {
+          playerId_trainingDate: {
+            playerId: player.id,
+            trainingDate: trainingDateAsDate,
+          },
+        },
+        update: {
+          reasonCode: "other",
+          reasonText: "Промяна направена от треньор",
+        },
+        create: {
+          playerId: player.id,
+          trainingDate: trainingDateAsDate,
+          reasonCode: "other",
+          reasonText: "Промяна направена от треньор",
+        },
+      });
+    } else {
+      await prisma.trainingOptOut.deleteMany({
+        where: {
+          playerId: player.id,
+          trainingDate: trainingDateAsDate,
+        },
+      });
+    }
+
+    const firstCardCode = player.cards[0]?.cardCode ?? null;
+    const formattedDate = formatBgDate(trainingDate);
+    const memberPayload = {
+      title: "Промяна в присъствието",
+      body: optedOut
+        ? `Треньорът е отбелязал отсъствие за тренировка на ${formattedDate}.`
+        : `Треньорът е потвърдил присъствие за тренировка на ${formattedDate}.`,
+      url: firstCardCode ? `/member/${encodeURIComponent(firstCardCode)}` : "/",
+      icon: "/logo.png",
+      badge: "/logo.png",
+      tag: "training-attendance-updated",
+      data: { type: "training_reminder", trainingDate },
+    };
+
+    try {
+      await sendPushToMember(player.id, memberPayload, "training_reminder");
+    } catch (error) {
+      console.error("Member push send error (coach attendance change):", error);
+    }
+
+    for (const { cardCode } of player.cards) {
+      publishMemberUpdated(cardCode, "training-updated");
+    }
+    publishTrainingAttendanceUpdated(clubId, trainingDate);
+
+    return NextResponse.json({ success: true, playerId: player.id, trainingDate, optedOut });
+  } catch (error) {
+    console.error("Training attendance PATCH error:", error);
     if (isTransientPrismaConnectionError(error)) {
       return NextResponse.json(
         { error: "Database temporarily unavailable. Please retry in a few seconds." },
