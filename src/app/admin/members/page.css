@@ -3659,6 +3659,15 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
+.amp-import-overwrite-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  accent-color: #32cd32;
+}
+
 .amp-import-folder-name {
   display: flex;
   align-items: center;
