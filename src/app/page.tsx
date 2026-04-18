@@ -9,12 +9,13 @@ import {
   Zap, Trophy, ArrowRight,
   Phone, Mail, MessageSquare, User,
   Wifi, WifiOff, Menu, Calendar,
-  MapPin, TrendingUp, Activity, Globe, Lock
+  MapPin, TrendingUp, Activity, Globe, Lock,
+  Check, X as CloseX, PhoneCall
 } from "lucide-react";
 
 /* ── TOKENS ── */
 const G = "#39FF14";
-const B = "#00D4FF";
+const B = "#39FF14"; // Unified to Green
 const BG = "#070C14";
 const CARD = "#0D1520";
 
@@ -59,17 +60,17 @@ const FEATURES = [
   {
     id: 3, icon: BadgePercent, color: G,
     title: "Партньорска Мрежа",
-    short: "Ексклузивни отстъпки за родители и атлети.",
-    details: "Възползвайте се от специални цени при нашите партньори като Sport Depot и Sport Vision.",
-    benefits: ["10-20% отстъпка в спортни магазини", "Лоялностна програма за родители", "Индивидуални оферти според спорта", "Дигитална карта за отстъпки"],
+    short: "Ексклузивни отстъпки в Sport Depot, Dalida и други.",
+    details: "Вашият клуб получава достъп до -10% отстъпка при лидери като Sport Depot, Dalida Dance, Innline Dragon Body и Мебели Нико.",
+    benefits: ["Директна отстъпка от -10%", "Широка мрежа от физически обекти", "Смарт карта за лесна идентификация", "Ползи за родителите и атлетите"],
     requiresSub: true
   },
   {
     id: 4, icon: CreditCard, color: B,
-    title: "Умно Плащане",
-    short: "Автоматизация на месечните членски такси.",
-    details: "Елиминирайте ръчното събиране на пари. Системата автоматично издава фактури и напомня за плащания.",
-    benefits: ["70% по-малко просрочени вноски", "Автоматични напомняния по имейл и Push", "Пълна финансова прозрачност", "Интеграция с банкови системи"],
+    title: "Плащания",
+    short: "Ръчно проследяване на месечните такси.",
+    details: "Системата позволява бързо отразяване на плащанията, като автоматично виждате статуса на всеки член.",
+    benefits: ["Ръчно маркиране на вноски", "Бърза проверка на задълженията", "Пълна финансова прозрачност", "История на плащанията"],
     requiresSub: true
   },
   {
@@ -90,9 +91,37 @@ const FEATURES = [
   }
 ];
 
+const PROBLEMS = [
+  { icon: "📓", title: "Хаос с тефтери", desc: "Различни списъци и Excel-и водят до грешки и загубено време. MyTeam дигитализира всичко." },
+  { icon: "💸", title: "Нередовни плащания", desc: "Родителите забравят или закъсняват с таксите. Системата проследява всичко автоматично." },
+  { icon: "📊", title: "Липса на контрол", desc: "Нямаш ясна представа кой е платил и кой не. С MyTeam виждаш статуса на всеки член." },
+  { icon: "🧠", title: "Сложно планиране", desc: "Ръчното разпределение на групи и графици е трудно. Нашата система го прави вместо Вас." },
+  { icon: "📢", title: "Трудна комуникация", desc: "Разпръснати съобщения във Viber и Messenger? MyTeam централизира връзката с родителите." },
+  { icon: "📂", title: "Загуба на история", desc: "Играчи напускат, а данните им изчезват? Пазете пълна история на всяко дете години наред." }
+];
+
+const COMPARISON = {
+  before: [
+    "Управление 'на ръка' с тефтери",
+    "Ръчно следене на плащания в Excel",
+    "Постоянни спорове за посещаемост",
+    "Никакви ползи за родителите",
+    "Липса на прозрачни отчети"
+  ],
+  after: [
+    "Цялостно дигитално управление",
+    "Автоматично проследяване на такси",
+    "Смарт карти за достъп и контрол",
+    "Отстъпки в Sport Depot, Dalida, IDB, Нико",
+    "Интелигентен тренировъчен график"
+  ]
+};
+
 const PARTNERS = [
-  { name: "Sport Depot", abbr: "SD", color: "#FF6B00" },
-  { name: "Sport Vision", abbr: "SV", color: "#0066CC" },
+  { name: "Sport Depot", abbr: "SD", color: "#FF6B00", disc: "-10%", logo: "/sd-logo.png" },
+  { name: "Dalida Dance", abbr: "DD", color: "#E91E63", disc: "-10%", logo: "/logo-dalida.png" },
+  { name: "Innline Dragon Body", abbr: "IDB", color: "#00D4FF", disc: "-10%", logo: "/idb-logo.svg" },
+  { name: "Мебели Нико", abbr: "MN", color: "#C8102E", disc: "-10%", logo: "/niko-logo.png" },
 ];
 
 /* ══════════════════════════════════════════════
@@ -426,7 +455,8 @@ function StadiumCanvas({ selectedId, onSelect, scrollProgress, zoomValRef, zoomP
 
     s.ballConnIndexes = indexes.slice(0, maxBalls);
 
-    // Preload logos
+    // Logos preloading disabled as assets are handled via fallbacks
+    /*
     CLUBS.forEach(c => {
       const img = new Image();
       img.src = `/logos/${c.id}.svg`;
@@ -434,6 +464,7 @@ function StadiumCanvas({ selectedId, onSelect, scrollProgress, zoomValRef, zoomP
         s.loadedLogos[c.id] = img;
       };
     });
+    */
   }, []);
 
   function proj(x, y, z, rX, rY, zoom, cx, cy) {
@@ -849,7 +880,7 @@ function HoloPanel({ club, onClose }) {
 
   const stats = [
     { icon: Users, label: "Athletes Count", value: club.athletes, unit: "", color: G },
-    { icon: Activity, label: "Status", value: "Smart Access", unit: "Active", color: B },
+    { icon: Activity, label: "Status", value: "Smart Access", unit: "Active", color: G },
     { icon: Calendar, label: "Member since", value: club.months, unit: "months", color: "#FFD700" },
     { icon: TrendingUp, label: "Collection Rate", value: `${club.fees}%`, unit: "", color: "#FF6B9D" },
   ];
@@ -1033,7 +1064,7 @@ function HoloPanel({ club, onClose }) {
             }}
           />
           <span style={{ fontFamily: "'Exo 2',sans-serif", fontSize: 12, color: G, fontWeight: 600 }}>
-            MyTeam OS — Онлайн и активен
+            MyTeam — Онлайн и активен
           </span>
         </div>
       </div>
@@ -1082,9 +1113,9 @@ function TrustedNetwork({ contactRef }) {
           <span className="network-tag-text">Trusted Network Map</span>
         </div>
         <h2 className="network-title">
-          Клубовете, които <span className="hero-title-highlight">вече ни вярват</span>
+          Клубовете, които <span className="hero-title-highlight">ни вярват</span>
         </h2>
-        <p className="network-subtitle">Натиснете клуб за детайли · Влачете за завъртане · Скролирайте за zoom</p>
+        <p className="network-subtitle">Присъединете се към националната мрежа от дигитални спортни организации.</p>
       </div>
 
       <div className="network-canvas-zone">
@@ -1107,14 +1138,14 @@ function TrustedNetwork({ contactRef }) {
             <span ref={zoomValRef} className="zoom-value">0%</span>
           </div>
 
-          {["tl", "tr", "bl", "br"].map(k => (
-            <div key={k} className={`hud-corner hud-${k}`} />
-          ))}
-
           <div className="live-indicator">
             <div className="live-dot" />
             <span className="live-text">LIVE — {isMobileView ? "10" : "16"} КЛУБА ОНЛАЙН</span>
           </div>
+
+          {["tl", "tr", "bl", "br"].map(k => (
+            <div key={k} className={`hud-corner hud-${k}`} />
+          ))}
         </div>
 
         <div className="club-chip-strip">
@@ -1172,41 +1203,55 @@ function NavBar({ menuOpen, setMenuOpen }) {
   }, []);
 
   return (
-    <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""}`}>
-      <div className="navbar-container">
-        <div className="navbar-logo">
-          <div className="logo-icon">
-            <Trophy size={20} color="#000" strokeWidth={2.5} />
-          </div>
-          <div className="logo-text-wrapper">
-            <div className="logo-brand">My<span className="brand-accent">Team</span></div>
-            <div className="logo-subtitle">by Moozuk22 OS</div>
-          </div>
-        </div>
-
-        <div className="desk-nav">
-          {["Функции", "Клубове", "Партньори", "Контакт"].map(item => (
-            <a key={item} href={`#${item}`} className="nav-link">{item}</a>
-          ))}
-          <a href="#contact" className="nav-demo-btn">ДЕМО →</a>
-        </div>
-
-        <button onClick={() => setMenuOpen(!menuOpen)} className="mobile-toggle">
-          <Menu size={24} />
-        </button>
-      </div>
-
-      {menuOpen && (
-        <div className="mobile-menu">
-          {["Функции", "Клубове", "Партньори", "Контакт"].map(item => (
-            <div key={item} className="mobile-menu-item">
-              <a href={`#${item}`} onClick={() => setMenuOpen(false)} className="mobile-nav-link">{item}</a>
+    <>
+      <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""}`}>
+        <div className="navbar-container">
+          <div className="navbar-logo">
+            <div className="logo-text-wrapper">
+              <div className="logo-brand" style={{ fontFamily: "var(--serif-font)", fontSize: 24 }}>MyTeam</div>
             </div>
-          ))}
-          <a href="#contact" className="mobile-demo-btn">ДЕМО ЗАЯВКА</a>
+          </div>
+
+          <div className="desk-nav">
+            {["Функции", "Клубове", "Въпроси"].map(item => (
+              <a key={item} href={`#${item}`} className="nav-link">{item}</a>
+            ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <a href="tel:0895919545" className="nav-link" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <PhoneCall size={16} color="var(--neon-green)" />
+                0895 919 545
+              </a>
+              <a href="#Контакт" className="nav-demo-btn">БЕЗПЛАТНА КОНСУЛТАЦИЯ</a>
+            </div>
+          </div>
+
+          <button onClick={() => setMenuOpen(!menuOpen)} className="mobile-toggle">
+            <Menu size={28} />
+          </button>
         </div>
-      )}
-    </nav>
+      </nav>
+
+      {/* Mobile Sidebar */}
+      {menuOpen && <div className="menu-overlay" onClick={() => setMenuOpen(false)} />}
+      <div className={`mobile-menu ${menuOpen ? "mobile-menu-open" : ""}`}>
+        <button onClick={() => setMenuOpen(false)} style={{ position: "absolute", top: 30, right: 30, background: "none", border: "none", color: "#fff" }}>
+          <X size={36} />
+        </button>
+        
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 32 }}>
+          <div className="logo-brand" style={{ fontSize: 32, marginBottom: 40 }}>MyTeam</div>
+          {["Функции", "Клубове", "Въпроси"].map(item => (
+            <a key={item} href={`#${item}`} onClick={() => setMenuOpen(false)} className="mobile-nav-link" style={{ fontSize: 28, border: "none" }}>{item}</a>
+          ))}
+          <a href="#Контакт" onClick={() => setMenuOpen(false)} className="mobile-demo-btn" style={{ width: "80%", fontSize: 18 }}>ЗАЯВИ КОНСУЛТАЦИЯ</a>
+          
+          <div style={{ marginTop: 40, textAlign: "center" }}>
+            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, marginBottom: 15 }}>СВЪРЖЕТЕ СЕ С НАС</div>
+            <a href="tel:0895919545" style={{ color: "var(--neon-green)", fontSize: 22, fontWeight: 700, textDecoration: "none" }}>0895 919 545</a>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1295,7 +1340,7 @@ function VideoModal({ onClose }) {
 
         <div style={{ padding: "20px 28px", display: "flex", justifyContent: "center" }}>
           <a
-            href="#contact"
+            href="#Контакт"
             onClick={onClose}
             style={{
               background: `linear-gradient(135deg,${G},#20C020)`,
@@ -1315,6 +1360,7 @@ function VideoModal({ onClose }) {
     </div>
   );
 }
+
 
 function FeatureCard({ feature, active, onClick }) {
   const isSub = feature.requiresSub;
@@ -1383,7 +1429,7 @@ function FeaturePopup({ feature, onClose }) {
 }
 
 function LeadForm() {
-  const [form, setForm] = useState({ name: "", club: "", email: "", phone: "", message: "" });
+  const [form, setForm] = useState({ club: "", name: "", phone: "", kids: "" });
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState("");
 
@@ -1393,7 +1439,7 @@ function LeadForm() {
     await new Promise(r => setTimeout(r, 1500));
     setLoading(false);
     alert("Заявката е изпратена успешно!");
-    setForm({ name: "", club: "", email: "", phone: "", message: "" });
+    setForm({ club: "", name: "", phone: "", kids: "" });
   };
 
   const inp = (f) => ({
@@ -1404,12 +1450,12 @@ function LeadForm() {
 
   return (
     <div className="lead-form-wrapper">
-      <div className="form-grid">
+      <div className="form-grid" style={{ gridTemplateColumns: "1fr" }}>
         {[
-          { id: "name", label: "Вашето Име", icon: User, ph: "Иван Иванов" },
-          { id: "club", label: "Име на Клуба", icon: Trophy, ph: "ФК Левски / ТК Пловдив" },
-          { id: "email", label: "Имейл Адрес", icon: Mail, ph: "ivan@example.com" },
-          { id: "phone", label: "Телефон за контакт", icon: Phone, ph: "0888 000 000" }
+          { id: "club", label: "Име на спортен клуб", icon: Trophy, ph: "Име на вашия клуб" },
+          { id: "name", label: "Вашето име", icon: User, ph: "Вашите три имена" },
+          { id: "phone", label: "Телефон за връзка", icon: Phone, ph: "0XXXXXXXXX" },
+          { id: "kids", label: "Приблизителен брой деца", icon: Users, ph: "пр. 150" }
         ].map(i => (
           <div key={i.id} className="form-group">
             <label className="form-label"><i.icon size={12} /> {i.label}</label>
@@ -1424,31 +1470,43 @@ function LeadForm() {
         ))}
       </div>
 
-      <div className="form-group-textarea">
-        <label className="form-label"><MessageSquare size={12} /> Как можем да помогнем?</label>
-        <textarea
-          placeholder="Разкажете ни за вашия клуб..."
-          value={form.message}
-          onChange={e => setForm({ ...form, message: e.target.value })}
-          {...inp("message")}
-          rows={4}
-          style={{ resize: "vertical", minHeight: 100 }}
-        />
-      </div>
-
-      <button onClick={handleSubmit} disabled={loading} className={`form-submit-btn ${loading ? "btn-loading" : ""}`}>
+      <button onClick={handleSubmit} disabled={loading} className={`form-submit-btn ${loading ? "btn-loading" : ""}`} style={{ marginTop: 24 }}>
         {loading ? (
           <>
             <div className="loading-spinner" /> Изпращане...
           </>
         ) : (
           <>
-            ИЗПРАТЕТЕ ЗАЯВКАТА <ArrowRight size={18} />
+            ВЗЕМИ БЕЗПЛАТНО ДЕМО <ArrowRight size={18} />
           </>
         )}
       </button>
 
-      <div className="form-footer-note">🔒 Данните Ви са защитени. Без спам. Отговор в рамките на 24ч.</div>
+      <div className="form-footer-note">🔒 Данните Ви са защитени. Получавате 3 месеца гратисен период.</div>
+    </div>
+  );
+}
+
+function RevealSection({ children }) {
+  const ref = useRef(null);
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setActive(true);
+        obs.unobserve(el);
+      }
+    }, { threshold: 0.15 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={`reveal-hidden ${active ? "reveal-active" : ""}`}>
+      {children}
     </div>
   );
 }
@@ -1458,25 +1516,7 @@ export default function Home() {
   const [subActive, setSubActive] = useState(false);
   const [popup, setPopup] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [counters, setCounters] = useState({ clubs: 0, hours: 0, disc: 0 });
   const contactRef = useRef(null);
-
-  useEffect(() => {
-    const targets = { clubs: 240, hours: 3, disc: 70 };
-    let step = 0;
-    const t = setInterval(() => {
-      step++;
-      const e = 1 - Math.pow(1 - step / 60, 3);
-      setCounters({
-        clubs: Math.round(targets.clubs * e),
-        hours: Math.round(targets.hours * e * 10) / 10,
-        disc: Math.round(targets.disc * e)
-      });
-      if (step >= 60) clearInterval(t);
-    }, 1800 / 60);
-
-    return () => clearInterval(t);
-  }, []);
 
   return (
     <>
@@ -1484,174 +1524,273 @@ export default function Home() {
       {videoOpen && <VideoModal onClose={() => setVideoOpen(false)} />}
       {popup && <FeaturePopup feature={popup} onClose={() => setPopup(null)} />}
 
-      <section className="hero-section">
-        <div className="hero-grid-bg" />
-        <div className="hero-glow-top" />
-        <div className="hero-glow-bottom" />
+      <RevealSection>
+        <section className="hero-section" style={{ minHeight: "100vh", display: "flex", alignItems: "center" }}>
+          <div className="hero-grid-bg" />
+          <div className="hero-content" style={{ maxWidth: 1280, margin: "0 auto", padding: "120px 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div className="hero-tag" style={{ margin: "0 auto 48px auto", display: "flex", width: "fit-content" }}>
+              <div className="tag-pulse" />
+              <span className="tag-text">Powered by moozuk22</span>
+            </div>
 
-        <div className="hero-content">
-          <div className="hero-tag">
-            <div className="tag-pulse" />
-            <span className="tag-text">Powered by Moozuk22 OS</span>
+            <div style={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 64, width: "100%" }} className="hero-split">
+              <div className="hero-text-col" style={{ flex: 1, minWidth: 320, display: "flex", flexDirection: "column" }}>
+                <h1 className="hero-title">
+                  Спри да губиш време в <span className="hero-title-highlight">таблици.</span><br />
+                  Управлявай своя клуб професионално.
+                </h1>
+
+                <p className="hero-description" style={{ margin: "0 0 48px 0", maxWidth: 600 }}>
+                  Дигитална нервна система за Вашия спортен клуб — автоматизиран контрол, финансова дисциплина и специални отстъпки за родителите.
+                </p>
+
+                <div className="hero-actions" style={{ marginTop: 10 }}>
+                  <a href="#Контакт" className="hero-btn-primary" style={{ background: "var(--neon-green)", boxShadow: "0 0 30px rgba(57, 255, 20, 0.4)", textDecoration: "none", display: "flex", alignItems: "center", gap: 10, color: "#000", padding: "16px 36px" }}>
+                    КОНСУЛТАЦИЯ →
+                  </a>
+                  <button onClick={() => setVideoOpen(true)} className="hero-btn-secondary" style={{ padding: "16px 28px" }}>
+                    ВИЖ КАК РАБОТИ ↓
+                  </button>
+                </div>
+
+                <div className="stats-row" style={{ marginTop: 60, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", background: "none", border: "none", gap: 32 }}>
+                  {[
+                    { v: "10 мин.", l: "за пълна настройка" },
+                    { v: "70%", l: "по-малко просрочени такси" },
+                    { v: "3 мес.", l: "безплатен период" }
+                  ].map((s, i) => (
+                    <div key={i} style={{ padding: 0 }}>
+                      <div className="stat-v-hero" style={{ fontFamily: "var(--serif-font)", fontSize: 32, color: "#fff" }}>{s.v}</div>
+                      <div className="stat-l-hero" style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: 1, marginTop: 4 }}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hero-image-col" style={{ flex: 1, minWidth: 320, maxWidth: "540px", position: "relative" }}>
+                <div style={{ 
+                  borderRadius: 32, 
+                  overflow: "hidden", 
+                  boxShadow: "0 40px 100px rgba(0,0,0,0.8), 0 0 40px rgba(57, 255, 20, 0.15)",
+                  border: "1px solid rgba(255,255,255,0.1)"
+                }}>
+                  <img 
+                    src="/images/hero_coach_green.png" 
+                    alt="MyTeam Football Management"
+                    style={{ width: "100%", display: "block" }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
+      </RevealSection>
 
-          <h1 className="hero-title">
-            My Team: <span className="hero-title-highlight">Дигиталната нервна система</span><br />
-            <span className="hero-title-sub"> на Вашия спортен клуб</span>
-          </h1>
+      <RevealSection>
+        <section className="problem-section">
+          <div className="problem-header">
+            <div className="problem-tag">ПРОБЛЕМЪТ</div>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Твоите ежедневни главоболия.</h2>
+          </div>
+          <div className="problem-grid">
+            {PROBLEMS.map((p, i) => (
+              <div key={i} className="problem-card">
+                <div className="problem-icon">{p.icon}</div>
+                <h3 className="problem-card-title">{p.title}</h3>
+                <p className="problem-card-desc">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </RevealSection>
 
-          <p className="hero-description">Автоматизиран контрол, финансова дисциплина и ексклузивни ползи за родителите.</p>
+      <RevealSection>
+        <section className="comparison-section">
+          <div style={{ textAlign: "center", marginBottom: 64 }}>
+            <div className="section-tag-light" style={{ color: "var(--neon-green)" }}>ТРАНСФОРМАЦИЯТА</div>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Животът преди и след MyTeam.</h2>
+          </div>
+          <div className="comparison-grid">
+            <div className="comparison-col col-before">
+              <h3 className="comp-title" style={{ color: "#ff4d4d" }}>Преди</h3>
+              <div className="comp-list">
+                {COMPARISON.before.map((item, i) => (
+                  <div key={i} className="comp-item">
+                    <CloseX size={18} className="comp-icon-x" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="comparison-col col-after">
+              <h3 className="comp-title" style={{ color: "var(--neon-green)" }}>След MyTeam</h3>
+              <div className="comp-list">
+                {COMPARISON.after.map((item, i) => (
+                  <div key={i} className="comp-item">
+                    <Check size={18} className="comp-icon-v" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </RevealSection>
 
-          <div className="hero-actions">
-            <button onClick={() => setVideoOpen(true)} className="hero-btn-primary">
-              <Play size={18} fill="#000" />
-              ВИЖ КАК РАБОТИ
-            </button>
-            <a href="#contact" className="hero-btn-secondary">
-              БЕЗПЛАТНА КОНСУЛТАЦИЯ <ChevronRight size={16} />
+      <RevealSection>
+        <section id="Функции" className="features-section">
+          <div className="features-container">
+            <div className="section-header">
+              <div className="section-tag-light">ВЪЗМОЖНОСТИ</div>
+              <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>
+                Всичко, от което се нуждаеш.<br />
+                <span className="section-title-highlight" style={{ fontStyle: "italic", color: "var(--neon-green)" }}>Нищо излишно.</span>
+              </h2>
+            </div>
+
+            <div className={`toggle-wrapper ${subActive ? "toggle-wrapper-active" : ""}`}>
+              <div className="toggle-label-group">
+                <WifiOff size={15} className={`toggle-icon ${subActive ? "icon-dim" : "icon-active"}`} />
+                <span className={`toggle-text ${subActive ? "text-dim" : "text-active"}`}>БЕЗ АБОНАМЕНТ</span>
+              </div>
+
+              <button onClick={() => setSubActive(!subActive)} className={`toggle-switch ${subActive ? "switch-active" : ""}`}>
+                <div className={`toggle-handle ${subActive ? "handle-active" : ""}`} />
+              </button>
+
+              <div className="toggle-label-group">
+                <span className={`toggle-text ${subActive ? "text-active" : "text-dim"}`}>С АБОНАМЕНТ</span>
+                <Wifi size={15} className={`toggle-icon ${subActive ? "icon-active" : "icon-dim"}`} />
+                {subActive && <div className="active-indicator" />}
+              </div>
+            </div>
+
+            <div className="feat-grid">
+              {FEATURES.map(f => (
+                <FeatureCard key={f.id} feature={f} active={subActive} onClick={() => setPopup(f)} />
+              ))}
+            </div>
+          </div>
+        </section>
+      </RevealSection>
+
+      <RevealSection>
+        <TrustedNetwork contactRef={contactRef} />
+      </RevealSection>
+
+      <RevealSection>
+        <section className="pricing-section">
+          <div style={{ textAlign: "center", marginBottom: 64 }}>
+            <div className="section-tag-light" style={{ color: "var(--neon-green)" }}>ПРОЗРАЧНИ ЦЕНИ</div>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Избери правилния път за развитие.</h2>
+            <p style={{ color: "var(--neon-green)", fontWeight: 700, marginTop: 10 }}>* 3 месеца гратисен период за нови клубове!</p>
+          </div>
+          <div className="pricing-grid">
+            {[
+              { price: "44€", count: "До 100 деца" },
+              { price: "53€", count: "До 200 деца", popular: true },
+              { price: "71€", count: "Над 300 деца" }
+            ].map((plan, i) => (
+              <div key={i} className={`pricing-card ${plan.popular ? "pricing-card-popular" : ""}`}>
+                {plan.popular && <div className="pricing-badge">НАЙ-ПРЕДПОЧИТАН</div>}
+                <h3 className="comp-title">{plan.count}</h3>
+                <div className="price-box">
+                  <span className="price-val">{plan.price}</span>
+                  <span className="price-unit">/ месец</span>
+                </div>
+                <div className="comp-list" style={{ marginBottom: 40 }}>
+                  <div className="comp-item"><Check size={16} color="var(--neon-green)" /> <span>Всички модули и Pro функции</span></div>
+                  <div className="comp-item"><Check size={16} color="var(--neon-green)" /> <span>Смарт карти за достъп</span></div>
+                  <div className="comp-item"><Check size={16} color="var(--neon-green)" /> <span>Партньорска мрежа</span></div>
+                  <div className="comp-item"><Check size={16} color="var(--neon-green)" /> <span style={{ fontWeight: 700, color: "var(--neon-green)" }}>3 месеца гратисен период</span></div>
+                </div>
+                <a href="#Контакт" className="nav-demo-btn" style={{ 
+                  width: "100%", 
+                  background: plan.popular ? "var(--neon-green)" : "none", 
+                  color: plan.popular ? "#000" : "#fff", 
+                  border: plan.popular ? "none" : "1px solid rgba(255,255,255,0.2)", 
+                  textDecoration: "none", 
+                  textAlign: "center",
+                  display: "inline-block"
+                }}>
+                  {plan.popular ? "3 МЕСЕЦА БЕЗ ТАКСА" : "ЗАПОЧНИ СЕГА"}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
+      </RevealSection>
+
+      <RevealSection>
+        <section id="Партньори" style={{ padding: "100px 24px", background: "rgba(255,255,255,0.02)" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 60 }}>
+              <div className="section-tag-light">МРЕЖА ОТ ПАРТНЬОРИ</div>
+              <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Добавена стойност за всеки член.</h2>
+              <p style={{ color: "rgba(255,255,255,0.4)" }}>Вашият клуб получава достъп до преференциални условия при подбрани брандове.</p>
+            </div>
+
+            <div className="partners-grid">
+              {PARTNERS.map(p => (
+                <div key={p.name} className="partner-card" style={{ height: "100%", display: "flex", flexDirection: "column", padding: "32px 20px" }}>
+                  <div style={{ 
+                    height: 54,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 12
+                  }}>
+                    <img src={p.logo} alt={p.name} style={{ maxHeight: "100%", maxWidth: "80%", objectFit: "contain", filter: "brightness(1.1)" }} />
+                  </div>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 8px", marginBottom: 10 }}>
+                    <div style={{ color: "#fff", fontWeight: 700, fontSize: 12, lineHeight: 1.2, textTransform: "uppercase", letterSpacing: 0.5 }}>{p.name}</div>
+                  </div>
+                  <div style={{ color: "var(--neon-green)", fontSize: 10, fontWeight: 900, letterSpacing: 1 }}>{p.disc} ОТСТЪПКА</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </RevealSection>
+
+      <RevealSection>
+        <section id="Въпроси" style={{ padding: "80px 24px", background: "#05080F" }}>
+          <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Още се колебаеш?</h2>
+            <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 40 }}>Можем да ти помогнем да дигитализираш клуба си за по-малко от седмица.</p>
+            <a href="tel:0895919545" style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 12,
+              fontSize: 24,
+              color: "var(--neon-green)",
+              textDecoration: "none",
+              fontFamily: "var(--serif-font)"
+            }}>
+              <PhoneCall size={24} /> 0895 919 545
             </a>
           </div>
+        </section>
+      </RevealSection>
 
-          <div className="stats-row hero-stats">
-            {[
-              { v: `${counters.clubs}+`, l: "Клуба вече използват системата", c: G },
-              { v: `${counters.hours}ч/ден`, l: "Средно спестено административно време", c: B },
-              { v: `${counters.disc}%`, l: "Намаление на просрочените вноски", c: G }
-            ].map((s, i) => (
-              <div key={i} className="hero-stat-item">
-                <div style={{ color: s.c }} className="hero-stat-value">{s.v}</div>
-                <div className="hero-stat-label">{s.l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="Функции" className="features-section">
-        <div className="features-container">
-          <div className="section-header">
-            <div className="section-tag-light">◆ Smart Club Ecosystem</div>
-            <h2 className="section-title">
-              Всичко, от което се нуждае<br />
-              <span className="section-title-highlight">един модерен клуб</span>
-            </h2>
-          </div>
-
-          <div className={`toggle-wrapper ${subActive ? "toggle-wrapper-active" : ""}`}>
-            <div className="toggle-label-group">
-              <WifiOff size={15} className={`toggle-icon ${subActive ? "icon-dim" : "icon-active"}`} />
-              <span className={`toggle-text ${subActive ? "text-dim" : "text-active"}`}>БЕЗ АБОНАМЕНТ</span>
+      <RevealSection>
+        <section id="Контакт" ref={contactRef} style={{ padding: "90px 24px", background: `linear-gradient(180deg,#09101C 0%,${BG} 100%)` }}>
+          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 48 }}>
+              <div className="section-tag-light">◆ ЗАЯВЕТЕ ДЕМО И 3 МЕСЕЦА БЕЗ ТАКСА</div>
+              <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Готови ли сте за следващото ниво?</h2>
             </div>
-
-            <button onClick={() => setSubActive(!subActive)} className={`toggle-switch ${subActive ? "switch-active" : ""}`}>
-              <div className={`toggle-handle ${subActive ? "handle-active" : ""}`} />
-            </button>
-
-            <div className="toggle-label-group">
-              <span className={`toggle-text ${subActive ? "text-active" : "text-dim"}`}>С АБОНАМЕНТ</span>
-              <Wifi size={15} className={`toggle-icon ${subActive ? "icon-active" : "icon-dim"}`} />
-              {subActive && <div className="active-indicator" />}
-            </div>
+            <LeadForm />
           </div>
-
-          <div className="feat-grid">
-            {FEATURES.map(f => (
-              <FeatureCard key={f.id} feature={f} active={subActive} onClick={() => setPopup(f)} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <TrustedNetwork contactRef={contactRef} />
-
-      <section id="Партньори" className="partners-section">
-        <div className="partners-container">
-          <div className="partners-header">
-            <div className="partners-tag">Партньорска програма</div>
-            <h3 className="partners-title">
-              <span className="text-neon-green">10-20% отстъпка</span> за членовете на вашия клуб
-            </h3>
-          </div>
-
-          <div className="partners-grid">
-            {PARTNERS.map(p => (
-              <div key={p.name} className="partner-card" style={{ "--p-color": p.color }}>
-                <div className="partner-icon" style={{ color: p.color }}>{p.abbr}</div>
-                <div className="partner-name">{p.name}</div>
-                <div className="partner-discount">до 20% OFF</div>
-              </div>
-            ))}
-            <div className="partner-card card-upcoming">
-              <div className="partner-icon icon-upcoming">+</div>
-              <div className="partner-name text-upcoming">Скоро...</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="Контакт" ref={contactRef} style={{ padding: "90px 24px", background: `linear-gradient(180deg,#09101C 0%,${BG} 100%)` }}>
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div
-              style={{
-                fontFamily: "'Exo 2',sans-serif",
-                fontSize: 11,
-                color: G,
-                letterSpacing: 3,
-                textTransform: "uppercase",
-                marginBottom: 16,
-                fontWeight: 600
-              }}
-            >
-              ◆ Стартирайте Сега
-            </div>
-
-            <h2
-              style={{
-                fontFamily: "'Exo 2',sans-serif",
-                fontWeight: 900,
-                fontSize: "clamp(26px,4vw,44px)",
-                color: "#fff",
-                marginBottom: 14,
-                letterSpacing: -0.5,
-                lineHeight: 1.1
-              }}
-            >
-              Заявете Вашата<br />
-              <span style={{ background: `linear-gradient(135deg,${G},${B})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                дигитална трансформация
-              </span>
-            </h2>
-
-            <p
-              style={{
-                fontFamily: "'Exo 2',sans-serif",
-                fontSize: 15,
-                color: "rgba(255,255,255,.4)",
-                maxWidth: 480,
-                margin: "0 auto"
-              }}
-            >
-              Нашият екип ще ви покаже как MyTeam работи за вашия клуб — безплатна консултация, без ангажимент.
-            </p>
-          </div>
-
-          <LeadForm />
-        </div>
-      </section>
+        </section>
+      </RevealSection>
 
       <footer className="main-footer">
         <div className="footer-container">
           <div className="footer-logo">
-            <div className="logo-icon-small">
-              <Trophy size={14} color="#000" strokeWidth={2.5} />
-            </div>
-            <div>
-              <div className="footer-brand">My<span className="text-neon-green">Team</span></div>
-              <div className="footer-subtitle">by Moozuk22 OS</div>
-            </div>
+            <div className="footer-brand" style={{ fontFamily: "var(--serif-font)", fontSize: 24 }}>MyTeam</div>
           </div>
-          <div className="footer-copyright">© 2025 MyTeam / Moozuk22 OS. Всички права запазени.</div>
+          <div className="footer-copyright">© 2026 MyTeam. Всички права запазени.</div>
           <div className="footer-dots">
             {[G, B, G].map((c, i) => (
               <div key={i} className="footer-dot" style={{ background: c, animationDelay: `${i * 0.3}s` }} />
@@ -1659,6 +1798,15 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      <div className="sticky-actions">
+        <a href="https://wa.me/359895919545" target="_blank" rel="noopener noreferrer" className="action-btn action-whatsapp" title="WhatsApp">
+          <MessageSquare size={24} />
+        </a>
+        <a href="tel:0895919545" className="action-btn action-phone" title="Call Us">
+          <PhoneCall size={24} />
+        </a>
+      </div>
     </>
   );
 }
