@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./page.css";
 import {
   Fingerprint, LayoutGrid, BadgePercent, CreditCard,
@@ -1436,16 +1436,32 @@ function SuccessModal({ onClose }) {
   );
 }
 
+const CAROUSEL_IMAGES = [
+  { src: "/reports-screen.png", alt: "Център за отчети" },
+];
+
 function InfiniteCarousel() {
-  const items = Array.from({ length: 8 });
+  const placeholderCount = 7;
+  const placeholders = Array.from({ length: placeholderCount });
+
+  const imageItems = CAROUSEL_IMAGES.map((img, i) => (
+    <div key={`img-${i}`} className="carousel-item carousel-item-image">
+      <img src={img.src} alt={img.alt} className="carousel-img" />
+    </div>
+  ));
+  const placeholderItems = placeholders.map((_, i) => (
+    <div key={`ph-${i}`} className="carousel-item">
+      MYTEAM GALLERY
+    </div>
+  ));
+  const allItems = [...imageItems, ...placeholderItems];
+
   return (
     <div className="carousel-container">
       <div className="carousel-track">
-        {[...items, ...items].map((_, i) => (
-          <div key={i} className="carousel-item">
-            MYTEAM GALLERY
-          </div>
-        ))}
+        {[...allItems, ...allItems].map((item, i) =>
+          React.cloneElement(item, { key: `clone-${i}` })
+        )}
       </div>
     </div>
   );
