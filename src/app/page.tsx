@@ -1513,7 +1513,7 @@ export default function Home() {
             <div style={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 64, width: "100%" }} className="hero-split">
               <div className="hero-text-col" style={{ flex: 1, minWidth: 320, display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <h1 className="hero-title">
-                  <span className="hero-title-highlight">MyTeam</span> – интелигентна платформа за управление на клубове.
+                  <span className="hero-title-highlight">MyTeam</span> – интелигентна платформа за управление на Вашия клуб!
                 </h1>
 
                 <p className="hero-description" style={{ margin: "0 0 48px 0", maxWidth: 700, textAlign: "center" }}>
@@ -1550,7 +1550,7 @@ export default function Home() {
       <RevealSection>
         <section id="Интерфейс" className="system-section">
           <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Системата, която работи.</h2>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Системата, която работи!</h2>
           </div>
           <InfiniteCarousel />
         </section>
@@ -1566,7 +1566,7 @@ export default function Home() {
               gap: 24 
             }}>
               {[
-                { icon: "📅", title: "Административен хаос", desc: "Списъжите и Excel таблиците водят до системни грешки и загуба на време.", color: "#FFB000" },
+                { icon: "📅", title: "Административен хаос", desc: "Хартиените списъци и Excel таблиците водят до системни грешки и загуба на време.", color: "#FFB000" },
                 { icon: "💸", title: "Нередовни такси", desc: "Липсата на автоматизирано следене принуждава „гоненето“ на родителите.", color: "var(--neon-green)" },
                 { icon: "📊", title: "Липса на контрол", desc: "Неясно присъствие на децата, което често води до спорове с родителите.", color: "#0080FF" },
                 { icon: "📢", title: "Комуникационен шум", desc: "Чат групите са пълни с излишни съобщения, а важната информация се губи.", color: "#FF3E3E" }
