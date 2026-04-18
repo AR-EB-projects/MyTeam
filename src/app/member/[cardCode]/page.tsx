@@ -567,7 +567,7 @@ export default function MemberCardPage({
     setTrainingModalOpen(false);
   };
 
-  const trackDiscount = (partner: string, action: "view" | "copy") => {
+  const trackDiscount = (partner: string, action: "view" | "copy" | "link_click") => {
     void fetch(`/api/members/${normalizedCardCode}/discount-usage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
