@@ -5322,6 +5322,11 @@ function AdminMembersPageContent() {
                             <h3>{notif.title}</h3>
                             {!notif.readAt ? <span className="amp-member-notification-new" aria-label={"\u041d\u043e\u0432\u043e"} /> : null}
                           </div>
+                          {notif.type === "admin_message" ? (
+                            <span style={{ display: "inline-block", fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "9999px", background: "rgba(201,168,76,0.15)", color: "var(--accent-gold-color)", marginBottom: "6px" }}>
+                              {"\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440"}
+                            </span>
+                          ) : null}
                           <p>{notif.body}</p>
                           <div className="amp-member-notification-meta">
                             {typeof notif.teamGroup === "number" ? <span>{"\u041e\u0442\u0431\u043e\u0440: "}{notif.teamGroup}</span> : null}
