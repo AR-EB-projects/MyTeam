@@ -253,6 +253,11 @@
   font-weight: 600;
 }
 
+.ds-action-link {
+  color: #60a5fa;
+  font-weight: 600;
+}
+
 .ds-count {
   font-weight: 700;
   color: #fff;

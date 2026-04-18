@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const VALID_PARTNERS = new Set(["SPORT_DEPOT", "IDB", "NIKO", "DALIDA"]);
-const VALID_ACTIONS = new Set(["view", "copy"]);
+const VALID_ACTIONS = new Set(["view", "copy", "link_click"]);
 
 export async function POST(
   request: NextRequest,

@@ -38,7 +38,7 @@ interface DailyRow {
 }
 
 interface StatsResponse {
-  totals: Record<string, { view: number; copy: number }>;
+  totals: Record<string, { view: number; copy: number; link_click: number }>;
   daily: DailyRow[];
 }
 
@@ -176,7 +176,7 @@ export default function AdminDiscountStatsClient() {
         {/* Summary cards */}
         <div className="ds-summary" style={{ gridTemplateColumns: "1fr 1fr" }}>
           {PARTNERS.map((partner) => {
-            const t = stats?.totals[partner] ?? { view: 0, copy: 0 };
+            const t = stats?.totals[partner] ?? { view: 0, copy: 0, link_click: 0 };
             const isSelected = selectedPartner === partner;
             return (
               <div 
@@ -219,29 +219,38 @@ export default function AdminDiscountStatsClient() {
                     {PARTNER_LABELS[partner]}
                   </div>
 
-                  <div className="ds-card-stats" style={{ 
-                    justifyContent: "center", 
+                  <div className="ds-card-stats" style={{
+                    justifyContent: "center",
                     width: "100%",
-                    gap: "24px",
+                    gap: "16px",
                     marginTop: "auto"
                   }}>
                     <div className="ds-stat" style={{ alignItems: "center" }}>
-                      <span className="ds-stat-value" style={{ 
-                        fontSize: "24px", 
-                        fontWeight: "900", 
+                      <span className="ds-stat-value" style={{
+                        fontSize: "24px",
+                        fontWeight: "900",
                         color: "#32cd32",
                         textShadow: "0 0 15px rgba(50, 205, 50, 0.3)"
                       }}>{t.view}</span>
                       <span className="ds-stat-label" style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.5)", fontWeight: "600", textTransform: "uppercase" }}>Прегледи</span>
                     </div>
                     <div className="ds-stat" style={{ alignItems: "center" }}>
-                      <span className="ds-stat-value" style={{ 
-                        fontSize: "24px", 
-                        fontWeight: "900", 
+                      <span className="ds-stat-value" style={{
+                        fontSize: "24px",
+                        fontWeight: "900",
                         color: "#32cd32",
                         textShadow: "0 0 15px rgba(50, 205, 50, 0.3)"
                       }}>{t.copy}</span>
                       <span className="ds-stat-label" style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.5)", fontWeight: "600", textTransform: "uppercase" }}>Копирания</span>
+                    </div>
+                    <div className="ds-stat" style={{ alignItems: "center" }}>
+                      <span className="ds-stat-value" style={{
+                        fontSize: "24px",
+                        fontWeight: "900",
+                        color: "#32cd32",
+                        textShadow: "0 0 15px rgba(50, 205, 50, 0.3)"
+                      }}>{t.link_click}</span>
+                      <span className="ds-stat-label" style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.5)", fontWeight: "600", textTransform: "uppercase" }}>Линк клика</span>
                     </div>
                   </div>
                 </div>
@@ -296,8 +305,8 @@ export default function AdminDiscountStatsClient() {
                           </span>
                         </td>
                         <td style={{ textAlign: "center", padding: "12px 16px" }}>
-                          <span className={row.action === "copy" ? "ds-action-copy" : "ds-action-view"} style={{ fontSize: "11px", fontWeight: "600" }}>
-                            {row.action === "copy" ? "Копиран код" : "Преглед"}
+                          <span className={row.action === "copy" ? "ds-action-copy" : row.action === "link_click" ? "ds-action-link" : "ds-action-view"} style={{ fontSize: "11px", fontWeight: "600" }}>
+                            {row.action === "copy" ? "Копиран код" : row.action === "link_click" ? "Линк клик" : "Преглед"}
                           </span>
                         </td>
                       </tr>

@@ -1871,7 +1871,7 @@ export default function MemberCardPage({
               {/* QR code */}
               <div className="sd-qr-wrap">
                 <img src="/QR.png" alt="QR код за отстъпка" className="sd-qr" />
-                <p className="sd-qr-hint">Покажи QR кода на касата или въведи кода онлайн на{" "}<a href="https://www.absolute-teamsport.bg" target="_blank" rel="noopener noreferrer" className="sd-store-link">absolute-teamsport.bg</a></p>
+                <p className="sd-qr-hint">Покажи QR кода на касата или въведи кода онлайн на{" "}<a href="https://www.absolute-teamsport.bg" target="_blank" rel="noopener noreferrer" className="sd-store-link" onClick={() => trackDiscount("SPORT_DEPOT", "link_click")}>absolute-teamsport.bg</a></p>
               </div>
 
               <div className="sd-modal-divider" />
@@ -1935,7 +1935,7 @@ export default function MemberCardPage({
               <p className="sd-validity">Валиден: 2026</p>
 
               <div className="sd-qr-wrap">
-                <p className="sd-qr-hint">Посетете ги онлайн на{" "}<a href="https://innlinedragonbody.com" target="_blank" rel="noopener noreferrer" className="sd-store-link" style={{ color: "#eab126" }}>innlinedragonbody.com</a></p>
+                <p className="sd-qr-hint">Посетете ги онлайн на{" "}<a href="https://innlinedragonbody.com" target="_blank" rel="noopener noreferrer" className="sd-store-link" style={{ color: "#eab126" }} onClick={() => trackDiscount("IDB", "link_click")}>innlinedragonbody.com</a></p>
               </div>
             </div>
           </div>
@@ -1987,7 +1987,7 @@ export default function MemberCardPage({
               <p className="sd-validity">Валиден: 2026</p>
 
               <div className="sd-qr-wrap">
-                <p className="sd-qr-hint">Разгледайте каталога им на{" "}<a href="https://mebeliniko.bg" target="_blank" rel="noopener noreferrer" className="niko-store-link">mebeliniko.bg</a></p>
+                <p className="sd-qr-hint">Разгледайте каталога им на{" "}<a href="https://mebeliniko.bg" target="_blank" rel="noopener noreferrer" className="niko-store-link" onClick={() => trackDiscount("NIKO", "link_click")}>mebeliniko.bg</a></p>
               </div>
             </div>
           </div>
@@ -2039,7 +2039,7 @@ export default function MemberCardPage({
               <p className="sd-validity">Валиден: 2026</p>
 
               <div className="sd-qr-wrap">
-                <p className="sd-qr-hint">Посетете ги онлайн на{" "}<a href="https://dalidadance.com" target="_blank" rel="noopener noreferrer" className="sd-store-link" style={{ color: "rgb(201, 168, 76)" }}>dalidadance.com</a></p>
+                <p className="sd-qr-hint">Посетете ги онлайн на{" "}<a href="https://dalidadance.com" target="_blank" rel="noopener noreferrer" className="sd-store-link" style={{ color: "rgb(201, 168, 76)" }} onClick={() => trackDiscount("DALIDA", "link_click")}>dalidadance.com</a></p>
               </div>
 
               <div className="sd-modal-divider" style={{ background: "linear-gradient(to right, transparent, rgb(201, 168, 76), transparent)", opacity: 0.3 }} />

@@ -38,14 +38,15 @@ export async function GET(request: NextRequest) {
   });
 
   const PARTNERS = ["SPORT_DEPOT", "IDB", "NIKO", "DALIDA"];
-  const totals: Record<string, { view: number; copy: number }> = {};
+  const totals: Record<string, { view: number; copy: number; link_click: number }> = {};
   for (const p of PARTNERS) {
-    totals[p] = { view: 0, copy: 0 };
+    totals[p] = { view: 0, copy: 0, link_click: 0 };
   }
   for (const row of grouped) {
     if (totals[row.partner]) {
       if (row.action === "view") totals[row.partner].view += row._count.id;
       else if (row.action === "copy") totals[row.partner].copy += row._count.id;
+      else if (row.action === "link_click") totals[row.partner].link_click += row._count.id;
     }
   }
 
