@@ -5334,7 +5334,7 @@ function AdminMembersPageContent() {
                               {"\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440"}
                             </span>
                           ) : null}
-                          <p>{notif.body}</p>
+                          <p style={{ whiteSpace: "pre-wrap" }}>{notif.body}</p>
                           <div className="amp-member-notification-meta">
                             {typeof notif.teamGroup === "number" ? <span>{"\u041e\u0442\u0431\u043e\u0440: "}{notif.teamGroup}</span> : null}
                             {Array.isArray(notif.trainingGroups) && notif.trainingGroups.length > 0 ? (
