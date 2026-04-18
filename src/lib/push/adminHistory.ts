@@ -41,11 +41,12 @@ export async function getClubAdminNotifications(input: {
   clubId: string;
   playerId?: string | null;
 }) {
+  const where: Record<string, unknown> = { clubId: input.clubId };
+  if (input.playerId) {
+    where.playerId = input.playerId;
+  }
   return await prismaAdmin.adminNotification.findMany({
-    where: {
-      clubId: input.clubId,
-      playerId: input.playerId ?? undefined,
-    },
+    where,
     orderBy: {
       sentAt: "desc",
     },
@@ -66,25 +67,23 @@ export async function getClubAdminUnreadCount(input: {
   clubId: string;
   playerId?: string | null;
 }) {
-  return await prismaAdmin.adminNotification.count({
-    where: {
-      clubId: input.clubId,
-      playerId: input.playerId ?? undefined,
-      readAt: null,
-    },
-  });
+  const where: Record<string, unknown> = { clubId: input.clubId, readAt: null };
+  if (input.playerId) {
+    where.playerId = input.playerId;
+  }
+  return await prismaAdmin.adminNotification.count({ where });
 }
 
 export async function markClubAdminNotificationsRead(input: {
   clubId: string;
   playerId?: string | null;
 }) {
+  const where: Record<string, unknown> = { clubId: input.clubId, readAt: null };
+  if (input.playerId) {
+    where.playerId = input.playerId;
+  }
   return await prismaAdmin.adminNotification.updateMany({
-    where: {
-      clubId: input.clubId,
-      playerId: input.playerId ?? undefined,
-      readAt: null,
-    },
+    where,
     data: {
       readAt: new Date(),
     },

@@ -76,6 +76,16 @@ export function buildNotificationPayload(
         tag: "monthly-membership-payment-reminder",
         data: { type: input.type },
       };
+    case "admin_message":
+      return {
+        title: "Съобщение от администратора",
+        body: input.trainerMessage?.trim() || "Имате ново съобщение.",
+        url,
+        icon: DEFAULT_ICON,
+        badge: DEFAULT_ICON,
+        tag: "admin-message",
+        data: { type: input.type },
+      };
     case "monthly_overdue_payment_reminder":
       return {
         title: "Просрочие",
