@@ -1201,10 +1201,10 @@ function NavBar() {
     <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""}`}>
       <div className="navbar-container">
         <div className="navbar-logo">
-          <img 
-            src="/myteam-logo.png" 
-            alt="MyTeam Logo" 
-            className="nav-logo-img" 
+          <img
+            src="/myteam-logo.png"
+            alt="MyTeam Logo"
+            className="nav-logo-img"
             onContextMenu={(e) => e.preventDefault()}
             onDragStart={(e) => e.preventDefault()}
           />
@@ -1293,7 +1293,7 @@ function LeadForm({ onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    
+
     // Basic validation: ensure all fields are filled
     if (!form.club || !form.name || !form.email || !form.phone || !form.kids) {
       setError("Моля попълнете абсолютно всички полета.");
@@ -1359,11 +1359,11 @@ function LeadForm({ onSuccess }) {
       </div>
 
       {error && (
-        <div style={{ 
-          color: "#FF3E3E", 
-          fontSize: 13, 
-          fontWeight: 600, 
-          marginTop: 20, 
+        <div style={{
+          color: "#FF3E3E",
+          fontSize: 13,
+          fontWeight: 600,
+          marginTop: 20,
           textAlign: "center",
           background: "rgba(255, 62, 62, 0.1)",
           padding: "10px 16px",
@@ -1399,40 +1399,40 @@ function SuccessModal({ onClose }) {
 
   return (
     <div className="popup-overlay" style={{ zIndex: 10000, position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div className="popup-card success-popup" onClick={e => e.stopPropagation()} style={{ 
-        textAlign: "center", 
+      <div className="popup-card success-popup" onClick={e => e.stopPropagation()} style={{
+        textAlign: "center",
         padding: "60px 40px",
         border: "1px solid rgba(57, 255, 20, 0.2)",
         boxShadow: "0 0 100px rgba(57, 255, 20, 0.15)",
         maxWidth: 450
       }}>
         <div style={{ marginBottom: 48 }}>
-          <img 
-            src="/myteam-logo.png" 
-            alt="MyTeam Logo" 
-            className="nav-logo-img" 
-            style={{ height: 80, margin: "0 auto" }} 
+          <img
+            src="/myteam-logo.png"
+            alt="MyTeam Logo"
+            className="nav-logo-img"
+            style={{ height: 80, margin: "0 auto" }}
             onContextMenu={(e) => e.preventDefault()}
             onDragStart={(e) => e.preventDefault()}
           />
         </div>
 
         <h2 className="popup-title" style={{ fontSize: 32, marginBottom: 16, fontFamily: "var(--serif-font)" }}>Заявката е приета!</h2>
-        
-        <p className="popup-desc" style={{ 
-          fontSize: 18, 
-          lineHeight: 1.6, 
-          color: "rgba(255,255,255,0.7)", 
+
+        <p className="popup-desc" style={{
+          fontSize: 18,
+          lineHeight: 1.6,
+          color: "rgba(255,255,255,0.7)",
           marginBottom: 40,
           maxWidth: 340,
           margin: "0 auto 40px"
         }}>
-          Вашата заявка е получена успешно. <br/>
+          Вашата заявка е получена успешно. <br />
           Представител на MyTeam ще се свърже с вас до 24 часа.
         </p>
 
-        <button onClick={onClose} className="popup-action-btn" style={{ 
-          width: "100%", 
+        <button onClick={onClose} className="popup-action-btn" style={{
+          width: "100%",
           height: 60,
           fontSize: 16,
           fontWeight: 800,
@@ -1470,10 +1470,10 @@ function Lightbox({ image, onClose }) {
         <button className="lightbox-close" onClick={onClose}>
           <X size={24} />
         </button>
-        <img 
-          src={image.src} 
-          alt={image.alt} 
-          className="lightbox-img" 
+        <img
+          src={image.src}
+          alt={image.alt}
+          className="lightbox-img"
           onContextMenu={(e) => e.preventDefault()}
           onDragStart={(e) => e.preventDefault()}
         />
@@ -1485,15 +1485,15 @@ function Lightbox({ image, onClose }) {
 function InfiniteCarousel({ onExpand }) {
 
   const imageItems = CAROUSEL_IMAGES.map((img, i) => (
-    <div 
-      key={`img-${i}`} 
+    <div
+      key={`img-${i}`}
       className="carousel-item carousel-item-image"
       onClick={() => onExpand(img)}
     >
-      <img 
-        src={img.src} 
-        alt={img.alt} 
-        className="carousel-img" 
+      <img
+        src={img.src}
+        alt={img.alt}
+        className="carousel-img"
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
       />
@@ -1624,10 +1624,10 @@ export default function Home() {
         <section style={{ padding: "40px 24px", background: "#070C14", textAlign: "center" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
-            <div className="problem-grid" style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", 
-              gap: 24 
+            <div className="problem-grid" style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 24
             }}>
               {[
                 { icon: "📅", title: "Административен хаос", desc: "Хартиените списъци и Excel таблиците водят до системни грешки и загуба на време.", color: "#FFB000" },
@@ -1723,8 +1723,8 @@ export default function Home() {
       <RevealSection>
         <section style={{ padding: "40px 24px", background: "radial-gradient(circle at center, #0B1628 0%, #070C14 100%)", textAlign: "center" }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
-            
-            <div 
+
+            <div
               onClick={() => setBenefitsOpen(!benefitsOpen)}
               style={{
                 cursor: "pointer",
@@ -1737,31 +1737,31 @@ export default function Home() {
               className="benefits-dropdown-trigger"
             >
               <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                <h2 className="section-title" style={{ 
-                  marginBottom: 0, 
-                  fontFamily: "var(--serif-font)", 
+                <h2 className="section-title" style={{
+                  marginBottom: 0,
+                  fontFamily: "var(--serif-font)",
                   color: benefitsOpen ? "var(--neon-green)" : "#fff",
                   transition: "color 0.4s ease"
                 }}>Ползи за родителите</h2>
-                <div style={{ 
-                  fontSize: 28, 
+                <div style={{
+                  fontSize: 28,
                   color: "var(--neon-green)",
                   transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                   transform: benefitsOpen ? "rotate(180deg)" : "rotate(0deg)"
                 }}>▾</div>
               </div>
-              <div style={{ 
-                width: benefitsOpen ? "100%" : "60px", 
-                height: "2px", 
-                background: "linear-gradient(90deg, transparent, var(--neon-green), transparent)", 
+              <div style={{
+                width: benefitsOpen ? "100%" : "60px",
+                height: "2px",
+                background: "linear-gradient(90deg, transparent, var(--neon-green), transparent)",
                 marginTop: 15,
                 transition: "width 0.6s ease",
                 opacity: benefitsOpen ? 1 : 0.3
               }} />
             </div>
 
-            <div style={{ 
-              maxHeight: benefitsOpen ? "2000px" : "0", 
+            <div style={{
+              maxHeight: benefitsOpen ? "2000px" : "0",
               opacity: benefitsOpen ? 1 : 0,
               overflow: "hidden",
               transition: "all 1s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -1867,7 +1867,7 @@ export default function Home() {
                   <div className="comp-item"><Check size={16} color="var(--neon-green)" /> <span>Партньорски отстъпки</span></div>
                 </div>
 
-                <div 
+                <div
                   onClick={() => setWithSchedule(!withSchedule)}
                   style={{
                     display: "flex",
@@ -1922,7 +1922,7 @@ export default function Home() {
           </div>
         </section>
       </RevealSection>
-      
+
       <RevealSection>
         <section id="Контакт" ref={contactRef} style={{ padding: "40px 24px", background: `linear-gradient(180deg,#09101C 0%,${BG} 100%)` }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
@@ -1966,23 +1966,23 @@ export default function Home() {
       </RevealSection>
 
       <footer className="main-footer">
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          gap: 32, 
-          marginBottom: 16, 
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 32,
+          marginBottom: 16,
         }}>
           <a href="#" style={{ color: "rgba(255,255,255,0.2)", fontSize: 11, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}>ЗАЩИТА НА ЛИЧНИ ДАННИ</a>
           <a href="#" style={{ color: "rgba(255,255,255,0.2)", fontSize: 11, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.2)"}>ОБЩИ УСЛОВИЯ</a>
         </div>
 
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          gap: 32, 
-          marginBottom: 32, 
-          paddingBottom: 32, 
-          borderBottom: "1px solid rgba(255,255,255,0.03)" 
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 32,
+          marginBottom: 32,
+          paddingBottom: 32,
+          borderBottom: "1px solid rgba(255,255,255,0.03)"
         }}>
           <a href="tel:0896495254" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>0896 495 254</a>
           <a href="mailto:officemyteam7@gmail.com" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>officemyteam7@gmail.com</a>
