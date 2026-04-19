@@ -1868,10 +1868,8 @@ export default function MemberCardPage({
               </button>
               <p className="sd-validity">Валиден: 02.04.2026 – 01.10.2026</p>
 
-              {/* QR code */}
               <div className="sd-qr-wrap">
-                <img src="/QR.png" alt="QR код за отстъпка" className="sd-qr" />
-                <p className="sd-qr-hint">Покажи QR кода на касата или въведи кода онлайн на{" "}<a href="https://www.absolute-teamsport.bg" target="_blank" rel="noopener noreferrer" className="sd-store-link" onClick={() => trackDiscount("SPORT_DEPOT", "link_click")}>absolute-teamsport.bg</a></p>
+                <p className="sd-qr-hint">Покажи кода за отстъпка на касата или въведи при поръчка онлайн на{" "}<a href="https://www.absolute-teamsport.bg" target="_blank" rel="noopener noreferrer" className="sd-store-link" onClick={() => trackDiscount("SPORT_DEPOT", "link_click")}>absolute-teamsport.bg</a></p>
               </div>
 
               <div className="sd-modal-divider" />
