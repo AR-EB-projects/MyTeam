@@ -1780,7 +1780,7 @@ export default function Home() {
         <section id="Цени" className="pricing-section">
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Преференциални условия за първи потребители.</h2>
-            <p style={{ color: "var(--neon-green)", fontWeight: 700, marginTop: 10 }}>* 7 дни безплатен период за нови клубове!</p>
+            <p style={{ color: "var(--neon-green)", fontWeight: 700, marginTop: 10 }}>* Свободни места: 5 от общо 10 отбора</p>
           </div>
           <div className="pricing-grid">
             {[
@@ -1863,7 +1863,8 @@ export default function Home() {
         <section id="Контакт" ref={contactRef} style={{ padding: "40px 24px", background: `linear-gradient(180deg,#09101C 0%,${BG} 100%)` }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <div className="section-tag-light">◆ ЗАЯВЕТЕ ДЕМО И 7 ДНИ БЕЗ ТАКСА</div>
+              <div className="section-tag-light" style={{ marginBottom: 8 }}>◆ ЗАЯВЕТЕ ДЕМО И 7 ДНИ БЕЗ ТАКСА</div>
+              <div style={{ color: "var(--neon-green)", fontSize: 12, fontWeight: 800, letterSpacing: 2, marginBottom: 24, textTransform: "uppercase", display: "flex", justifyContent: "center" }}>БЕЗ ОБВЪРЗВАНЕ</div>
               <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Получете детайлна оферта до 24 часа.</h2>
             </div>
             <LeadForm onSuccess={() => setShowSuccess(true)} />
