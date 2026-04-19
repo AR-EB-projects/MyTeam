@@ -1541,12 +1541,19 @@ function InfiniteCarousel({ onExpand }) {
     const track = trackRef.current;
     if (!container || !track) return;
 
+    let firstMeasure = true;
     const measure = () => {
       const itemEl = track.querySelector(".carousel-item") as HTMLElement;
       if (!itemEl) return;
       const itemWidth = itemEl.getBoundingClientRect().width;
       singleWidthRef.current = N * (itemWidth + GAP);
-      posRef.current = -singleWidthRef.current;
+      if (firstMeasure) {
+        posRef.current = -singleWidthRef.current;
+        firstMeasure = false;
+      }
+      const sw = singleWidthRef.current;
+      if (posRef.current <= -2 * sw) posRef.current += sw;
+      else if (posRef.current >= 0) posRef.current -= sw;
       track.style.transform = `translateX(${posRef.current}px)`;
     };
     measure();
@@ -1604,14 +1611,27 @@ function InfiniteCarousel({ onExpand }) {
     };
 
     let touchStartX = 0;
+    let touchStartY = 0;
     let touchStartPos = 0;
+    let isHorizontalDrag = false;
+    let dragDirectionLocked = false;
     const onTouchStart = (e: TouchEvent) => {
       touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
       touchStartPos = posRef.current;
       hasDraggedRef.current = false;
+      isHorizontalDrag = false;
+      dragDirectionLocked = false;
     };
     const onTouchMove = (e: TouchEvent) => {
       const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (!dragDirectionLocked) {
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+        isHorizontalDrag = Math.abs(dx) > Math.abs(dy);
+        dragDirectionLocked = true;
+      }
+      if (!isHorizontalDrag) return;
       if (Math.abs(dx) > 5) hasDraggedRef.current = true;
       posRef.current = touchStartPos + dx;
       clampLoop();
