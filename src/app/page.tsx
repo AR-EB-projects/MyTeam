@@ -1517,8 +1517,10 @@ function InfiniteCarousel({ onExpand }) {
     
     // Wait for images
     const check = setInterval(() => {
-       if (track.scrollWidth > 1000) {
-          offsetRef.current = -(track.scrollWidth / 3);
+       if (track.scrollWidth > 100) {
+          if (offsetRef.current === 0) {
+             offsetRef.current = -(track.scrollWidth / 3);
+          }
           track.style.transform = `translateX(${offsetRef.current}px)`;
           setIsReady(true);
           clearInterval(check);
@@ -1595,7 +1597,7 @@ function InfiniteCarousel({ onExpand }) {
       onTouchStart={handleDragStart}
       onTouchEnd={() => setIsMouseDown(false)}
       onTouchMove={handleDragMove}
-      style={{ cursor: isMouseDown ? 'grabbing' : 'grab', opacity: isReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
+      style={{ cursor: isMouseDown ? 'grabbing' : 'grab' }}
     >
       <div className="carousel-track" ref={trackRef}>
         {allItems.map((item, i) =>
