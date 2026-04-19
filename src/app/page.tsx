@@ -1298,9 +1298,23 @@ function LeadForm({ onSuccess }) {
     e.preventDefault();
     setError("");
 
-    // Basic validation: ensure all fields are filled
+    // Validation: ensure all fields are filled
     if (!form.club || !form.name || !form.email || !form.phone || !form.kids) {
-      setError("Моля попълнете абсолютно всички полета.");
+      setError("Моля попълнете всички полета.");
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Моля въведете валиден имейл адрес.");
+      return;
+    }
+
+    // Phone validation (simple check for digits and length)
+    const phoneDigits = form.phone.replace(/\D/g, "");
+    if (phoneDigits.length < 9 || phoneDigits.length > 13) {
+      setError("Моля въведете валиден телефонен номер.");
       return;
     }
 
@@ -1352,10 +1366,13 @@ function LeadForm({ onSuccess }) {
           <div key={i.id} className="form-group">
             <label className="form-label"><i.icon size={12} /> {i.label}</label>
             <input
-              type={i.id === "email" ? "email" : "text"}
+              type={i.id === "email" ? "email" : i.id === "phone" ? "tel" : i.id === "kids" ? "number" : "text"}
               placeholder={i.ph}
               value={form[i.id]}
-              onChange={e => setForm({ ...form, [i.id]: e.target.value })}
+              onChange={e => {
+                const val = i.id === "phone" ? e.target.value.replace(/\D/g, "") : e.target.value;
+                setForm({ ...form, [i.id]: val });
+              }}
               {...inp(i.id)}
             />
           </div>
