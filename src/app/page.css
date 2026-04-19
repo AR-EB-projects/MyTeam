@@ -129,22 +129,26 @@ img {
 }
 
 .carousel-container {
-  overflow: hidden;
   width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
   position: relative;
   margin-top: 40px;
   padding: 40px 0;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.carousel-container::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .carousel-track {
   display: flex !important;
   width: max-content;
-  animation: scrollInfinite 60s linear infinite;
   gap: 24px;
-}
-
-.carousel-container:hover .carousel-track {
-  animation-play-state: paused;
 }
 
 .carousel-item {

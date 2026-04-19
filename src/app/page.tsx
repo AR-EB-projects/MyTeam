@@ -1504,28 +1504,85 @@ function Lightbox({ image, onClose }) {
 }
 
 function InfiniteCarousel({ onExpand }) {
+  const containerRef = useRef(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [startX, setStartX] = useState(0);
+
   const imageItems = CAROUSEL_IMAGES.map((img, i) => (
-    <div
-      key={`img-${i}`}
-      className="carousel-item carousel-item-image"
-      onClick={() => onExpand(img)}
-      style={{ userSelect: "none" }}
-    >
-      <img
-        src={img.src}
-        alt={img.alt}
-        className="carousel-img"
-        style={{ pointerEvents: "none" }}
-        onContextMenu={(e) => e.preventDefault()}
-        onDragStart={(e) => e.preventDefault()}
-      />
+    <div key={`img-${i}`} className="carousel-item carousel-item-image" onClick={() => onExpand(img)}>
+      <img src={img.src} alt={img.alt} className="carousel-img" draggable={false} style={{ pointerEvents: "none" }} />
     </div>
   ));
 
   const allItems = [...imageItems, ...imageItems, ...imageItems];
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let requestId;
+    const scroll = () => {
+      if (!isMouseDown && !isHovered) {
+        container.scrollLeft += 0.8;
+        const seg = container.scrollWidth / 3;
+        if (seg > 0 && container.scrollLeft >= seg * 2) {
+          container.scrollLeft -= seg;
+        }
+      }
+      requestId = requestAnimationFrame(scroll);
+    };
+
+    const init = () => {
+      if (container.scrollWidth > 500) {
+        container.scrollLeft = container.scrollWidth / 3;
+      } else {
+        setTimeout(init, 100);
+      }
+    };
+    init();
+
+    requestId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(requestId);
+  }, [isMouseDown, isHovered]);
+
+  const handleDragStart = (e) => {
+    setIsMouseDown(true);
+    const x = e.type.includes("touch") ? e.touches[0].pageX : e.pageX;
+    setStartX(x - containerRef.current.offsetLeft);
+  };
+
+  const handleDragEnd = () => {
+    setIsMouseDown(false);
+  };
+
+  const handleDragMove = (e) => {
+    if (!isMouseDown) return;
+    const x = e.type.includes("touch") ? e.touches[0].pageX : e.pageX;
+    const walk = (x - containerRef.current.offsetLeft - startX) * 1.5;
+    const container = containerRef.current;
+    const seg = container.scrollWidth / 3;
+
+    container.scrollLeft -= walk;
+    setStartX(x - containerRef.current.offsetLeft);
+
+    if (container.scrollLeft <= 0) container.scrollLeft += seg;
+    if (container.scrollLeft >= seg * 2) container.scrollLeft -= seg;
+  };
+
   return (
-    <div className="carousel-container">
+    <div 
+      className="carousel-container" 
+      ref={containerRef}
+      onMouseDown={handleDragStart}
+      onMouseUp={handleDragEnd}
+      onMouseLeave={() => { setIsMouseDown(false); setIsHovered(false); }}
+      onMouseMove={handleDragMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onTouchStart={handleDragStart}
+      onTouchEnd={handleDragEnd}
+      onTouchMove={handleDragMove}
+    >
       <div className="carousel-track">
         {allItems.map((item, i) =>
           React.cloneElement(item, { key: `clone-${i}` })
