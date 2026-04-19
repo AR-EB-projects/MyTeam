@@ -1487,28 +1487,94 @@ function Lightbox({ image, onClose }) {
 }
 
 function InfiniteCarousel({ onExpand }) {
+  const containerRef = useRef(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   const imageItems = CAROUSEL_IMAGES.map((img, i) => (
     <div
       key={`img-${i}`}
       className="carousel-item carousel-item-image"
       onClick={() => onExpand(img)}
+      style={{ userSelect: "none" }}
     >
       <img
         src={img.src}
         alt={img.alt}
         className="carousel-img"
+        style={{ pointerEvents: "none" }}
         onContextMenu={(e) => e.preventDefault()}
         onDragStart={(e) => e.preventDefault()}
       />
     </div>
   ));
+
   const allItems = [...imageItems];
 
+  const handleMouseDown = (e) => {
+    setIsMouseDown(true);
+    setStartX(e.pageX - containerRef.current.offsetLeft);
+    setScrollLeft(containerRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsMouseDown(false);
+    setIsHovered(false);
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseUp = () => {
+    setIsMouseDown(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isMouseDown) return;
+    e.preventDefault();
+    const x = e.pageX - containerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; 
+    
+    let nextScroll = scrollLeft - walk;
+    const scrollWidth = containerRef.current.scrollWidth;
+    
+    if (nextScroll <= 0) {
+      nextScroll = (scrollWidth / 3);
+      setStartX(e.pageX - containerRef.current.offsetLeft + (scrollWidth/3)/2);
+    } else if (nextScroll >= (scrollWidth * 2/3)) {
+      nextScroll = (scrollWidth / 3);
+      setStartX(e.pageX - containerRef.current.offsetLeft - (scrollWidth/3)/2);
+    }
+
+    containerRef.current.scrollLeft = nextScroll;
+  };
+
   return (
-    <div className="carousel-container">
-      <div className="carousel-track">
-        {[...allItems, ...allItems].map((item, i) =>
+    <div 
+      className="carousel-container" 
+      ref={containerRef}
+      onMouseDown={handleMouseDown}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      style={{ 
+        cursor: isMouseDown ? "grabbing" : "grab",
+        overflowX: "hidden",
+        position: "relative"
+      }}
+    >
+      <div 
+        className="carousel-track" 
+        style={{ 
+          animation: "scrollInfinite 60s linear infinite",
+          animationPlayState: (isMouseDown || isHovered) ? "paused" : "running"
+        }}
+      >
+        {[...allItems, ...allItems, ...allItems].map((item, i) =>
           React.cloneElement(item, { key: `clone-${i}` })
         )}
       </div>
@@ -1581,7 +1647,7 @@ export default function Home() {
             <div style={{ display: "flex", flexWrap: "nowrap", alignItems: "center", gap: 64, width: "100%" }} className="hero-split">
               <div className="hero-text-col" style={{ flex: 1, minWidth: 320, display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <h1 className="hero-title">
-                  <span className="hero-title-highlight">MyTeam</span> – интелигентна платформа за управление на Вашия клуб.
+                  <span className="hero-title-highlight"><span style={{ color: "#fff" }}>My</span>Team</span> – интелигентна платформа за управление на Вашия клуб.
                 </h1>
 
                 <p className="hero-description" style={{ margin: "0 0 48px 0", maxWidth: 700, textAlign: "center" }}>
@@ -1760,15 +1826,17 @@ export default function Home() {
               }}
               className="benefits-dropdown-trigger"
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                 <h2 className="section-title" style={{
                   marginBottom: 0,
                   fontFamily: "var(--serif-font)",
                   color: benefitsOpen ? "var(--neon-green)" : "#fff",
-                  transition: "color 0.4s ease"
+                  transition: "color 0.4s ease",
+                  textAlign: "center"
                 }}>Ползи за родителите</h2>
                 <div style={{
-                  fontSize: 28,
+                  fontSize: 32,
+                  lineHeight: 1,
                   color: "var(--neon-green)",
                   transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
                   transform: benefitsOpen ? "rotate(180deg)" : "rotate(0deg)"
