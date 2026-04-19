@@ -1552,6 +1552,37 @@ function InfiniteCarousel({ onExpand }) {
     containerRef.current.scrollLeft = nextScroll;
   };
 
+  const handleTouchStart = (e) => {
+    setIsMouseDown(true);
+    setIsHovered(true);
+    setStartX(e.touches[0].pageX - containerRef.current.offsetLeft);
+    setScrollLeft(containerRef.current.scrollLeft);
+  };
+
+  const handleTouchEnd = () => {
+    setIsMouseDown(false);
+    setIsHovered(false);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isMouseDown) return;
+    const x = e.touches[0].pageX - containerRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; 
+    
+    let nextScroll = scrollLeft - walk;
+    const scrollWidth = containerRef.current.scrollWidth;
+    
+    if (nextScroll <= 0) {
+      nextScroll = (scrollWidth / 3);
+      setStartX(e.touches[0].pageX - containerRef.current.offsetLeft + (scrollWidth/3)/2);
+    } else if (nextScroll >= (scrollWidth * 2/3)) {
+      nextScroll = (scrollWidth / 3);
+      setStartX(e.touches[0].pageX - containerRef.current.offsetLeft - (scrollWidth/3)/2);
+    }
+
+    containerRef.current.scrollLeft = nextScroll;
+  };
+
   return (
     <div 
       className="carousel-container" 
@@ -1561,10 +1592,14 @@ function InfiniteCarousel({ onExpand }) {
       onMouseLeave={handleMouseLeave}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
       style={{ 
         cursor: isMouseDown ? "grabbing" : "grab",
         overflowX: "hidden",
-        position: "relative"
+        position: "relative",
+        touchAction: "pan-y"
       }}
     >
       <div 
