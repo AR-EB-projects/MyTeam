@@ -872,8 +872,7 @@ function HoloPanel({ club, onClose }) {
     const t = setTimeout(() => setVis(true), 20);
     return () => clearTimeout(t);
   }, []);
-
-  const stats = [
+const stats = [
     { icon: Users, label: "Athletes Count", value: club.athletes, unit: "", color: G },
     { icon: Activity, label: "Status", value: "Smart Access", unit: "Active", color: G },
     { icon: Calendar, label: "Member since", value: club.months, unit: "months", color: "#FFD700" },
@@ -1424,7 +1423,6 @@ function SuccessModal({ onClose }) {
         textAlign: "center",
         padding: "60px 40px",
         border: "1px solid rgba(57, 255, 20, 0.2)",
-        boxShadow: "0 0 100px rgba(57, 255, 20, 0.15)",
         maxWidth: 450
       }}>
         <div style={{ marginBottom: 48 }}>
@@ -1504,6 +1502,7 @@ function Lightbox({ image, onClose }) {
 }
 
 function InfiniteCarousel({ onExpand }) {
+  const containerRef = useRef(null);
   const trackRef = useRef(null);
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -1512,40 +1511,46 @@ function InfiniteCarousel({ onExpand }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    
-    // Wait for images
-    const check = setInterval(() => {
-       if (track.scrollWidth > 100) {
-          if (offsetRef.current === 0) {
-             offsetRef.current = -(track.scrollWidth / 3);
-          }
-          track.style.transform = `translateX(${offsetRef.current}px)`;
-          setIsReady(true);
-          clearInterval(check);
-       }
-    }, 100);
-    return () => clearInterval(check);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const update = () => {
+      const track = trackRef.current;
+      if (track && track.scrollWidth > 100) {
+        const seg = track.scrollWidth / 3;
+        if (offsetRef.current === 0) {
+          offsetRef.current = -seg;
+        }
+        track.style.transform = `translateX(${offsetRef.current}px)`;
+        setIsReady(true);
+      }
+    };
+
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    update();
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
-    let animationId;
-    const animate = () => {
-      const track = trackRef.current;
-      if (track && isReady && !isMouseDown && !isHovered) {
-        const seg = track.scrollWidth / 3;
-        offsetRef.current -= 1.2; // Speed
+    let id;
+    const loop = () => {
+      if (!isMouseDown && !isHovered && isReady) {
+        const track = trackRef.current;
+        if (track) {
+          const seg = track.scrollWidth / 3;
+          offsetRef.current -= 1.2;
 
-        if (Math.abs(offsetRef.current) >= seg * 2) {
-          offsetRef.current += seg;
+          if (Math.abs(offsetRef.current) >= seg * 2) {
+            offsetRef.current += seg;
+          }
+          track.style.transform = `translateX(${offsetRef.current}px)`;
         }
-        track.style.transform = `translateX(${offsetRef.current}px)`;
       }
-      animationId = requestAnimationFrame(animate);
+      id = requestAnimationFrame(loop);
     };
-    animationId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationId);
+    id = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(id);
   }, [isMouseDown, isHovered, isReady]);
 
   const handleDragStart = (e) => {
@@ -1562,7 +1567,6 @@ function InfiniteCarousel({ onExpand }) {
 
     const track = trackRef.current;
     const seg = track.scrollWidth / 3;
-    
     offsetRef.current += delta;
 
     if (offsetRef.current >= 0) {
@@ -1589,6 +1593,7 @@ function InfiniteCarousel({ onExpand }) {
   return (
     <div 
       className="carousel-container" 
+      ref={containerRef}
       onMouseDown={handleDragStart}
       onMouseUp={() => setIsMouseDown(false)}
       onMouseLeave={() => { setIsMouseDown(false); setIsHovered(false); }}
@@ -1597,7 +1602,7 @@ function InfiniteCarousel({ onExpand }) {
       onTouchStart={handleDragStart}
       onTouchEnd={() => setIsMouseDown(false)}
       onTouchMove={handleDragMove}
-      style={{ cursor: isMouseDown ? 'grabbing' : 'grab' }}
+      style={{ cursor: isMouseDown ? 'grabbing' : 'grab', opacity: isReady ? 1 : 0 }}
     >
       <div className="carousel-track" ref={trackRef}>
         {allItems.map((item, i) =>
