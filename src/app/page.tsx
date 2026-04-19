@@ -1603,37 +1603,34 @@ function InfiniteCarousel({ onExpand }) {
 
   useEffect(() => {
     let animationId;
-    const scrollSpeed = 0.8; // pixels per frame
+    const speed = 0.8;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const animate = () => {
-      if (!isMouseDown && !isHovered && containerRef.current) {
-        const container = containerRef.current;
-        if (container.scrollWidth > 0) {
-          const segmentWidth = container.scrollWidth / 3;
-          container.scrollLeft += scrollSpeed;
-          
-          if (container.scrollLeft >= segmentWidth * 2) {
-            container.scrollLeft -= segmentWidth;
+    const run = () => {
+      if (!isMouseDown && !isHovered) {
+        const seg = container.scrollWidth / 3;
+        if (seg > 0) {
+          container.scrollLeft += speed;
+          if (container.scrollLeft >= seg * 2) {
+            container.scrollLeft -= seg;
           }
         }
       }
-      animationId = requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(run);
     };
 
-    // Initial center if not already moved
-    if (containerRef.current) {
-      const container = containerRef.current;
-      const setInitial = () => {
-        if (container.scrollWidth > 0) {
-          container.scrollLeft = container.scrollWidth / 3;
-        } else {
-          setTimeout(setInitial, 50);
-        }
-      };
-      setInitial();
-    }
+    // Center it immediately if we can, or wait for content
+    const init = () => {
+      if (container.scrollWidth > 500) {
+        container.scrollLeft = container.scrollWidth / 3;
+      } else {
+        setTimeout(init, 100);
+      }
+    };
+    init();
 
-    animationId = requestAnimationFrame(animate);
+    animationId = requestAnimationFrame(run);
     return () => cancelAnimationFrame(animationId);
   }, [isMouseDown, isHovered]);
 
@@ -1642,28 +1639,15 @@ function InfiniteCarousel({ onExpand }) {
       className="carousel-container" 
       ref={containerRef}
       onMouseDown={handleMouseDown}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onMouseUp={handleMouseUp}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => { setIsMouseDown(false); setIsHovered(false); }}
+      onMouseUp={() => setIsMouseDown(false)}
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchMove}
-      style={{ 
-        cursor: isMouseDown ? "grabbing" : "grab",
-        overflowX: "hidden",
-        position: "relative",
-        touchAction: "pan-y"
-      }}
     >
-      <div 
-        className="carousel-track" 
-        style={{ 
-          display: "flex",
-          width: "max-content",
-          gap: "24px"
-        }}
-      >
+      <div className="carousel-track">
         {[...allItems, ...allItems, ...allItems].map((item, i) =>
           React.cloneElement(item, { key: `clone-${i}` })
         )}
