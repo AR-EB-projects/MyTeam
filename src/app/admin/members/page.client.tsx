@@ -6972,7 +6972,7 @@ function AdminMembersPageContent() {
           <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
-              <span className="amp-modal-title-gradient" style={{ flex: 1, textAlign: "center", paddingLeft: "32px" }}>Настройки на график</span>
+              <span className="amp-modal-title-gradient" style={{ flex: 1, textAlign: "center", paddingLeft: "32px" }}>Месечно напомняне</span>
               <button
                 className="amp-modal-close"
                 onClick={() => setSchedulerSettingsOpen(false)}
@@ -6988,9 +6988,6 @@ function AdminMembersPageContent() {
                 <p className="amp-empty amp-empty--modal">Зареждане...</p>
               ) : (
                 <div className="amp-edit-grid">
-                  <div className="amp-edit-field amp-edit-field--full amp-scheduler-section-title" style={{ textAlign: "center" }}>
-                    <span className="amp-lbl" style={{ textAlign: "center" }}>Месечно напомняне</span>
-                  </div>
                   <label className="amp-edit-field amp-scheduler-primary-day" style={{ textAlign: "center" }}>
                     <span className="amp-lbl" style={{ textAlign: "center" }}>Ден месечно напомняне (1-28)</span>
                     <input
