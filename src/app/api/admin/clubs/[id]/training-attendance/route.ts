@@ -656,8 +656,8 @@ export async function PATCH(
         ? `Треньорът е отбелязал отсъствие за тренировка на ${formattedDate}.`
         : `Треньорът е потвърдил присъствие за тренировка на ${formattedDate}.`,
       url: firstCardCode ? `/member/${encodeURIComponent(firstCardCode)}` : "/",
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon: "/myteam-logo.png",
+      badge: "/myteam-logo.png",
       tag: "training-attendance-updated",
       data: { type: "training_reminder", trainingDate },
     };

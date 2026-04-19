@@ -45,8 +45,8 @@ self.addEventListener("push", (event) => {
       : cardCode
       ? `/member/${encodeURIComponent(cardCode)}`
       : "/";
-  const icon = typeof data.icon === "string" ? data.icon : "/logo.png";
-  const badge = typeof data.badge === "string" ? data.badge : "/logo.png";
+  const icon = typeof data.icon === "string" ? data.icon : "/myteam-logo.png";
+  const badge = typeof data.badge === "string" ? data.badge : "/myteam-logo.png";
   const tag = typeof data.tag === "string" ? data.tag : "checkin-notification";
 
   event.waitUntil(

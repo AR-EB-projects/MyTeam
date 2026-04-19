@@ -76,7 +76,7 @@ export default function AdminMembersPage() {
     <div className="container p-6 fade-in">
       <div className="text-center mb-6">
         <img
-          src="/logo.png"
+          src="/myteam-logo.png"
           alt="Logo"
           className="mb-3 mx-auto"
           style={{ width: '100px', height: '100px', objectFit: 'contain' }}
@@ -123,7 +123,7 @@ export default function AdminMembersPage() {
                   <p className="text-muted" style={{ fontSize: '0.9rem' }}>ID: {member.id}</p>
                 </div>
                 <img
-                src="/logo.png"
+                src="/myteam-logo.png"
                 alt="Logo"
                 style={{ width: '24px', height: '24px', objectFit: 'contain' }}
               />

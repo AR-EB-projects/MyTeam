@@ -81,7 +81,7 @@ export async function GET(
     console.error("Admin members manifest icon route error:", error);
   }
 
-  const fallback = size >= 512 ? "/icon-512.png" : "/icon-192.png";
+  const fallback = "/myteam-logo.png";
   try {
     const filePath = path.join(process.cwd(), "public", fallback.replace(/^\/+/, ""));
     const body = await readFile(filePath);

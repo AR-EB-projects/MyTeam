@@ -85,8 +85,8 @@ function buildCoachAttendancePayload(input: {
       ? `${input.playerName} отбеляза отсъствие за тренировка на ${formattedDate}.${reasonSuffix}`
       : `${input.playerName} потвърди присъствие за тренировка на ${formattedDate}.`,
     url: `/admin/members?clubId=${encodeURIComponent(input.clubId)}`,
-    icon: "/logo.png",
-    badge: "/logo.png",
+    icon: "/myteam-logo.png",
+    badge: "/myteam-logo.png",
     tag: "training-attendance-updated",
     data: {
       type: "training_reminder",

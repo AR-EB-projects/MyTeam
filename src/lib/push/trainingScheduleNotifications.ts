@@ -241,8 +241,8 @@ function buildTrainingSchedulePayload(input: {
   return {
     title: "Тренировъчен график",
     body,
-    icon: "/logo.png",
-    badge: "/logo.png",
+    icon: "/myteam-logo.png",
+    badge: "/myteam-logo.png",
     tag: "training-schedule-updated",
     data: { type: "training_reminder" },
   };
