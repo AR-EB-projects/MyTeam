@@ -6,7 +6,7 @@ import "./page.css";
 import {
   Fingerprint, LayoutGrid, BadgePercent, CreditCard,
   Users, ShieldCheck, X, ChevronRight, Play,
-  Zap, Trophy, ArrowRight,
+  Zap, Trophy, ArrowRight, ArrowDown,
   Phone, Mail, MessageSquare, MessageCircle, User,
   Wifi, WifiOff, Menu, Calendar,
   MapPin, TrendingUp, Activity, Globe, Lock,
@@ -1190,9 +1190,13 @@ function TrustedNetwork({ contactRef }) {
 
 function NavBar() {
   const [scrolled, setScrolled] = useState(false);
+  const [showBtn, setShowBtn] = useState(false);
 
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 40);
+    const h = () => {
+      setScrolled(window.scrollY > 40);
+      setShowBtn(window.scrollY > 450); // Threshold to appear after hero section
+    };
     window.addEventListener("scroll", h);
     return () => window.removeEventListener("scroll", h);
   }, []);
@@ -1210,7 +1214,7 @@ function NavBar() {
           />
         </div>
 
-        <div className="nav-actions">
+        <div className={`nav-actions ${showBtn ? "nav-actions-visible" : "nav-actions-hidden"}`}>
           <a href="#Контакт" className="nav-demo-btn">БЕЗПЛАТНА <span style={{ color: "#FF3E3E", fontWeight: "900" }}>ВИДЕО</span> КОНСУЛТАЦИЯ</a>
         </div>
       </div>
@@ -1585,11 +1589,28 @@ export default function Home() {
                 </p>
 
                 <div className="hero-actions" style={{ marginTop: 10 }}>
-                  <a href="#Контакт" className="hero-btn-primary" style={{ background: "var(--neon-green)", boxShadow: "0 0 30px rgba(57, 255, 20, 0.4)", textDecoration: "none", display: "flex", alignItems: "center", gap: 10, color: "#000", padding: "16px 36px" }}>
-                    БЕЗПЛАТНА КОНСУЛТАЦИЯ →
+                  <a href="#Контакт" className="hero-btn-primary hero-btn-cta">
+                    <div className="hero-btn-stack">
+                      <div className="hero-line-1">
+                        БЕЗПЛАТНА <span style={{ color: "#FF3E3E", fontWeight: "900" }}>ВИДЕО</span>
+                      </div>
+                      <div className="hero-line-2">
+                        КОНСУЛТАЦИЯ <ArrowRight size={20} style={{ marginLeft: 8 }} />
+                      </div>
+                    </div>
                   </a>
-                  <a href="#Интерфейс" className="hero-btn-secondary" style={{ padding: "16px 28px", textDecoration: "none" }}>
-                    ВИЖ КАК РАБОТИ ↓
+                  <a href="#Системата" className="hero-btn-secondary" style={{ 
+                    padding: "16px 28px", 
+                    textDecoration: "none",
+                    background: "#FF3E3E",
+                    color: "#000",
+                    fontWeight: "800",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "12px"
+                  }}>
+                    ВИЖ КАК РАБОТИ <ArrowDown size={20} />
                   </a>
                 </div>
 
@@ -1611,6 +1632,7 @@ export default function Home() {
         </section>
       </RevealSection>
 
+      <div id="Системата" style={{ scrollMarginTop: "140px" }}></div>
       <RevealSection>
         <section id="Интерфейс" className="system-section">
           <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -1650,7 +1672,7 @@ export default function Home() {
                     justifyContent: "center",
                     filter: `drop-shadow(0 0 10px ${p.color}44)`
                   }}>{p.icon}</div>
-                  <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 15 }}>{p.title}</h3>
+                  <h3 style={{ fontSize: 20, color: "#FF3E3E", marginBottom: 12, fontWeight: 800 }}>{p.title}</h3>
                   <p style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>{p.desc}</p>
                 </div>
               ))}
@@ -1662,7 +1684,9 @@ export default function Home() {
       <RevealSection>
         <section className="comparison-section">
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Настояще / Бъдеще</h2>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>
+              <span style={{ color: "#FF3E3E" }}>Настояще</span> / <span style={{ color: "var(--neon-green)" }}>Бъдеще</span>
+            </h2>
           </div>
           <div className="comparison-grid">
             <div className="comparison-col col-before">
@@ -1843,8 +1867,8 @@ export default function Home() {
       <RevealSection>
         <section id="Цени" className="pricing-section">
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Преференциални условия за първи потребители.</h2>
-            <p style={{ color: "var(--neon-green)", fontWeight: 700, marginTop: 10 }}>* Свободни места: 5 от общо 10 отбора</p>
+            <h2 className="section-title" style={{ fontFamily: "var(--serif-font)", color: "var(--neon-green)" }}>Преференциални условия за първи потребители.</h2>
+            <p style={{ color: "#FF3E3E", fontWeight: 700, marginTop: 10 }}>* Свободни места: 5 от общо 10 отбора</p>
           </div>
           <div className="pricing-grid">
             {[
@@ -1928,7 +1952,7 @@ export default function Home() {
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 32 }}>
               <div className="section-tag-light" style={{ marginBottom: 8 }}>◆ ЗАЯВЕТЕ ДЕМО И 7 ДНИ БЕЗ ТАКСА</div>
-              <div style={{ color: "var(--neon-green)", fontSize: 12, fontWeight: 800, letterSpacing: 2, marginBottom: 24, textTransform: "uppercase", display: "flex", justifyContent: "center" }}>БЕЗ ОБВЪРЗВАНЕ</div>
+              <div style={{ color: "#FF3E3E", fontSize: 12, fontWeight: 800, letterSpacing: 2, marginBottom: 24, textTransform: "uppercase", display: "flex", justifyContent: "center" }}>БЕЗ ОБВЪРЗВАНЕ</div>
               <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Получете детайлна оферта до 24 часа.</h2>
             </div>
             <LeadForm onSuccess={() => setShowSuccess(true)} />
@@ -1953,7 +1977,7 @@ export default function Home() {
                   </div>
                   <div className="partner-info-minimal">
                     <div className="partner-name-minimal">{p.name}</div>
-                    <div className="partner-disc-minimal">{p.disc} ОТСТЪПКА</div>
+                    <div className="partner-disc-minimal" style={{ color: "#FF3E3E" }}>{p.disc} ОТСТЪПКА</div>
                     <div style={{ marginTop: 20, color: "rgba(255,255,255,0.2)", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase" }}>
                       + специални условия в широка мрежа от партньори
                     </div>
