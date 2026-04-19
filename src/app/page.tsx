@@ -1491,7 +1491,7 @@ function InfiniteCarousel({ onExpand }) {
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+
 
   const imageItems = CAROUSEL_IMAGES.map((img, i) => (
     <div
@@ -1536,27 +1536,27 @@ function InfiniteCarousel({ onExpand }) {
     if (!isMouseDown) return;
     e.preventDefault();
     const x = e.pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 2; 
-    
-    let nextScroll = scrollLeft - walk;
-    const scrollWidth = containerRef.current.scrollWidth;
-    
-    if (nextScroll <= 0) {
-      nextScroll = (scrollWidth / 3);
-      setStartX(e.pageX - containerRef.current.offsetLeft + (scrollWidth/3)/2);
-    } else if (nextScroll >= (scrollWidth * 2/3)) {
-      nextScroll = (scrollWidth / 3);
-      setStartX(e.pageX - containerRef.current.offsetLeft - (scrollWidth/3)/2);
-    }
+    const delta = (x - startX) * 2;
+    setStartX(x);
 
-    containerRef.current.scrollLeft = nextScroll;
+    const container = containerRef.current;
+    if (!container) return;
+    
+    const segmentWidth = container.scrollWidth / 3;
+    container.scrollLeft -= delta;
+
+    // Seamless loop teleport
+    if (container.scrollLeft <= 0) {
+      container.scrollLeft += segmentWidth;
+    } else if (container.scrollLeft >= segmentWidth * 2) {
+      container.scrollLeft -= segmentWidth;
+    }
   };
 
   const handleTouchStart = (e) => {
     setIsMouseDown(true);
     setIsHovered(true);
     setStartX(e.touches[0].pageX - containerRef.current.offsetLeft);
-    setScrollLeft(containerRef.current.scrollLeft);
   };
 
   const handleTouchEnd = () => {
@@ -1566,21 +1566,23 @@ function InfiniteCarousel({ onExpand }) {
 
   const handleTouchMove = (e) => {
     if (!isMouseDown) return;
+    // Don't preventDefault here to allow vertical page scroll (touchAction: pan-y handles it)
     const x = e.touches[0].pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5; 
-    
-    let nextScroll = scrollLeft - walk;
-    const scrollWidth = containerRef.current.scrollWidth;
-    
-    if (nextScroll <= 0) {
-      nextScroll = (scrollWidth / 3);
-      setStartX(e.touches[0].pageX - containerRef.current.offsetLeft + (scrollWidth/3)/2);
-    } else if (nextScroll >= (scrollWidth * 2/3)) {
-      nextScroll = (scrollWidth / 3);
-      setStartX(e.touches[0].pageX - containerRef.current.offsetLeft - (scrollWidth/3)/2);
-    }
+    const delta = (x - startX) * 1.5;
+    setStartX(x);
 
-    containerRef.current.scrollLeft = nextScroll;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const segmentWidth = container.scrollWidth / 3;
+    container.scrollLeft -= delta;
+
+    // Seamless loop teleport
+    if (container.scrollLeft <= 0) {
+      container.scrollLeft += segmentWidth;
+    } else if (container.scrollLeft >= segmentWidth * 2) {
+      container.scrollLeft -= segmentWidth;
+    }
   };
 
   return (
