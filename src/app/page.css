@@ -26,6 +26,11 @@ body {
   overflow-x: hidden;
 }
 
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 /* ── ANIMATIONS ── */
 @keyframes fadeIn {
   from {

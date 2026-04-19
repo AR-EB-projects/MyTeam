@@ -110,7 +110,7 @@ const COMPARISON = {
   after: [
     "Цялостно дигитално управление",
     "Автоматично проследяване на такси",
-    "Информация в реално време",
+    "Отстъпки в Sport Depot и други",
     "Интелигентен тренировъчен график"
   ]
 };
@@ -1201,11 +1201,17 @@ function NavBar() {
     <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""}`}>
       <div className="navbar-container">
         <div className="navbar-logo">
-          <img src="/myteam-logo.png" alt="MyTeam Logo" className="nav-logo-img" />
+          <img 
+            src="/myteam-logo.png" 
+            alt="MyTeam Logo" 
+            className="nav-logo-img" 
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+          />
         </div>
 
         <div className="nav-actions">
-          <a href="#Контакт" className="nav-demo-btn">БЕЗПЛАТНА КОНСУЛТАЦИЯ</a>
+          <a href="#Контакт" className="nav-demo-btn">БЕЗПЛАТНА <span style={{ color: "#FF3E3E", fontWeight: "900" }}>ВИДЕО</span> КОНСУЛТАЦИЯ</a>
         </div>
       </div>
     </nav>
@@ -1401,7 +1407,14 @@ function SuccessModal({ onClose }) {
         maxWidth: 450
       }}>
         <div style={{ marginBottom: 48 }}>
-          <img src="/myteam-logo.png" alt="MyTeam Logo" className="nav-logo-img" style={{ height: 80, margin: "0 auto" }} />
+          <img 
+            src="/myteam-logo.png" 
+            alt="MyTeam Logo" 
+            className="nav-logo-img" 
+            style={{ height: 80, margin: "0 auto" }} 
+            onContextMenu={(e) => e.preventDefault()}
+            onDragStart={(e) => e.preventDefault()}
+          />
         </div>
 
         <h2 className="popup-title" style={{ fontSize: 32, marginBottom: 16, fontFamily: "var(--serif-font)" }}>Заявката е приета!</h2>
@@ -1442,6 +1455,7 @@ const CAROUSEL_IMAGES = [
   { src: "/3.png", alt: "MyTeam Interface — Reports & Analytics" },
   { src: "/4.png", alt: "MyTeam Interface — Schedule" },
   { src: "/5.png", alt: "MyTeam Interface — Smart Access" },
+  { src: "/6.png", alt: "MyTeam Interface — Smart" },
 ];
 
 function Lightbox({ image, onClose }) {
@@ -1456,15 +1470,19 @@ function Lightbox({ image, onClose }) {
         <button className="lightbox-close" onClick={onClose}>
           <X size={24} />
         </button>
-        <img src={image.src} alt={image.alt} className="lightbox-img" />
+        <img 
+          src={image.src} 
+          alt={image.alt} 
+          className="lightbox-img" 
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
+        />
       </div>
     </div>
   );
 }
 
 function InfiniteCarousel({ onExpand }) {
-  const placeholderCount = 1;
-  const placeholders = Array.from({ length: placeholderCount });
 
   const imageItems = CAROUSEL_IMAGES.map((img, i) => (
     <div 
@@ -1472,15 +1490,16 @@ function InfiniteCarousel({ onExpand }) {
       className="carousel-item carousel-item-image"
       onClick={() => onExpand(img)}
     >
-      <img src={img.src} alt={img.alt} className="carousel-img" />
+      <img 
+        src={img.src} 
+        alt={img.alt} 
+        className="carousel-img" 
+        onContextMenu={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
+      />
     </div>
   ));
-  const placeholderItems = placeholders.map((_, i) => (
-    <div key={`ph-${i}`} className="carousel-item">
-      MYTEAM GALLERY
-    </div>
-  ));
-  const allItems = [...imageItems, ...placeholderItems];
+  const allItems = [...imageItems];
 
   return (
     <div className="carousel-container">
@@ -1525,6 +1544,23 @@ export default function Home() {
   const [benefitsOpen, setBenefitsOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const contactRef = useRef(null);
+
+  useEffect(() => {
+    const handleGlobalContextMenu = (e) => {
+      if (e.target.tagName === "IMG") e.preventDefault();
+    };
+    const handleGlobalDragStart = (e) => {
+      if (e.target.tagName === "IMG") e.preventDefault();
+    };
+
+    document.addEventListener("contextmenu", handleGlobalContextMenu);
+    document.addEventListener("dragstart", handleGlobalDragStart);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleGlobalContextMenu);
+      document.removeEventListener("dragstart", handleGlobalDragStart);
+    };
+  }, []);
 
   return (
     <>
