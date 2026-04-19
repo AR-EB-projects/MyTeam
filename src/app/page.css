@@ -123,7 +123,7 @@ img {
 /* ── INFINITE CAROUSEL ── */
 /* ── INFINITE CAROUSEL ── */
 .system-section {
-  padding: 0 0 100px 0;
+  padding: 0 0 0 0;
   overflow: hidden;
   background: var(--bg-dark);
 }
