@@ -1779,7 +1779,6 @@ export default function Home() {
       <RevealSection>
         <section id="Цени" className="pricing-section">
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div className="section-tag-light" style={{ color: "var(--neon-green)" }}>ПРОЗРАЧНИ ЦЕНИ</div>
             <h2 className="section-title" style={{ fontFamily: "var(--serif-font)" }}>Преференциални условия за първи потребители.</h2>
             <p style={{ color: "var(--neon-green)", fontWeight: 700, marginTop: 10 }}>* 7 дни безплатен период за нови клубове!</p>
           </div>
