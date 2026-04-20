@@ -280,12 +280,8 @@ export async function runMonthlyMembershipPaymentReminder(
           });
 
           const pushResult = await sendPushToMember(member.id, payload);
-          let historySaved = 0;
-
-          if (pushResult.sent > 0) {
-            await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
-            historySaved = 1;
-          }
+          await saveMemberNotificationHistory(member.id, REMINDER_TYPE, payload);
+          const historySaved = 1;
 
           return {
             historySaved,
