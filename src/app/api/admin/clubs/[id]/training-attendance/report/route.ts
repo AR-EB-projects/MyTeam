@@ -74,7 +74,8 @@ function getTrainingDatesInRange({
     for (const d of trainingDates) {
       if (rangeSet.has(d)) result.push(d);
     }
-    return result.sort();
+    if (result.length > 0) return result.sort();
+    // No explicit dates fall in this range — fall through to weekdays
   }
 
   const weekdaySet = new Set(trainingWeekdays);
