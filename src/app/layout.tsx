@@ -5,8 +5,14 @@ import { GDPRConsent } from "@/components/GDPR/GDPRConsent";
 
 export const metadata: Metadata = {
   applicationName: "My Team",
-  title: "My Team",
-  description: "NFC member management and attendance tracking.",
+  title: "MyTeam – интелигентна платформа за управление на спортен клуб",
+  description: "Управлявайте членовете, таксите и тренировъчния график на Вашия клуб на едно място. Автоматично проследяване на плащания, смарт карти за достъп и партньорски отстъпки в Sport Depot. 30 дни безплатен период, без обвързване.",
+  openGraph: {
+    title: "MyTeam – интелигентна платформа за управление на спортен клуб",
+    description: "Управлявайте членовете, таксите и тренировъчния график на Вашия клуб на едно място. Автоматично проследяване на плащания, смарт карти за достъп и партньорски отстъпки в Sport Depot. 30 дни безплатен период, без обвързване.",
+    locale: "bg_BG",
+    type: "website",
+  },
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
