@@ -1320,16 +1320,15 @@ function LeadForm({ onSuccess }) {
     setLoading(true);
 
     try {
-      const response = await fetch("https://formspree.io/f/mpqkrzqb", {
+      const response = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          "Име на клуб": form.club,
-          "Лице за контакт": form.name,
-          "Имейл": form.email,
-          "Телефон": form.phone,
-          "Брой деца": form.kids,
-          _subject: `НОВО ЗАПИТВАНЕ: ${form.club}`
+          club: form.club,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          kids: form.kids
         })
       });
 
