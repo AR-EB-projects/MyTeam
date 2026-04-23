@@ -16,27 +16,27 @@ const CHAT_STAGES = {
 const OPTIONS = [
   {
     id: "fees",
-    text: "Навременно събиране на месечни такси",
+    text: "1. Навременно събиране на месечни такси",
     reply: "Разбираме Ви! My Team гарантира 100% платени такси чрез автоматизирано проследяване и напомняния. Край на неудобните разговори с родителите – системата върши работата вместо Вас. 💸"
   },
   {
     id: "schedule",
-    text: "Лесно организиране на тренировъчен график",
+    text: "2. Лесно организиране на тренировъчен график",
     reply: "Забравете за хаоса! С My Team имате интелигентен онлайн график, достъпен за всички треньори и родители в реално време. Промените стават за секунди, а всички са информирани моментално. 📅"
   },
   {
     id: "communication",
-    text: "Преход от безкрайни съобщения към тишина и фокус",
+    text: "3. Преход от безкрайни съобщения към тишина и фокус",
     reply: "С My Team родителите отбелязват отсъствия с един клик, а Вашата Viber група най-после спира да вибрира денонощно. Важната информация вече не се губи в чата."
   },
   {
     id: "discounts",
-    text: "Бонуси и отстъпки за членовете",
+    text: "4. Бонуси и отстъпки за членовете",
     reply: "Това е нашият коз! 🃏 Вашите членове получават смарт карти, които им осигуряват 10% отстъпка в Sport Depot и други обекти. Така софтуерът се изплаща сам и родителите Ви обичат още повече!"
   },
   {
     id: "other",
-    text: "Друго",
+    text: "5. Друго",
     reply: "Вашите нужди са специфични и ние уважаваме това! My Team предлага функции по задание на клиента. Моля, напишете ни накратко какво търсите и Вашето име и телефон. Ще се свържем с Вас с персонално решение."
   }
 ];
@@ -67,6 +67,18 @@ export default function ChatBot({ scrollToContact }: { scrollToContact: () => vo
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const trackClick = async (action: string) => {
+    try {
+      await fetch("/api/page-clicks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+      });
+    } catch (e) {
+      console.error("Failed to track click", e);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
@@ -86,6 +98,7 @@ export default function ChatBot({ scrollToContact }: { scrollToContact: () => vo
     const selected = OPTIONS.find(o => o.id === optionId);
     if (!selected) return;
 
+    trackClick(`chatbot_option_${optionId}`);
     setSelectedOption(optionId);
     setMessages(prev => [...prev, { sender: "user", text: selected.text, id: prev.length + 1 }]);
     setStage(CHAT_STAGES.REPLY);
@@ -210,10 +223,11 @@ export default function ChatBot({ scrollToContact }: { scrollToContact: () => vo
 
         {stage === CHAT_STAGES.CTA && !isTyping && (
           <div className="chat-cta-actions">
-            <a href="tel:0896495254" className="chat-btn-primary">
+            <a href="tel:0896495254" className="chat-btn-primary" onClick={() => trackClick('chatbot_cta_call')}>
               📞 Обади се за бърза консултация
             </a>
             <button onClick={() => {
+              trackClick('chatbot_cta_form');
               setIsOpen(false);
               scrollToContact();
             }} className="chat-btn-secondary">

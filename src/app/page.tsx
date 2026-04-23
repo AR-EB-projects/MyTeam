@@ -873,7 +873,7 @@ function HoloPanel({ club, onClose }) {
     const t = setTimeout(() => setVis(true), 20);
     return () => clearTimeout(t);
   }, []);
-const stats = [
+  const stats = [
     { icon: Users, label: "Athletes Count", value: club.athletes, unit: "", color: G },
     { icon: Activity, label: "Status", value: "Smart Access", unit: "Active", color: G },
     { icon: Calendar, label: "Member since", value: club.months, unit: "months", color: "#FFD700" },
@@ -1727,15 +1727,15 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    let lastClick = 0;
-    const handleClick = () => {
-      const now = Date.now();
-      if (now - lastClick < 500) return;
-      lastClick = now;
-      void fetch("/api/page-clicks", { method: "POST" });
-    };
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
+    // Record page visit only once per browser session to prevent inflation from refreshes
+    if (typeof window !== "undefined" && !sessionStorage.getItem("mt_visit_recorded")) {
+      void fetch("/api/page-clicks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "page_visit" })
+      });
+      sessionStorage.setItem("mt_visit_recorded", "true");
+    }
   }, []);
 
   return (
@@ -1771,8 +1771,8 @@ export default function Home() {
                       </div>
                     </div>
                   </a>
-                  <a href="#Системата" className="hero-btn-secondary" style={{ 
-                    padding: "16px 28px", 
+                  <a href="#Системата" className="hero-btn-secondary" style={{
+                    padding: "16px 28px",
                     textDecoration: "none",
                     background: "#FF3E3E",
                     color: "#000",
@@ -2058,28 +2058,28 @@ export default function Home() {
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
 
             <button
-                onClick={() => setBenefitsOpen(!benefitsOpen)}
-                className="benefits-toggle-btn"
-                style={{
-                  background: "linear-gradient(135deg, var(--neon-green), #20C020)",
-                  color: "#000",
-                  border: "none",
-                  borderRadius: 12,
-                  padding: "16px 36px",
-                  fontFamily: "'Exo 2', sans-serif",
-                  fontWeight: 800,
-                  fontSize: 15,
-                  letterSpacing: 1,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 10,
-                  boxShadow: benefitsOpen
-                    ? "0 0 55px rgba(57, 255, 20, 0.7)"
-                    : "0 0 30px rgba(57, 255, 20, 0.4)",
-                  transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                  userSelect: "none"
-                }}
+              onClick={() => setBenefitsOpen(!benefitsOpen)}
+              className="benefits-toggle-btn"
+              style={{
+                background: "linear-gradient(135deg, var(--neon-green), #20C020)",
+                color: "#000",
+                border: "none",
+                borderRadius: 12,
+                padding: "16px 36px",
+                fontFamily: "'Exo 2', sans-serif",
+                fontWeight: 800,
+                fontSize: 15,
+                letterSpacing: 1,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                boxShadow: benefitsOpen
+                  ? "0 0 55px rgba(57, 255, 20, 0.7)"
+                  : "0 0 30px rgba(57, 255, 20, 0.4)",
+                transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                userSelect: "none"
+              }}
             >
               ПОЛЗИ ЗА РОДИТЕЛИТЕ
               <span style={{
@@ -2105,24 +2105,24 @@ export default function Home() {
                   { icon: "📱", text: "Проследяване на тренировки и плащания в реално време", desc: "Пълен контрол през вашето мобилно устройство без нужда от излишни обаждания." },
                   { icon: "💳", text: "Смарт карта, която се изплаща сама чрез спестени средства", desc: "Уникална дигитална карта, която ви носи реална добавена стойност всеки месец." }
                 ].map((item, i) => (
-                    <div key={i} className="benefit-card">
-                      <div style={{
-                        fontSize: 32,
-                        width: 64,
-                        height: 64,
-                        background: "rgba(57, 255, 20, 0.05)",
-                        borderRadius: 16,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        border: "1px solid rgba(57, 255, 20, 0.1)"
-                      }}>{item.icon}</div>
-                      <div className="benefit-card-content">
-                        <h4 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "var(--neon-green)" }}>{item.text}</h4>
-                        <p style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.6, fontSize: 16 }}>{item.desc}</p>
-                      </div>
+                  <div key={i} className="benefit-card">
+                    <div style={{
+                      fontSize: 32,
+                      width: 64,
+                      height: 64,
+                      background: "rgba(57, 255, 20, 0.05)",
+                      borderRadius: 16,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      border: "1px solid rgba(57, 255, 20, 0.1)"
+                    }}>{item.icon}</div>
+                    <div className="benefit-card-content">
+                      <h4 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "var(--neon-green)" }}>{item.text}</h4>
+                      <p style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.6, fontSize: 16 }}>{item.desc}</p>
                     </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -2179,7 +2179,7 @@ export default function Home() {
           borderBottom: "1px solid rgba(255,255,255,0.03)"
         }}>
           <a href="tel:0896495254" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>0896 495 254</a>
-          <a href="mailto:officemyteam7@gmail.com" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>officemyteam7@gmail.com</a>
+          <a href="mailto:office@myteam7.com" style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "color 0.2s" }} onMouseOver={e => e.currentTarget.style.color = "var(--neon-green)"} onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>office@myteam7.com</a>
         </div>
 
         <div className="footer-container">
