@@ -23,7 +23,7 @@ export async function GET() {
     const clicks = await prisma.pageClick.groupBy({
       by: ['action'],
       _count: {
-        action: true,
+        _all: true,
       },
     });
     return NextResponse.json({ success: true, clicks });

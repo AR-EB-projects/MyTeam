@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     
     const chatbotGroups = await prisma.pageClick.groupBy({
       by: ['action'],
-      _count: { action: true },
+      _count: { _all: true },
       where: { action: { notIn: ["unknown", "page_visit"] } }
     });
 
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     });
 
     const chatbotStats = chatbotGroups.reduce((acc: any, g: any) => {
-      acc[g.action] = g._count.action;
+      acc[g.action] = g._count._all;
       return acc;
     }, {});
 
