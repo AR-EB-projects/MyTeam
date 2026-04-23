@@ -7,20 +7,23 @@ import "./page.css";
 interface ClickEntry {
   id: string;
   clickedAt: string;
+  action?: string;
 }
 
 export default function PageClicksClient() {
   const router = useRouter();
   const [total, setTotal] = useState<number | null>(null);
   const [clicks, setClicks] = useState<ClickEntry[]>([]);
+  const [chatbotStats, setChatbotStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/page-clicks", { cache: "no-store" })
       .then((r) => r.json())
-      .then((data: { total?: number; clicks?: ClickEntry[] }) => {
+      .then((data: { total?: number; clicks?: ClickEntry[]; chatbotStats?: Record<string, number> }) => {
         setTotal(data.total ?? 0);
         setClicks(Array.isArray(data.clicks) ? data.clicks : []);
+        setChatbotStats(data.chatbotStats || {});
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -38,6 +41,16 @@ export default function PageClicksClient() {
     });
   };
 
+  const optionsMap: Record<string, string> = {
+    "chatbot_option_fees": "1. Такси",
+    "chatbot_option_schedule": "2. График",
+    "chatbot_option_communication": "3. Комуникация",
+    "chatbot_option_discounts": "4. Отстъпки",
+    "chatbot_option_other": "5. Друго",
+    "chatbot_cta_call": "CTA: Обаждане",
+    "chatbot_cta_form": "CTA: Форма за демо"
+  };
+
   return (
     <main className="pc-page">
       <div className="pc-dot-grid" aria-hidden="true" />
@@ -50,18 +63,38 @@ export default function PageClicksClient() {
         </button>
 
         <div className="pc-header">
-          <h1 className="pc-title">Кликове на началната страница</h1>
-          <p className="pc-subtitle">Статистика за посещенията на /</p>
+          <h1 className="pc-title">Кликове и Взаимодействия</h1>
+          <p className="pc-subtitle">Статистика за посещенията и чатбот асистента</p>
           <div className="pc-title-line" />
         </div>
 
-        <div className="pc-stat-card">
-          <p className="pc-stat-label">Общо кликове</p>
-          <p className="pc-stat-num">{loading ? "—" : (total ?? 0)}</p>
+        <div className="pc-stats-grid">
+          <div className="pc-stat-card">
+            <p className="pc-stat-label">Общо посещения на страницата</p>
+            <p className="pc-stat-num">{loading ? "—" : (total ?? 0)}</p>
+          </div>
+          
+          <div className="pc-stat-card chatbot-stats">
+            <p className="pc-stat-label" style={{ marginBottom: "12px", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px" }}>Чатбот Взаимодействия</p>
+            {loading ? (
+              <p className="pc-empty">Зареждане...</p>
+            ) : Object.keys(chatbotStats).length === 0 ? (
+              <p className="pc-empty">Няма данни.</p>
+            ) : (
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+                {Object.entries(chatbotStats).sort((a,b) => b[1] - a[1]).map(([key, val]) => (
+                  <li key={key} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", color: "var(--light-gray)" }}>
+                    <span>{optionsMap[key] || key}</span>
+                    <strong style={{ color: "var(--neon-green)" }}>{val}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <div className="pc-history">
-          <h2 className="pc-history-title">История</h2>
+          <h2 className="pc-history-title">История на кликовете</h2>
           {loading && <p className="pc-empty">Зареждане...</p>}
           {!loading && clicks.length === 0 && (
             <p className="pc-empty">Няма записани кликове.</p>
