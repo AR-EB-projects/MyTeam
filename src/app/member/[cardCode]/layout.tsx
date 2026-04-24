@@ -41,6 +41,16 @@ export async function generateMetadata(
     title: playerName,
     applicationName: playerName,
     manifest: `/api/manifest/${encodeURIComponent(normalizedCardCode)}`,
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: {
+        index: false,
+        follow: false,
+        noimageindex: true,
+      },
+    },
     appleWebApp: {
       title: playerName,
     },

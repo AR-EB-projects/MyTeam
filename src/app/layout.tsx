@@ -3,7 +3,22 @@ import "./globals.css";
 import { PwaClientBootstrap } from "@/components/pwa/PwaClientBootstrap";
 import { GDPRConsent } from "@/components/GDPR/GDPRConsent";
 
+function resolveMetadataBase(): URL | undefined {
+  const rawUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.APP_BASE_URL?.trim() ||
+    "";
+  if (!rawUrl) return undefined;
+
+  try {
+    return new URL(rawUrl);
+  } catch {
+    return undefined;
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: resolveMetadataBase(),
   applicationName: "My Team",
   title: "MyTeam – интелигентна платформа за управление на спортен клуб",
   description: "Управлявайте членовете, таксите и тренировъчния график на Вашия клуб на едно място. Автоматично проследяване на плащания, смарт карти за достъп и партньорски отстъпки в Sport Depot. 30 дни безплатен период, без обвързване.",
@@ -21,6 +36,16 @@ export const metadata: Metadata = {
     ],
     apple: "/myteam-logo.png",
     shortcut: "/myteam-logo.png",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   appleWebApp: {
     capable: true,
