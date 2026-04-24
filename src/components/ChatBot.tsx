@@ -50,11 +50,18 @@ export default function ChatBot({ scrollToContact }: { scrollToContact: () => vo
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [customForm, setCustomForm] = useState({ needs: "", name: "", phone: "" });
   const [isTyping, setIsTyping] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setHasMounted(true);
     setMessages([{ sender: "bot", text: "Здравейте! 👋 My Team е тук, за да направи управлението на Вашия клуб по-лесно. Кое от изброените е най-голямото Ви предизвикателство в момента?", id: 1 }]);
+
+    const timer = setTimeout(() => {
+      setShowNotification(true);
+    }, 15000); 
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleRestartChat = () => {
@@ -149,16 +156,35 @@ export default function ChatBot({ scrollToContact }: { scrollToContact: () => vo
 
   return (
     <>
-      <button 
+      <div 
         className={`chat-toggle-pill ${isOpen ? 'hidden' : ''}`}
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setIsOpen(true);
+          setShowNotification(false);
+        }}
+        role="button"
+        tabIndex={0}
       >
         <div className="chat-toggle-avatar">
           <img src="/myteam-logo.png" alt="Bot" />
         </div>
         <span className="chat-toggle-text">MyTeam Асистент</span>
         <span className="status-dot-pulse"></span>
-      </button>
+
+        {showNotification && !isOpen && (
+          <div className="notification-bubble-wrapper">
+            <div className="notif-dot notif-dot-1" />
+            <div className="notif-dot notif-dot-2" />
+            <div className="notif-main-bubble">
+              Здравейте! 👋 Имате ли нужда от помощ?
+              <button className="notif-close" onClick={(e) => {
+                e.stopPropagation();
+                setShowNotification(false);
+              }}>×</button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {isOpen && createPortal(
         <div className="chat-container">
