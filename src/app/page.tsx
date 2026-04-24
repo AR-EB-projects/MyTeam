@@ -10,7 +10,7 @@ import {
   Phone, Mail, MessageSquare, MessageCircle, User,
   Wifi, WifiOff, Menu, Calendar,
   MapPin, TrendingUp, Activity, Globe, Lock,
-  Check, X as CloseX, PhoneCall,
+  Check, X as CloseX, PhoneCall, HelpCircle, Cpu, Tag,
   IdCard, BarChart3, ChevronDown, Crown, CheckCircle, Shield
 } from "lucide-react";
 import ChatBot from "@/components/ChatBot";
@@ -1193,6 +1193,7 @@ function NavBar() {
   const [scrolled, setScrolled] = useState(false);
   const [showBtn, setShowBtn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
 
   useEffect(() => {
     const h = () => {
@@ -1204,6 +1205,33 @@ function NavBar() {
   }, []);
 
   useEffect(() => {
+    const handleScroll = () => {
+      const sections = ["Защо", "VIP", "Функции", "Цени", "Контакт"];
+      let current = activeSection;
+
+      // Check which section is currently at the top of the viewport
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          // If the top of the section is above the 150px mark, it's potentially active
+          if (rect.top <= 150) {
+            current = id;
+          }
+        }
+      }
+      
+      if (current !== activeSection) {
+        setActiveSection(current);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [activeSection]);
+
+  useEffect(() => {
     if (isMenuOpen) {
       document.body.classList.add("menu-open-active");
     } else {
@@ -1212,6 +1240,14 @@ function NavBar() {
   }, [isMenuOpen]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const navItems = [
+    { id: "Защо", text: "Защо MyTeam", icon: HelpCircle, index: "01" },
+    { id: "VIP", text: "VIP CLUB", icon: Crown, index: "02" },
+    { id: "Функции", text: "Функции", icon: Cpu, index: "03" },
+    { id: "Цени", text: "Цени", icon: Tag, index: "04" },
+    { id: "Контакт", text: "Контакт", icon: MessageSquare, index: "05" },
+  ];
 
   return (
     <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""} ${isMenuOpen ? "navbar-open" : ""}`}>
@@ -1242,11 +1278,33 @@ function NavBar() {
             </button>
           </div>
 
-          <div className="mobile-links-container">
-            <a href="#Защо" onClick={() => setIsMenuOpen(false)} className="nav-link">Защо MyTeam7</a>
-            <a href="#Функции" onClick={() => setIsMenuOpen(false)} className="nav-link">Функции</a>
-            <a href="#Цени" onClick={() => setIsMenuOpen(false)} className="nav-link">Инвестиция</a>
-            <a href="#Контакт" onClick={() => setIsMenuOpen(false)} className="nav-link">Контакт</a>
+          <div className="nav-links-container">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              return (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  onClick={(e) => {
+                    setIsMenuOpen(false);
+                    setActiveSection(item.id);
+                  }}
+                  className={`nav-link ${isActive ? "active" : ""} ${item.id === "VIP" ? "nav-vip-link" : ""}`}
+                >
+                  <span className="nav-index">{item.index}</span>
+                  <Icon size={18} className="nav-icon" />
+                  <span className="nav-text">{item.text}</span>
+                </a>
+              );
+            })}
+
+            <a
+              href="#Контакт"
+              className={`nav-demo-btn nav-desktop-cta ${!showBtn ? "cta-hidden" : ""}`}
+            >
+              БЕЗПЛАТНА ВИДЕО КОНСУЛТАЦИЯ
+            </a>
           </div>
 
           <div className="mobile-menu-footer">
@@ -1549,7 +1607,7 @@ function VideoModal({ onClose }) {
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, []);
 
@@ -1823,6 +1881,9 @@ export default function Home() {
   const [expandedImage, setExpandedImage] = useState(null);
   const [benefitsOpen, setBenefitsOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [activeFeature, setActiveFeature] = useState(1);
+  const [selectedScale, setSelectedScale] = useState(2);
   const contactRef = useRef(null);
 
   useEffect(() => {
@@ -1886,8 +1947,8 @@ export default function Home() {
                   Проследявайте плащанията, използвайте онлайн график и се възползвайте от специални отстъпки – всичко на едно място.
                 </p>
 
-                <div className="hero-actions" style={{ marginTop: 0, gap: 16 }}>
-                  <a href="#Контакт" className="hero-btn-primary hero-btn-cta" style={{ padding: "14px 28px", height: "auto" }}>
+                <div className="hero-actions" style={{ marginTop: 24, gap: 24, display: "flex", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+                  <a href="#Контакт" className="hero-btn-primary hero-btn-cta" style={{ padding: "12px 36px", height: "64px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px", border: "1px solid rgba(57, 255, 20, 0.3)" }}>
                     <div className="hero-btn-stack" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                       <div className="hero-line-1" style={{ fontSize: "13px", fontWeight: "900", letterSpacing: "0.5px" }}>
                         БЕЗПЛАТНА <span style={{ color: "#000", fontWeight: "900" }}>ВИДЕО</span>
@@ -1898,20 +1959,21 @@ export default function Home() {
                     </div>
                   </a>
                   <a href="#Системата" className="hero-btn-secondary" style={{
-                    padding: "0 28px",
-                    height: "58px", // Match the height of the primary button
+                    padding: "0 36px",
+                    height: "64px",
                     textDecoration: "none",
                     background: "#FF3E3E",
                     color: "#000",
-                    fontWeight: "800",
+                    fontWeight: "900",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "12px",
                     fontSize: "13px",
-                    border: "none"
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    boxShadow: "0 8px 20px rgba(255, 62, 62, 0.25)"
                   }}>
-                    ВИЖ КАК РАБОТИ <ArrowDown size={16} />
+                    ВИЖ КАК РАБОТИ <ArrowDown size={18} style={{ marginLeft: 8 }} />
                   </a>
                 </div>
 
@@ -1943,9 +2005,8 @@ export default function Home() {
         </section>
       </RevealSection>
 
-      <div id="Защо" style={{ scrollMarginTop: "140px" }}></div>
       <RevealSection>
-        <section className="why-section">
+        <section id="Защо" className="why-section" style={{ scrollMarginTop: "100px" }}>
           <div className="section-container-wide">
             <div className="section-header-centered">
               <div className="section-tag-light">ИСТОРИЯТА ЗАД ПРОДУКТА</div>
@@ -2052,9 +2113,8 @@ export default function Home() {
         </section>
       </RevealSection>
 
-      <div id="VIP" style={{ scrollMarginTop: "140px" }}></div>
       <RevealSection>
-        <section className="vip-dashboard-section">
+        <section id="VIP" className="vip-dashboard-section" style={{ scrollMarginTop: "100px" }}>
           <div className="section-container-wide">
 
             {/* TOP HEADER */}
@@ -2309,9 +2369,8 @@ export default function Home() {
         </section>
       </RevealSection>
 
-      <div id="Функции" style={{ scrollMarginTop: "140px" }}></div>
       <RevealSection>
-        <section className="features-accordion-section" style={{ padding: "80px 24px", background: "#070C14" }}>
+        <section id="Функции" className="features-accordion-section" style={{ padding: "80px 24px", background: "#070C14", scrollMarginTop: "100px" }}>
           <div className="section-container-wide" style={{ maxWidth: 800 }}>
             <div className="section-header-centered" style={{ marginBottom: 60 }}>
               <h2 className="section-title-premium">Всичко, от което се нуждаеш.<br /><span style={{ color: "var(--neon-green)", fontStyle: "italic" }}>Нищо излишно.</span></h2>
@@ -2373,7 +2432,7 @@ export default function Home() {
       </RevealSection>
 
       <RevealSection>
-        <section id="Цени" className="pricing-section">
+        <section id="Цени" className="pricing-section" style={{ scrollMarginTop: "100px" }}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <h2 className="section-title" style={{ fontFamily: "var(--serif-font)", color: "var(--neon-green)" }}>Преференциални условия за първи потребители.</h2>
             <p style={{ color: "#FF3E3E", fontWeight: 700, marginTop: 10 }}>* Свободни места: 5 от общо 10 отбора</p>
@@ -2457,7 +2516,7 @@ export default function Home() {
       </RevealSection>
 
       <RevealSection>
-        <section id="Контакт" ref={contactRef} style={{ padding: "40px 24px", background: `linear-gradient(180deg,#09101C 0%,${BG} 100%)` }}>
+        <section id="Контакт" ref={contactRef} style={{ padding: "40px 24px", background: `linear-gradient(180deg,#09101C 0%,${BG} 100%)`, scrollMarginTop: "100px" }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 32 }}>
               <div className="section-tag-light" style={{ marginBottom: 8 }}>◆ ЗАЯВЕТЕ ДЕМО И 30 ДНИ БЕЗ ТАКСА</div>
