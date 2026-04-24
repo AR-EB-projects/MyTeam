@@ -2012,6 +2012,7 @@ export default function Home() {
                 </div>
 
                 <div
+                  className="pricing-schedule-toggle"
                   onClick={() => setWithSchedule(!withSchedule)}
                   style={{
                     display: "flex",
@@ -2022,7 +2023,6 @@ export default function Home() {
                     borderRadius: 12,
                     cursor: "pointer",
                     border: `1px solid ${withSchedule ? "rgba(57, 255, 20, 0.3)" : "rgba(255,255,255,0.05)"}`,
-                    marginBottom: 32,
                     transition: "all 0.3s ease"
                   }}
                 >

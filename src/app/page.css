@@ -1428,6 +1428,9 @@ body.menu-open-active .dock-container {
   position: relative;
   transition: transform 0.3s;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 620px;
 }
 
 .pricing-card-popular {
@@ -1460,6 +1463,8 @@ body.menu-open-active .dock-container {
   font-family: var(--serif-font);
   font-size: 40px;
   font-weight: 600;
+  filter: blur(12px);
+  user-select: none;
 }
 
 .price-unit {
@@ -3297,6 +3302,8 @@ body.menu-open-active .dock-container {
   margin-top: 2px;
   position: relative;
   display: inline-block;
+  filter: blur(12px);
+  user-select: none;
 }
 
 .v-price-old-red::before,
@@ -3324,6 +3331,8 @@ body.menu-open-active .dock-container {
   color: #ff3e3e;
   position: relative;
   display: inline-block;
+  filter: blur(12px);
+  user-select: none;
 }
 
 .price-crossed::after {
@@ -3356,6 +3365,8 @@ body.menu-open-active .dock-container {
   font-size: 32px;
   font-weight: 900;
   margin-bottom: 4px;
+  filter: blur(12px);
+  user-select: none;
 }
 
 .plus-profit {
@@ -3363,6 +3374,8 @@ body.menu-open-active .dock-container {
   font-weight: 900;
   color: #fff;
   margin-bottom: 4px;
+  filter: blur(12px);
+  user-select: none;
 }
 
 .promo-period {
@@ -3682,6 +3695,8 @@ body.menu-open-active .dock-container {
   font-size: 24px;
   font-weight: 900;
   line-height: 1;
+  filter: blur(12px);
+  user-select: none;
 }
 
 .price-sub-label {
@@ -4833,3 +4848,19 @@ body.menu-open-active .dock-container {
     font-size: 12px !important;
   }
 }
+
+/* -- PERMANENT PRICE BLUR -- */
+.price-val, .v-price-old-red, .price-crossed, .zero-price, .plus-profit, .price-big, .price-medium {
+  filter: blur(12px) !important;
+  user-select: none !important;
+}
+
+.pricing-schedule-toggle {
+  margin-top: auto;
+  margin-bottom: 32px;
+}
+
+.pricing-card .comp-list {
+  min-height: 160px;
+}
+
