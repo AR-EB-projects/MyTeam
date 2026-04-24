@@ -1070,10 +1070,13 @@ body.menu-open-active .dock-container {
 
 .nav-desktop-cta {
   margin-left: 24px;
-  transition: opacity 1s ease, max-width 1s ease;
+  transition: 
+    opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1), 
+    max-width 1.4s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-left 1.4s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 1;
   visibility: visible;
-  max-width: 400px; /* enough for button text */
+  max-width: 400px;
   overflow: hidden;
 }
 
@@ -1496,6 +1499,33 @@ body.menu-open-active .dock-container {
 
 .action-viber {
   right: 32px;
+}
+
+/* ── DOCK VISIBILITY LOGIC ── */
+.dock-hidden-actions .action-phone,
+.dock-hidden-actions .action-viber {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.action-phone, .action-viber {
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 480px) {
+  .dock-container.dock-hidden-actions {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    grid-template-columns: 1fr !important;
+  }
+  
+  .dock-container.dock-hidden-actions .action-phone,
+  .dock-container.dock-hidden-actions .action-viber {
+    display: none !important;
+  }
 }
 
 .dock-icon-wrapper {

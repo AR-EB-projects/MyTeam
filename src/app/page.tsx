@@ -1884,6 +1884,7 @@ export default function Home() {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [activeFeature, setActiveFeature] = useState(1);
   const [selectedScale, setSelectedScale] = useState(2);
+  const [showDockActions, setShowDockActions] = useState(false);
   const contactRef = useRef(null);
 
   useEffect(() => {
@@ -1922,6 +1923,20 @@ export default function Home() {
         setShowVideoModal(true);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    if (!contactRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowDockActions(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(contactRef.current);
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -2685,7 +2700,7 @@ export default function Home() {
         </div>
       </footer>
 
-      <div className="dock-container">
+      <div className={`dock-container ${!showDockActions ? "dock-hidden-actions" : ""}`}>
         <a href="tel:0896495254" className="action-btn action-phone dock-item" title="Call Us">
           <div className="dock-icon-wrapper call-wrapper">
             <PhoneCall size={20} color="#000" />
