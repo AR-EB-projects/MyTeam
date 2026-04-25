@@ -4790,26 +4790,28 @@ body.menu-open-active .dock-container {
     padding: 32px 24px 20px 24px !important;
     order: 1;
     pointer-events: auto !important;
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
     flex: none !important;
     text-align: center !important;
   }
 
   .benefits-icon-list {
     margin: 20px 0 0 0 !important;
-    width: 100% !important;
+    width: fit-content !important;
   }
 
   .benefits-icon-list li {
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     gap: 16px !important;
     font-size: 15px !important;
     margin-bottom: 20px !important;
     color: #fff !important;
-    width: 100% !important;
-    text-align: center !important;
+    width: auto !important;
+    text-align: left !important;
   }
 
   .benefits-icon-list li div {
