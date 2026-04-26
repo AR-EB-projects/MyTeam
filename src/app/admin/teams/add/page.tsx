@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
-import { uploadImage } from "@/lib/uploadImage";
+import { uploadImage, validateImageFile } from "@/lib/uploadImage";
 import "./page.css";
 
 interface TeamForm {
@@ -164,7 +164,14 @@ export default function AdminAddTeamPage() {
                     type="file"
                     id="image"
                     accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      if (file) {
+                        const err = validateImageFile(file);
+                        if (err) { setErrorMessage(err); e.target.value = ""; return; }
+                      }
+                      setImageFile(file);
+                    }}
                     className="file-input"
                   />
                   <div className="upload-placeholder">

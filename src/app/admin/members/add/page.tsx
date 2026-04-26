@@ -3,7 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { uploadImage } from "@/lib/uploadImage";
+import { uploadImage, validateImageFile } from "@/lib/uploadImage";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
 import "./page.css";
 
@@ -296,7 +296,14 @@ function AddMemberPageContent() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file) {
+                    const err = validateImageFile(file);
+                    if (err) { setError(err); e.target.value = ""; return; }
+                  }
+                  setAvatarFile(file);
+                }}
                 className="add-member-input"
               />
               {avatarPreviewUrl && (

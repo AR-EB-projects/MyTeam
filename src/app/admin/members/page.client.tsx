@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
-import { uploadImage } from "@/lib/uploadImage";
+import { uploadImage, validateImageFile } from "@/lib/uploadImage";
 import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
 import "./page.css";
 
@@ -5478,7 +5478,14 @@ function AdminMembersPageContent() {
                     className="amp-edit-input amp-edit-input--file"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setEditAvatarFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      if (file) {
+                        const err = validateImageFile(file);
+                        if (err) { setEditError(err); e.target.value = ""; return; }
+                      }
+                      setEditAvatarFile(file);
+                    }}
                     disabled={isSavingEdit || isAssigningNewCard}
                   />
                 </label>
