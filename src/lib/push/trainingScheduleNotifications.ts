@@ -175,13 +175,18 @@ function formatPeriodFromDates(dates: string[]) {
   return `${formatBgDate(sorted[0])} - ${formatBgDate(sorted[sorted.length - 1])}`;
 }
 
+function getTodayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function diffDates(previousDates: string[], nextDates: string[]) {
+  const today = getTodayIso();
   const prev = uniqueSortedDates(previousDates);
   const next = uniqueSortedDates(nextDates);
   const nextSet = new Set(next);
   const prevSet = new Set(prev);
 
-  const removed = prev.filter((date) => !nextSet.has(date));
+  const removed = prev.filter((date) => !nextSet.has(date) && date >= today);
   const added = next.filter((date) => !prevSet.has(date));
 
   return { prev, next, removed, added };
