@@ -48,7 +48,7 @@ export default function VipPage() {
             <div className="dashboard-header">
               <h1 className="dashboard-main-title">
                 MyTeam7: Софтуерът, който не Ви струва нищо – <br />
-                <span className="text-neon">ТОЙ ВИ НОСИ ПРИХОДИ</span>
+                <span className="text-neon" style={{ color: "var(--neon-green)" }}>ТОЙ ВИ НОСИ ПРИХОДИ</span>
               </h1>
               <div className="dashboard-stats-bar">
                 <div className="dash-stat"><Check size={18} color="var(--neon-green)" /> 100% събираемост на таксите</div>
@@ -58,8 +58,8 @@ export default function VipPage() {
               </div>
             </div>
 
-            <div className="dashboard-main-grid">
-              {/* LEFT: MODULES & SCALE */}
+            <div className="vip-dashboard-grid">
+{/*
               <div className="dash-left-col">
                 <div className="left-modules-wrapper">
                   <div className="dash-tag-centered">ГЪВКАВ МОДЕЛ СПОРЕД НУЖДИТЕ НА ВАШИЯ КЛУБ</div>
@@ -128,6 +128,51 @@ export default function VipPage() {
                   </div>
                 </div>
               </div>
+              */}
+
+              {/* LEFT: Pricing Table */}
+              <div className="pricing-table-container" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                <div className="pricing-table-header">АБОНАМЕНТНИ НИВА</div>
+                <table className="pricing-modern-table">
+                  <thead>
+                    <tr>
+                      <th>Категория <br /> (Брой деца)</th>
+                      <th>Стандартна месечна такса</th>
+                      <th className="vip-column-header">
+                        <div className="vip-header-content">
+                          <Crown size={50} color="#39FF14" />
+                          <div>
+                            <div className="vip-title">VIP Цена <br /> <span className="vip-subtitle">(Първи 10 отбора)</span></div>
+                          </div>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { cat: "0 - 50 деца", old: "35 €", new: "0 €" },
+                      { cat: "50 - 100 деца", old: "44 €", new: "17 €" },
+                      { cat: "100 - 200 деца", old: "53 €", new: "26 €" },
+                      { cat: "200 - 300 деца", old: "62 €", new: "35 €" },
+                      { cat: "Над 300 деца", old: "71 €", new: "44 €" },
+                    ].map((row, i) => (
+                      <tr key={i}>
+                        <td>
+                          <div className="cat-cell">
+                            <Users size={18} color="rgba(131, 102, 102, 0.7)" />
+                            {row.cat}
+                          </div>
+                        </td>
+                        <td><span className="old-price-cell">{row.old}</span></td>
+                        <td className="vip-price-cell">{row.new}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="pricing-disclaimer">
+                  *Преференциалните VIP цени са валидни до края на годината единствено за първите 10 клуба, присъединили се към програмата.
+                </p>
+              </div>
 
               {/* RIGHT: VIP CLUB NEON CARD */}
               <div className="dash-right-col">
@@ -147,7 +192,7 @@ export default function VipPage() {
                       </div>
                       <div className="v-info-col">
                         <div className="v-label">Такса за внедряване</div>
-                        <div className="v-price-old-red no-blur">0 €</div>
+                        <div className="v-price-old-red no-blur">200 €</div>
                       </div>
                       <div className="v-separator-line" style={{ width: 1.5, height: 36, background: "var(--neon-green)", opacity: 0.3, marginRight: 66 }}></div>
                       <div className="v-value-col">
@@ -162,7 +207,7 @@ export default function VipPage() {
                       </div>
                       <div className="v-info-col">
                         <div className="v-label">Месечен абонамент за базовия пакет</div>
-                        <div className="v-price-old-red no-blur">44 € / месец</div>
+                        <div className="v-price-old-red no-blur">35 € / месец</div>
                       </div>
                       <div className="v-separator-line" style={{ width: 1.5, height: 36, background: "var(--neon-green)", opacity: 0.3, marginRight: 66 }}></div>
                       <div className="v-value-col">
