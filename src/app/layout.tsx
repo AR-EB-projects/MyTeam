@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { PwaClientBootstrap } from "@/components/pwa/PwaClientBootstrap";
 import { GDPRConsent } from "@/components/GDPR/GDPRConsent";
+import { MicrosoftClarity } from "@/components/MicrosoftClarity";
 
 function resolveMetadataBase(): URL | undefined {
   const rawUrl =
@@ -72,6 +73,7 @@ export default function RootLayout({
       <body>
         <PwaClientBootstrap />
         <GDPRConsent />
+        <MicrosoftClarity />
         {children}
       </body>
     </html>
