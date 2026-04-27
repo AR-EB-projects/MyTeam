@@ -23,7 +23,7 @@ const PARTNER_LOGOS: Record<string, string> = {
   SPORT_DEPOT: "/sd-logo.png",
   IDB: "/idb-logo.svg",
   NIKO: "/niko-logo.png",
-  DALIDA: "/logo-dalida.png",
+  DALIDA: "/dalida-logo.png",
 };
 
 interface ClubRow {
@@ -179,8 +179,8 @@ export default function AdminDiscountStatsClient() {
             const t = stats?.totals[partner] ?? { view: 0, copy: 0, link_click: 0 };
             const isSelected = selectedPartner === partner;
             return (
-              <div 
-                key={partner} 
+              <div
+                key={partner}
                 className={`ds-card ${isSelected ? "is-selected" : ""}`}
                 style={{
                   cursor: "pointer",
@@ -206,9 +206,9 @@ export default function AdminDiscountStatsClient() {
                 onClick={() => setSelectedPartner(isSelected ? null : partner)}
               >
                 <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", width: "100%", height: "100%" }}>
-                  <div className="ds-card-name" style={{ 
-                    textAlign: "center", 
-                    width: "100%", 
+                  <div className="ds-card-name" style={{
+                    textAlign: "center",
+                    width: "100%",
                     fontSize: "15px",
                     fontWeight: "700",
                     color: "rgba(255, 255, 255, 0.95)",
@@ -271,10 +271,10 @@ export default function AdminDiscountStatsClient() {
           ) : !stats || stats.daily.length === 0 ? (
             <div className="ds-empty">Няма записани използвания за избрания период.</div>
           ) : (() => {
-            const visibleDaily = selectedPartner 
-              ? stats.daily.filter((r) => r.partner === selectedPartner) 
+            const visibleDaily = selectedPartner
+              ? stats.daily.filter((r) => r.partner === selectedPartner)
               : stats.daily;
-            
+
             if (visibleDaily.length === 0) {
               return <div className="ds-empty">Няма записани използвания за този партньор.</div>;
             }

@@ -122,6 +122,13 @@ const PARTNERS = [
   { name: "Sport Depot", abbr: "SD", color: "#FF6B00", disc: "-10%", logo: "/sd-logo.png" }
 ];
 
+const ALL_PARTNERS = [
+  { name: "Sport Depot", logo: "/sd-logo.png" },
+  { name: "Мебели НИКО", logo: "/niko-logo.png" },
+  { name: "Dalida", logo: "/dalida-logo.png" },
+  { name: "Inline Body", logo: "/idb-logo.svg" }
+];
+
 /* ══════════════════════════════════════════════
    FOOTBALL GEOMETRY — Truncated Icosahedron
 ══════════════════════════════════════════════ */
@@ -2277,6 +2284,21 @@ export default function Home() {
                       + специални условия в широка мрежа от партньори
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </RevealSection>
+
+      <RevealSection>
+        <section className="partners-strip-section" style={{ borderTop: "1px solid rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.03)", padding: "30px 0" }}>
+          <div className="partners-marquee-outer">
+            <div className="partners-marquee-track">
+              {Array(10).fill(ALL_PARTNERS).flat().map((p, i) => (
+                <div className="partner-marquee-item" key={i}>
+                  <img src={p.logo} alt={p.name} className="partner-marquee-logo" />
+                  <span className="partner-marquee-name">{p.name}</span>
                 </div>
               ))}
             </div>

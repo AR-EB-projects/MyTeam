@@ -572,7 +572,7 @@ export default function MemberCardPage({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ partner, action }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   // Fetch member
@@ -2000,7 +2000,7 @@ export default function MemberCardPage({
               </button>
 
               <div className="sd-modal-header" style={{ marginBottom: "16px" }}>
-                <img src="/logo-dalida.png" alt="Dalida Dance" className="sd-modal-logo" style={{ transform: "scale(1.2)" }} />
+                <img src="/dalida-logo.png" alt="Dalida Dance" className="sd-modal-logo" style={{ transform: "scale(1.2)" }} />
                 <div className="sd-modal-title-wrap">
                   <p className="sd-modal-eyebrow" style={{ color: "rgb(201, 168, 76)" }}>Партньорска програма</p>
                   <h2 className="sd-modal-title">Dalida Dance</h2>
@@ -2096,7 +2096,7 @@ export default function MemberCardPage({
                   aria-label="Dalida Dance отстъпка"
                 >
                   <div className="sd-discount-logo-wrap">
-                    <img src="/logo-dalida.png" alt="Dalida Dance" className="sd-discount-logo dalida-logo-fix" />
+                    <img src="/dalida-logo.png" alt="Dalida Dance" className="sd-discount-logo dalida-logo-fix" />
                   </div>
                   <span className="sd-discount-label">Dalida Dance</span>
                   <span className="sd-discount-badge dalida-discount-badge">-10%</span>
