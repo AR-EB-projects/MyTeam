@@ -54,7 +54,7 @@ export async function GET(
   const todayAsDate = isoDateToUtcMidnight(todayIso);
 
   try {
-    const [club, teamSchedules, trainingGroups, players, note] = await Promise.all([
+    const [club, teamSchedules, trainingGroups, customTrainingGroups, players, note] = await Promise.all([
       prisma.club.findUnique({
         where: { id },
         select: {
@@ -62,6 +62,7 @@ export async function GET(
           trainingDates: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
+          trainingGroupMode: true,
         },
       }),
       prisma.clubTrainingGroupSchedule.findMany({
@@ -83,6 +84,18 @@ export async function GET(
           trainingDates: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
+        },
+      }),
+      prisma.clubCustomTrainingGroup.findMany({
+        where: { clubId: id },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          trainingDates: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+          players: { select: { playerId: true } },
         },
       }),
       prisma.player.findMany({
@@ -145,6 +158,42 @@ export async function GET(
         continue;
       }
       optedOutByTeamGroup.set(teamGroup, (optedOutByTeamGroup.get(teamGroup) ?? 0) + 1);
+    }
+
+    if (club.trainingGroupMode === "custom_group") {
+      const optedOutPlayerIds = new Set(optOuts.map((item) => item.playerId));
+      const sessions = customTrainingGroups
+        .filter((group) =>
+          hasTrainingOnDate({
+            date: todayIso,
+            trainingDates: group.trainingDates,
+            weekdays: group.trainingWeekdays,
+            windowDays: group.trainingWindowDays,
+          }),
+        )
+        .map((group) => {
+          const playerIds = Array.from(new Set(group.players.map((item) => item.playerId)));
+          const total = playerIds.length;
+          const optedOut = playerIds.filter((playerId) => optedOutPlayerIds.has(playerId)).length;
+          return {
+            id: `custom-${group.id}`,
+            scopeType: "trainingGroup" as const,
+            label: group.name || "Custom group",
+            teamGroups: [],
+            stats: {
+              total,
+              optedOut,
+              attending: Math.max(0, total - optedOut),
+            },
+          };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label, "bg"));
+
+      return NextResponse.json({
+        date: todayIso,
+        note: note?.note ?? "",
+        sessions,
+      });
     }
 
     const teamScheduleByGroup = new Map<number, (typeof teamSchedules)[number]>();

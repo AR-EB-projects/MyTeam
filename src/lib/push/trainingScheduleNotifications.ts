@@ -39,12 +39,14 @@ export function shouldNotifyForTrainingDatesChange(
 
 export async function sendTrainingScheduleNotifications(input: {
   clubId: string;
-  teamGroups: number[];
+  teamGroups?: number[];
+  playerIds?: string[];
   previousDates: string[];
   trainingDates: string[];
 }): Promise<TrainingScheduleNotificationSummary> {
-  const uniqueTeamGroups = Array.from(new Set(input.teamGroups)).filter((value) => Number.isInteger(value));
-  if (uniqueTeamGroups.length === 0 || input.trainingDates.length === 0) {
+  const uniqueTeamGroups = Array.from(new Set(input.teamGroups ?? [])).filter((value) => Number.isInteger(value));
+  const uniquePlayerIds = Array.from(new Set(input.playerIds ?? [])).filter(Boolean);
+  if ((uniqueTeamGroups.length === 0 && uniquePlayerIds.length === 0) || input.trainingDates.length === 0) {
     return {
       targetedMembers: 0,
       total: 0,
@@ -60,9 +62,9 @@ export async function sendTrainingScheduleNotifications(input: {
     where: {
       clubId: input.clubId,
       isActive: true,
-      teamGroup: {
-        in: uniqueTeamGroups,
-      },
+      ...(uniquePlayerIds.length > 0
+        ? { id: { in: uniquePlayerIds } }
+        : { teamGroup: { in: uniqueTeamGroups } }),
     },
     select: {
       id: true,

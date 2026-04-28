@@ -74,6 +74,14 @@ function parseOptionalTrainingGroupId(raw: unknown): string | null {
   return value ? value : null;
 }
 
+function parseOptionalCustomTrainingGroupId(raw: unknown): string | null {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  const value = String(raw).trim();
+  return value ? value : null;
+}
+
 async function verifySession(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
   const session = token ? await verifyAdminToken(token) : null;
@@ -93,14 +101,16 @@ export async function GET(
   const requestedDate = request.nextUrl.searchParams.get("date")?.trim() ?? "";
   let teamGroup: number | null = null;
   let trainingGroupId: string | null = null;
+  let customTrainingGroupId: string | null = null;
   try {
     teamGroup = parseOptionalTeamGroup(request.nextUrl.searchParams.get("teamGroup"));
     trainingGroupId = parseOptionalTrainingGroupId(request.nextUrl.searchParams.get("trainingGroupId"));
+    customTrainingGroupId = parseOptionalCustomTrainingGroupId(request.nextUrl.searchParams.get("customTrainingGroupId"));
   } catch {
-    return NextResponse.json({ error: "Invalid teamGroup or trainingGroupId query parameter" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid training group query parameter" }, { status: 400 });
   }
-  if (teamGroup !== null && trainingGroupId) {
-    return NextResponse.json({ error: "Use either teamGroup or trainingGroupId." }, { status: 400 });
+  if ([teamGroup !== null, Boolean(trainingGroupId), Boolean(customTrainingGroupId)].filter(Boolean).length > 1) {
+    return NextResponse.json({ error: "Use only one training group filter." }, { status: 400 });
   }
   if (requestedDate && !isIsoDate(requestedDate)) {
     return NextResponse.json({ error: "Invalid date query parameter" }, { status: 400 });
@@ -117,6 +127,7 @@ export async function GET(
       trainingDateTimes: true,
       trainingWeekdays: true,
       trainingWindowDays: true,
+      trainingGroupMode: true,
     },
   });
   if (!club) {
@@ -142,6 +153,27 @@ export async function GET(
     : null;
   if (trainingGroupId && !trainingGroup) {
     return NextResponse.json({ error: "Training group not found" }, { status: 404 });
+  }
+
+  const customTrainingGroup = customTrainingGroupId
+    ? await prisma.clubCustomTrainingGroup.findFirst({
+        where: {
+          id: customTrainingGroupId,
+          clubId: id,
+        },
+        select: {
+          id: true,
+          trainingDates: true,
+          trainingTime: true,
+          trainingDateTimes: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+          players: { select: { playerId: true } },
+        },
+      })
+    : null;
+  if (customTrainingGroupId && !customTrainingGroup) {
+    return NextResponse.json({ error: "Custom training group not found" }, { status: 404 });
   }
 
   const groupSchedule = teamGroup === null
@@ -187,27 +219,36 @@ export async function GET(
     : null;
 
   const resolvedTrainingDates =
-    trainingGroup
+    customTrainingGroup
+      ? customTrainingGroup.trainingDates ?? []
+      : trainingGroup
       ? trainingGroup.trainingDates ?? []
       : trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? club.trainingDates ?? [];
   const resolvedTrainingWeekdays =
-    trainingGroup
+    customTrainingGroup
+      ? customTrainingGroup.trainingWeekdays ?? []
+      : trainingGroup
       ? trainingGroup.trainingWeekdays ?? []
       : trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? club.trainingWeekdays ?? [];
   const resolvedTrainingWindowDays =
+    customTrainingGroup?.trainingWindowDays ??
     trainingGroup?.trainingWindowDays ??
     trainingGroupOverride?.trainingWindowDays ??
     groupSchedule?.trainingWindowDays ??
     club.trainingWindowDays ??
     TRAINING_SELECTION_WINDOW_DAYS;
   const resolvedTrainingDateTimes = normalizeStoredTrainingDateTimes(
-    trainingGroup
+    customTrainingGroup
+      ? customTrainingGroup.trainingDateTimes
+      : trainingGroup
       ? trainingGroup.trainingDateTimes
       : trainingGroupOverride?.trainingDateTimes ?? groupSchedule?.trainingDateTimes ?? club.trainingDateTimes,
     resolvedTrainingDates,
   );
   const resolvedDefaultTrainingTime = safeNormalizeTrainingTime(
-    trainingGroup
+    customTrainingGroup
+      ? customTrainingGroup.trainingTime
+      : trainingGroup
       ? trainingGroup.trainingTime
       : trainingGroupOverride?.trainingTime ?? groupSchedule?.trainingTime ?? club.trainingTime,
   );
@@ -239,13 +280,19 @@ export async function GET(
       upcomingDates: [],
       teamGroup,
       trainingGroupId: trainingGroup?.id ?? null,
+      customTrainingGroupId: customTrainingGroup?.id ?? null,
     });
   }
+
+  const customPlayerIds = customTrainingGroup
+    ? customTrainingGroup.players.map((item) => item.playerId)
+    : [];
 
   const players = await prisma.player.findMany({
     where: {
       clubId: id,
       isActive: true,
+      ...(customTrainingGroup ? { id: { in: customPlayerIds } } : {}),
       ...(trainingGroup ? { teamGroup: { in: trainingGroup.teamGroups } } : {}),
       ...(teamGroup !== null ? { teamGroup } : {}),
     },
@@ -320,6 +367,7 @@ export async function GET(
       clubName: club.name,
       teamGroup,
       trainingGroupId: trainingGroup?.id ?? null,
+      customTrainingGroupId: customTrainingGroup?.id ?? null,
       trainingDate,
       weekday: getWeekdayMondayFirst(trainingDate, FIXED_TIME_ZONE),
       trainingTime: resolvedTrainingDateTimes[trainingDate] ?? resolvedDefaultTrainingTime,
@@ -369,14 +417,16 @@ export async function PUT(
   const note = noteRaw === null || noteRaw === undefined ? "" : String(noteRaw).trim();
   let teamGroup: number | null = null;
   let trainingGroupId: string | null = null;
+  let customTrainingGroupId: string | null = null;
   try {
     teamGroup = parseOptionalTeamGroup((body as { teamGroup?: unknown }).teamGroup);
     trainingGroupId = parseOptionalTrainingGroupId((body as { trainingGroupId?: unknown }).trainingGroupId);
+    customTrainingGroupId = parseOptionalCustomTrainingGroupId((body as { customTrainingGroupId?: unknown }).customTrainingGroupId);
   } catch {
-    return NextResponse.json({ error: "Invalid teamGroup or trainingGroupId" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid training group filter" }, { status: 400 });
   }
-  if (teamGroup !== null && trainingGroupId) {
-    return NextResponse.json({ error: "Use either teamGroup or trainingGroupId." }, { status: 400 });
+  if ([teamGroup !== null, Boolean(trainingGroupId), Boolean(customTrainingGroupId)].filter(Boolean).length > 1) {
+    return NextResponse.json({ error: "Use only one training group filter." }, { status: 400 });
   }
 
   if (!isIsoDate(trainingDate)) {
@@ -391,6 +441,7 @@ export async function PUT(
       trainingDates: true,
       trainingWeekdays: true,
       trainingWindowDays: true,
+      trainingGroupMode: true,
     },
   });
   if (!club) {
@@ -414,6 +465,25 @@ export async function PUT(
     : null;
   if (trainingGroupId && !trainingGroup) {
     return NextResponse.json({ error: "Training group not found" }, { status: 404 });
+  }
+
+  const customTrainingGroup = customTrainingGroupId
+    ? await prisma.clubCustomTrainingGroup.findFirst({
+        where: {
+          id: customTrainingGroupId,
+          clubId: id,
+        },
+        select: {
+          id: true,
+          trainingDates: true,
+          trainingWeekdays: true,
+          trainingWindowDays: true,
+          players: { select: { playerId: true } },
+        },
+      })
+    : null;
+  if (customTrainingGroupId && !customTrainingGroup) {
+    return NextResponse.json({ error: "Custom training group not found" }, { status: 404 });
   }
 
   const groupSchedule = teamGroup === null
@@ -456,14 +526,19 @@ export async function PUT(
 
   const upcomingDates = getConfiguredTrainingDates({
     trainingDates:
-      trainingGroup
+      customTrainingGroup
+        ? customTrainingGroup.trainingDates ?? []
+        : trainingGroup
         ? trainingGroup.trainingDates ?? []
         : trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? club.trainingDates ?? [],
     weekdays:
-      trainingGroup
+      customTrainingGroup
+        ? customTrainingGroup.trainingWeekdays ?? []
+        : trainingGroup
         ? trainingGroup.trainingWeekdays ?? []
         : trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? club.trainingWeekdays ?? [],
     windowDays:
+      customTrainingGroup?.trainingWindowDays ??
       trainingGroup?.trainingWindowDays ??
       trainingGroupOverride?.trainingWindowDays ??
       groupSchedule?.trainingWindowDays ??
@@ -477,10 +552,14 @@ export async function PUT(
   }
 
   const trainingDateAsDate = isoDateToUtcMidnight(trainingDate);
+  const customPlayerIds = customTrainingGroup
+    ? customTrainingGroup.players.map((item) => item.playerId)
+    : [];
   const affectedPlayers = await prisma.player.findMany({
     where: {
       clubId: id,
       isActive: true,
+      ...(customTrainingGroup ? { id: { in: customPlayerIds } } : {}),
       ...(trainingGroup ? { teamGroup: { in: trainingGroup.teamGroups } } : {}),
       ...(teamGroup !== null ? { teamGroup } : {}),
     },

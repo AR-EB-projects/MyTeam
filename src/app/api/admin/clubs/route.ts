@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
           overdueMinute: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
+          trainingGroupMode: true,
           notifyOnCoachVisit: true,
         },
         orderBy: {
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
           overdueMinute: true,
           trainingWeekdays: true,
           trainingWindowDays: true,
+          trainingGroupMode: true,
           notifyOnCoachVisit: true,
         },
         orderBy: {

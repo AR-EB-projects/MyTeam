@@ -146,6 +146,21 @@ async function getMemberTrainingContext(cardCode: string) {
               trainingTime: true,
               trainingWeekdays: true,
               trainingWindowDays: true,
+              trainingGroupMode: true,
+            },
+          },
+          customTrainingGroups: {
+            take: 1,
+            select: {
+              group: {
+                select: {
+                  trainingDates: true,
+                  trainingDateTimes: true,
+                  trainingTime: true,
+                  trainingWeekdays: true,
+                  trainingWindowDays: true,
+                },
+              },
             },
           },
         },
@@ -156,6 +171,11 @@ async function getMemberTrainingContext(cardCode: string) {
   if (!card?.player?.club) {
     return null;
   }
+
+  const isCustomGroupMode = card.player.club.trainingGroupMode === "custom_group";
+  const customGroup = isCustomGroupMode
+    ? card.player.customTrainingGroups[0]?.group ?? null
+    : null;
 
   const groupSchedule = card.player.teamGroup === null
     ? null
@@ -199,26 +219,36 @@ async function getMemberTrainingContext(cardCode: string) {
         },
       });
 
-  const trainingWeekdays = (trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? card.player.club.trainingWeekdays ?? [])
+  const trainingWeekdays = (isCustomGroupMode
+    ? customGroup?.trainingWeekdays ?? []
+    : trainingGroupOverride?.trainingWeekdays ?? groupSchedule?.trainingWeekdays ?? card.player.club.trainingWeekdays ?? [])
     .filter((value) => Number.isInteger(value) && value >= 1 && value <= 7)
     .sort((a, b) => a - b);
   const trainingWindowDays = TRAINING_SELECTION_WINDOW_DAYS;
 
   const upcomingDates = getConfiguredTrainingDates({
-    trainingDates: trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? card.player.club.trainingDates ?? [],
+    trainingDates: isCustomGroupMode
+      ? customGroup?.trainingDates ?? []
+      : trainingGroupOverride?.trainingDates ?? groupSchedule?.trainingDates ?? card.player.club.trainingDates ?? [],
     weekdays: trainingWeekdays,
-    windowDays: trainingGroupOverride?.trainingWindowDays ?? groupSchedule?.trainingWindowDays ?? card.player.club.trainingWindowDays ?? trainingWindowDays,
+    windowDays: isCustomGroupMode
+      ? customGroup?.trainingWindowDays ?? trainingWindowDays
+      : trainingGroupOverride?.trainingWindowDays ?? groupSchedule?.trainingWindowDays ?? card.player.club.trainingWindowDays ?? trainingWindowDays,
     timeZone: FIXED_TIME_ZONE,
     maxDays: TRAINING_SELECTION_WINDOW_DAYS,
   });
   const scheduleDateTimes = normalizeStoredTrainingDateTimes(
-    trainingGroupOverride?.trainingDateTimes ??
+    isCustomGroupMode
+      ? customGroup?.trainingDateTimes
+      : trainingGroupOverride?.trainingDateTimes ??
       groupSchedule?.trainingDateTimes ??
       card.player.club.trainingDateTimes,
     upcomingDates,
   );
   const scheduleFallbackTime = safeNormalizeTrainingTime(
-    trainingGroupOverride?.trainingTime ??
+    isCustomGroupMode
+      ? customGroup?.trainingTime
+      : trainingGroupOverride?.trainingTime ??
     groupSchedule?.trainingTime ??
     card.player.club.trainingTime ??
     null,

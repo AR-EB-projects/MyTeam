@@ -1,0 +1,252 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { verifyAdminToken } from "@/lib/adminAuth";
+import {
+  getWeekdayMondayFirst,
+  getTodayIsoDateInTimeZone,
+  isIsoDate,
+  isoDateToUtcMidnight,
+  normalizeTrainingTime,
+} from "@/lib/training";
+import {
+  sendTrainingScheduleNotifications,
+  shouldNotifyForTrainingDatesChange,
+} from "@/lib/push/trainingScheduleNotifications";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const FIXED_TIME_ZONE = "Europe/Sofia";
+const TRAINING_SELECTION_WINDOW_DAYS = 30;
+
+async function verifySession(request: NextRequest) {
+  const token = request.cookies.get("admin_session")?.value;
+  return token ? await verifyAdminToken(token) : null;
+}
+
+function normalizePlayerIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return Array.from(new Set(raw.map((value) => String(value ?? "").trim()).filter(Boolean)));
+}
+
+function normalizeTrainingDates(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const todayIso = getTodayIsoDateInTimeZone(FIXED_TIME_ZONE);
+  const start = isoDateToUtcMidnight(todayIso).getTime();
+  const end = start + (TRAINING_SELECTION_WINDOW_DAYS - 1) * 24 * 60 * 60 * 1000;
+  const dates: string[] = [];
+  for (const value of raw) {
+    const date = String(value ?? "").trim();
+    if (!isIsoDate(date)) throw new Error("Training dates must be valid ISO dates.");
+    const timestamp = isoDateToUtcMidnight(date).getTime();
+    if (timestamp < start || timestamp > end) throw new Error(`Training dates must be within the next ${TRAINING_SELECTION_WINDOW_DAYS} days.`);
+    dates.push(date);
+  }
+  return Array.from(new Set(dates)).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeStoredTrainingDateTimes(raw: unknown, trainingDates: string[]): Record<string, string> {
+  if (!raw || typeof raw !== "object") return {};
+  const allowedDates = new Set(trainingDates);
+  const result: Record<string, string> = {};
+  for (const [date, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!allowedDates.has(date)) continue;
+    const normalized = normalizeTrainingTime(value);
+    if (normalized) result[date] = normalized;
+  }
+  return result;
+}
+
+function buildTrainingDateTimes(input: {
+  rawTrainingDateTimes: unknown;
+  trainingDates: string[];
+  fallbackTrainingTime: string | null;
+}) {
+  const allowedDates = new Set(input.trainingDates);
+  const result: Record<string, string> = {};
+  if (input.rawTrainingDateTimes && typeof input.rawTrainingDateTimes === "object" && !Array.isArray(input.rawTrainingDateTimes)) {
+    for (const [date, value] of Object.entries(input.rawTrainingDateTimes as Record<string, unknown>)) {
+      if (!allowedDates.has(date)) throw new Error("Training date times contain date outside selected training days.");
+      const normalized = normalizeTrainingTime(value);
+      if (!normalized) throw new Error("Training time is required for each selected day.");
+      result[date] = normalized;
+    }
+  }
+  if (Object.keys(result).length === 0 && input.fallbackTrainingTime) {
+    for (const date of input.trainingDates) result[date] = input.fallbackTrainingTime;
+  }
+  for (const date of input.trainingDates) {
+    if (!result[date]) throw new Error("Training time is required for each selected day.");
+  }
+  return result;
+}
+
+function serializeGroup(group: {
+  id: string;
+  name: string;
+  trainingDates: string[];
+  trainingTime: string | null;
+  trainingDateTimes: unknown;
+  trainingWeekdays: number[];
+  createdAt: Date;
+  updatedAt: Date;
+  players: Array<{ playerId: string; player: { fullName: string; teamGroup: number | null } }>;
+}) {
+  return {
+    id: group.id,
+    name: group.name,
+    trainingDates: group.trainingDates,
+    trainingTime: group.trainingTime,
+    trainingDateTimes: normalizeStoredTrainingDateTimes(group.trainingDateTimes, group.trainingDates ?? []),
+    trainingWeekdays: group.trainingWeekdays,
+    playerIds: group.players.map((item) => item.playerId),
+    players: group.players.map((item) => ({ id: item.playerId, fullName: item.player.fullName, teamGroup: item.player.teamGroup })),
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+  };
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; groupId: string }> },
+) {
+  const session = await verifySession(request);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id: clubId, groupId } = await params;
+  try {
+    const deleted = await prisma.clubCustomTrainingGroup.deleteMany({ where: { id: groupId, clubId } });
+    if (deleted.count === 0) return NextResponse.json({ error: "Training group not found." }, { status: 404 });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Custom training groups DELETE error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; groupId: string }> },
+) {
+  const session = await verifySession(request);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id: clubId, groupId } = await params;
+  const body = await request.json().catch(() => ({}));
+  const payload = body as {
+    name?: unknown;
+    playerIds?: unknown;
+    trainingDates?: unknown;
+    trainingTime?: unknown;
+    trainingDateTimes?: unknown;
+  };
+  const hasName = Object.prototype.hasOwnProperty.call(payload, "name");
+  const hasPlayerIds = Object.prototype.hasOwnProperty.call(payload, "playerIds");
+  const hasTrainingDates = Object.prototype.hasOwnProperty.call(payload, "trainingDates");
+  const hasTrainingTime = Object.prototype.hasOwnProperty.call(payload, "trainingTime");
+  const hasTrainingDateTimes = Object.prototype.hasOwnProperty.call(payload, "trainingDateTimes");
+  if (!hasName && !hasPlayerIds && !hasTrainingDates && !hasTrainingTime && !hasTrainingDateTimes) {
+    return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
+  }
+
+  try {
+    const existing = await prisma.clubCustomTrainingGroup.findFirst({
+      where: { id: groupId, clubId },
+      select: {
+        id: true,
+        name: true,
+        trainingDates: true,
+        trainingTime: true,
+        trainingDateTimes: true,
+        players: { select: { playerId: true } },
+      },
+    });
+    if (!existing) return NextResponse.json({ error: "Training group not found." }, { status: 404 });
+
+    let nextTrainingDates = existing.trainingDates ?? [];
+    if (hasTrainingDates) nextTrainingDates = normalizeTrainingDates(payload.trainingDates);
+    const fallbackTrainingTime = hasTrainingTime ? normalizeTrainingTime(payload.trainingTime) : existing.trainingTime ?? null;
+    const rawTrainingDateTimes = hasTrainingDateTimes ? payload.trainingDateTimes : existing.trainingDateTimes;
+    const nextTrainingDateTimes = nextTrainingDates.length > 0
+      ? buildTrainingDateTimes({ rawTrainingDateTimes, trainingDates: nextTrainingDates, fallbackTrainingTime })
+      : {};
+    const nextTrainingTime = fallbackTrainingTime ?? Object.values(nextTrainingDateTimes)[0] ?? null;
+    const nextTrainingWeekdays = Array.from(
+      new Set(nextTrainingDates.map((date) => getWeekdayMondayFirst(date, FIXED_TIME_ZONE)).filter((value) => value >= 1 && value <= 7)),
+    ).sort((a, b) => a - b);
+    const playerIds = hasPlayerIds ? normalizePlayerIds(payload.playerIds) : existing.players.map((item) => item.playerId);
+    const nextName = hasName ? String(payload.name ?? "").trim() : existing.name;
+    if (!nextName) return NextResponse.json({ error: "Group name is required." }, { status: 400 });
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const players = playerIds.length
+        ? await tx.player.findMany({
+            where: { id: { in: playerIds }, clubId, isActive: true },
+            select: { id: true },
+          })
+        : [];
+      if (players.length !== playerIds.length) throw new Error("INVALID_PLAYERS");
+      await tx.clubCustomTrainingGroup.update({
+        where: { id: groupId },
+        data: {
+          name: nextName,
+          ...(hasTrainingDates || hasTrainingTime || hasTrainingDateTimes
+            ? {
+                trainingDates: nextTrainingDates,
+                trainingTime: nextTrainingTime,
+                trainingDateTimes: nextTrainingDateTimes,
+                trainingWeekdays: nextTrainingWeekdays,
+                trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
+              }
+            : {}),
+        },
+      });
+      if (hasPlayerIds) {
+        await tx.clubCustomTrainingGroupPlayer.deleteMany({
+          where: { OR: [{ groupId }, { playerId: { in: playerIds } }] },
+        });
+        if (playerIds.length > 0) {
+          await tx.clubCustomTrainingGroupPlayer.createMany({
+            data: playerIds.map((playerId) => ({ groupId, playerId })),
+          });
+        }
+      }
+      return tx.clubCustomTrainingGroup.findUniqueOrThrow({
+        where: { id: groupId },
+        select: {
+          id: true,
+          name: true,
+          trainingDates: true,
+          trainingTime: true,
+          trainingDateTimes: true,
+          trainingWeekdays: true,
+          createdAt: true,
+          updatedAt: true,
+          players: {
+            orderBy: { player: { fullName: "asc" } },
+            select: {
+              playerId: true,
+              player: { select: { fullName: true, teamGroup: true } },
+            },
+          },
+        },
+      });
+    });
+
+    let notifications = null;
+    if (hasTrainingDates && shouldNotifyForTrainingDatesChange(existing.trainingDates ?? [], updated.trainingDates ?? [])) {
+      notifications = await sendTrainingScheduleNotifications({
+        clubId,
+        playerIds: updated.players.map((item) => item.playerId),
+        previousDates: existing.trainingDates ?? [],
+        trainingDates: updated.trainingDates,
+      });
+    }
+
+    return NextResponse.json({ ...serializeGroup(updated), notifications });
+  } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_PLAYERS") {
+      return NextResponse.json({ error: "Selected players must belong to this club and be active." }, { status: 400 });
+    }
+    console.error("Custom training groups PATCH error:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Internal Server Error" }, { status: 500 });
+  }
+}
