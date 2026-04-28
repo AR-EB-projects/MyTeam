@@ -747,7 +747,7 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
     if (!from || !to || from > to) return;
     if (scopeType === "player" && !selectedPlayerId) return;
 
-    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    let cancelled = false;
 
     const doFetch = async () => {
       setLoading(true);
@@ -765,11 +765,9 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
         } else if (groupScope.startsWith("year:")) {
           search.set("teamGroup", groupScope.slice(5));
         }
-        const requestInit: RequestInit = { cache: "no-store" };
-        if (controller) requestInit.signal = controller.signal;
         const res = await fetch(
           `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance/report?${search.toString()}`,
-          requestInit,
+          { cache: "no-store" },
         );
         if (!res.ok) {
           const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -778,22 +776,27 @@ function AttendanceDashboard({ onClose, clubId }: { onClose: () => void; clubId:
           );
         }
         const payload = (await res.json()) as AttendanceReportData;
-        setData(payload);
+        const reportData: AttendanceReportData = {
+          ...payload,
+          trainingDates: [...payload.trainingDates].sort((a, b) => b.localeCompare(a)),
+        };
+        if (cancelled) return;
+        setData(reportData);
       } catch (e) {
-        if ((e as { name?: string }).name !== "AbortError") {
+        if (!cancelled && (e as { name?: string }).name !== "AbortError") {
           setError(e instanceof Error ? e.message : "Грешка при зареждане.");
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     const timer = setTimeout(() => { void doFetch(); }, 300);
     return () => {
+      cancelled = true;
       clearTimeout(timer);
-      if (controller && !controller.signal.aborted) {
-        controller.abort();
-      }
     };
      
   }, [from, to, scopeType, groupScope, selectedPlayerId, clubId]);
