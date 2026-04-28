@@ -75,6 +75,7 @@ interface ClubOption {
   trainingDateTimes?: Record<string, string> | null;
   trainingWeekdays?: number[];
   trainingWindowDays?: number;
+  trainingGroupMode?: "team_group" | "custom_group";
 }
 
 interface Member {
@@ -118,6 +119,15 @@ interface TrainingScheduleGroup {
   id: string;
   name: string;
   teamGroups: number[];
+  trainingDates: string[];
+  trainingTime?: string | null;
+  trainingDateTimes?: Record<string, string> | null;
+}
+
+interface CustomTrainingGroup {
+  id: string;
+  name: string;
+  playerIds: string[];
   trainingDates: string[];
   trainingTime?: string | null;
   trainingDateTimes?: Record<string, string> | null;
@@ -2449,7 +2459,12 @@ function AdminMembersPageContent() {
   const [trainingDaysInitialDates, setTrainingDaysInitialDates] = useState<string[]>([]);
   const [trainingDaysSuccessOpen, setTrainingDaysSuccessOpen] = useState(false);
   const [trainingDaysSuccessMessage, setTrainingDaysSuccessMessage] = useState("");
-  const [trainingDaysEditorMode, setTrainingDaysEditorMode] = useState<"teamGroup" | "createGroup" | "trainingGroup">("teamGroup");
+  const [trainingGroupMode, setTrainingGroupMode] = useState<"team_group" | "custom_group">("team_group");
+  const [trainingGroupModeDraft, setTrainingGroupModeDraft] = useState<"team_group" | "custom_group">("team_group");
+  const [trainingGroupModeSettingsOpen, setTrainingGroupModeSettingsOpen] = useState(false);
+  const [trainingGroupModeSaving, setTrainingGroupModeSaving] = useState(false);
+  const [trainingGroupModeError, setTrainingGroupModeError] = useState("");
+  const [trainingDaysEditorMode, setTrainingDaysEditorMode] = useState<"teamGroup" | "createGroup" | "trainingGroup" | "customGroup">("teamGroup");
   const [trainingDaysEditorGroups, setTrainingDaysEditorGroups] = useState<string[]>([]);
   const [trainingDaysEditorGroupName, setTrainingDaysEditorGroupName] = useState("");
   const [trainingDaysEditorCreateOpen, setTrainingDaysEditorCreateOpen] = useState(false);
@@ -2457,6 +2472,8 @@ function AdminMembersPageContent() {
   const [trainingGroupCreateSaving, setTrainingGroupCreateSaving] = useState(false);
   const [trainingGroupCreateError, setTrainingGroupCreateError] = useState("");
   const [trainingGroupCreateGroups, setTrainingGroupCreateGroups] = useState<string[]>([]);
+  const [trainingGroupCreateName, setTrainingGroupCreateName] = useState("");
+  const [trainingGroupCreatePlayerIds, setTrainingGroupCreatePlayerIds] = useState<string[]>([]);
   const [trainingGroupEditOpen, setTrainingGroupEditOpen] = useState(false);
   const [trainingGroupEditSaving, setTrainingGroupEditSaving] = useState(false);
   const [trainingGroupEditError, setTrainingGroupEditError] = useState("");
@@ -2465,6 +2482,7 @@ function AdminMembersPageContent() {
   const [trainingGroupEditId, setTrainingGroupEditId] = useState("");
   const [trainingGroupEditName, setTrainingGroupEditName] = useState("");
   const [trainingGroupEditGroups, setTrainingGroupEditGroups] = useState<string[]>([]);
+  const [trainingGroupEditPlayerIds, setTrainingGroupEditPlayerIds] = useState<string[]>([]);
   const [selectedTrainingGroupId, setSelectedTrainingGroupId] = useState("");
   const [postTeamGroupSavePromptOpen, setPostTeamGroupSavePromptOpen] = useState(false);
   const [postTeamGroupSavePromptGroupId, setPostTeamGroupSavePromptGroupId] = useState("");
@@ -2475,6 +2493,7 @@ function AdminMembersPageContent() {
   const [importPhotosOpen, setImportPhotosOpen] = useState(false);
   const [trainingScheduleGroupsLoading, setTrainingScheduleGroupsLoading] = useState(false);
   const [trainingScheduleGroups, setTrainingScheduleGroups] = useState<TrainingScheduleGroup[]>([]);
+  const [customTrainingGroups, setCustomTrainingGroups] = useState<CustomTrainingGroup[]>([]);
   const schedulerCalendarDates = getNextTrainingCalendarDates();
   const schedulerCalendarDateSet = new Set(schedulerCalendarDates);
   const schedulerCalendarMonths = buildCalendarMonths(schedulerCalendarDates);
@@ -2546,19 +2565,6 @@ function AdminMembersPageContent() {
     );
 
   useEffect(() => {
-    if (!trainingGroupEditOpen) {
-      return;
-    }
-    const generatedName = trainingGroupEditGroups
-      .map((value) => Number.parseInt(value, 10))
-      .filter((value) => Number.isInteger(value))
-      .sort((a, b) => a - b)
-      .map((value) => String(value))
-      .join("/");
-    setTrainingGroupEditName(generatedName);
-  }, [trainingGroupEditGroups, trainingGroupEditOpen]);
-
-  useEffect(() => {
     if (!clubId) return;
     document.cookie = `admin_last_club_id=${encodeURIComponent(clubId)}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }, [clubId]);
@@ -2566,20 +2572,24 @@ function AdminMembersPageContent() {
   useEffect(() => {
     if (!clubId) return;
 
+    const sendPresence = (action: "connect" | "disconnect") => {
+      const blob = new Blob(
+        [JSON.stringify({ clubId, action })],
+        { type: "application/json" }
+      );
+      try {
+        navigator.sendBeacon("/api/admin/track/presence", blob);
+      } catch {
+        // Presence tracking is best-effort and should not interrupt the admin page.
+      }
+    };
+
     const sendConnect = () => {
-      void fetch("/api/admin/track/presence", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clubId, action: "connect" }),
-      });
+      sendPresence("connect");
     };
 
     const sendDisconnect = () => {
-      const blob = new Blob(
-        [JSON.stringify({ clubId, action: "disconnect" })],
-        { type: "application/json" }
-      );
-      navigator.sendBeacon("/api/admin/track/presence", blob);
+      sendPresence("disconnect");
     };
 
     const handleVisibilityChange = () => {
@@ -3351,6 +3361,9 @@ function AdminMembersPageContent() {
           }
 
           setClubName(selectedClub.name.trim());
+          const selectedMode = (selectedClub as Record<string, unknown>).trainingGroupMode;
+          setTrainingGroupMode(selectedMode === "custom_group" ? "custom_group" : "team_group");
+          setTrainingGroupModeDraft(selectedMode === "custom_group" ? "custom_group" : "team_group");
 
           const logo = (selectedClub as Record<string, unknown>).imageUrl;
           if (typeof logo === "string" && logo) {
@@ -3412,6 +3425,9 @@ function AdminMembersPageContent() {
         if (selectedClub?.name) {
           setClubName(String(selectedClub.name));
         }
+        const selectedMode = (selectedClub as Record<string, unknown> | null)?.trainingGroupMode;
+        setTrainingGroupMode(selectedMode === "custom_group" ? "custom_group" : "team_group");
+        setTrainingGroupModeDraft(selectedMode === "custom_group" ? "custom_group" : "team_group");
         const logo = (selectedClub as Record<string, unknown> | null)?.imageUrl;
         if (typeof logo === "string" && logo) {
           setClubLogoUrl(logo);
@@ -3451,10 +3467,27 @@ function AdminMembersPageContent() {
     : (groupOptions[0] ? String(groupOptions[0]) : "");
   const selectedTeamGroup = parseSelectedTeamGroup(resolvedTrainingGroupScope);
   const selectedTrainingGroup = trainingScheduleGroups.find((group) => group.id === selectedTrainingGroupId) ?? null;
+  const selectedCustomGroup = customTrainingGroups.find((group) => group.id === selectedTrainingGroupId) ?? null;
+  const isCustomTrainingGroupMode = trainingGroupMode === "custom_group";
+  const customTrainingGroupAssignedPlayerIds = new Set(customTrainingGroups.flatMap((group) => group.playerIds));
+  const customTrainingGroupEditPlayerIdsSet = new Set(trainingGroupEditPlayerIds);
+  const customTrainingGroupEditOriginalPlayerIds = new Set(
+    customTrainingGroups.find((g) => g.id === trainingGroupEditId)?.playerIds ?? [],
+  );
+  const availablePlayersForCustomGroupCreate = members.filter(
+    (member) => member.isActive && !customTrainingGroupAssignedPlayerIds.has(member.id),
+  );
+  const availablePlayersForCustomGroupEdit = members.filter(
+    (member) =>
+      member.isActive &&
+      (!customTrainingGroupAssignedPlayerIds.has(member.id) || customTrainingGroupEditOriginalPlayerIds.has(member.id)),
+  );
   const trainingGroupTeamGroupSet = new Set(trainingScheduleGroups.flatMap((g) => g.teamGroups));
   const standaloneTeamGroups = groupOptions.filter((g) => !trainingGroupTeamGroupSet.has(g));
   const unifiedGroupScopeValue =
-    trainingAttendanceView === "trainingGroups"
+    isCustomTrainingGroupMode
+      ? (selectedTrainingGroupId || "")
+      : trainingAttendanceView === "trainingGroups"
       ? (selectedTrainingGroupId || "")
       : `year:${resolvedTrainingGroupScope}`;
   const selectedTeamGroupLinkedTrainingGroups =
@@ -3793,13 +3826,132 @@ function AdminMembersPageContent() {
     }
   };
 
+  const loadCustomTrainingGroups = async (): Promise<CustomTrainingGroup[]> => {
+    if (!clubId) return [];
+    setTrainingScheduleGroupsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/custom-training-groups`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load custom training groups.");
+      }
+      const payload: unknown = await response.json();
+      const groups = Array.isArray(payload)
+        ? payload.map((item) => {
+          const raw = typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
+          const trainingDates = Array.isArray(raw.trainingDates)
+            ? raw.trainingDates
+              .map((value) => String(value ?? "").trim())
+              .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
+              .sort((a, b) => a.localeCompare(b))
+            : [];
+          const playerIds = Array.isArray(raw.playerIds)
+            ? raw.playerIds.map((value) => String(value ?? "").trim()).filter(Boolean)
+            : [];
+          return {
+            id: String(raw.id ?? ""),
+            name: String(raw.name ?? "").trim(),
+            playerIds,
+            trainingDates,
+            trainingTime:
+              typeof raw.trainingTime === "string" && TRAINING_TIME_REGEX.test(raw.trainingTime.trim())
+                ? raw.trainingTime.trim()
+                : null,
+            trainingDateTimes: normalizeTrainingDateTimes(
+              raw.trainingDateTimes,
+              trainingDates,
+              typeof raw.trainingTime === "string" ? raw.trainingTime : null,
+            ),
+          } satisfies CustomTrainingGroup;
+        }).filter((group) => group.id && group.name)
+        : [];
+      setCustomTrainingGroups(groups);
+      setSelectedTrainingGroupId((prev) => {
+        if (prev && groups.some((group) => group.id === prev)) {
+          return prev;
+        }
+        return groups[0]?.id ?? "";
+      });
+      return groups;
+    } catch {
+      setCustomTrainingGroups([]);
+      setSelectedTrainingGroupId("");
+      return [];
+    } finally {
+      setTrainingScheduleGroupsLoading(false);
+    }
+  };
+
+  const saveTrainingGroupMode = async (nextMode: "team_group" | "custom_group") => {
+    if (!clubId || trainingGroupModeSaving) return;
+    if (nextMode === trainingGroupMode) {
+      setTrainingGroupModeSettingsOpen(false);
+      setTrainingGroupModeError("");
+      return;
+    }
+    setTrainingGroupModeSaving(true);
+    setTrainingAttendanceError("");
+    setTrainingGroupModeError("");
+    try {
+      const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/training-group-mode`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trainingGroupMode: nextMode }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || "Failed to save training group mode.");
+      }
+      setTrainingGroupMode(nextMode);
+      setTrainingGroupModeDraft(nextMode);
+      setSelectedTrainingGroupId("");
+      setTrainingAttendancePlayers([]);
+      setTrainingAttendanceStats({ total: 0, attending: 0, optedOut: 0 });
+      setTrainingUpcomingDates([]);
+      if (nextMode === "custom_group") {
+        await loadCustomTrainingGroups();
+      } else {
+        await loadTrainingScheduleGroups();
+      }
+      setTrainingGroupModeSettingsOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save training group mode.";
+      setTrainingGroupModeError(message);
+      setTrainingAttendanceError(message);
+    } finally {
+      setTrainingGroupModeSaving(false);
+    }
+  };
+
+  const openTrainingGroupModeSettings = () => {
+    setTrainingGroupModeDraft(trainingGroupMode);
+    setTrainingGroupModeError("");
+    setTrainingGroupModeSettingsOpen(true);
+  };
+
   const openTrainingGroupCreateModal = () => {
     setTrainingGroupCreateError("");
     setTrainingGroupCreateGroups([]);
+    setTrainingGroupCreateName("");
+    setTrainingGroupCreatePlayerIds([]);
     setTrainingGroupCreateOpen(true);
   };
 
   const openTrainingGroupEditModal = (groupId: string) => {
+    if (isCustomTrainingGroupMode) {
+      const group = customTrainingGroups.find((item) => item.id === groupId);
+      if (!group) {
+        setTrainingAttendanceError("Custom training group not found.");
+        return;
+      }
+      setTrainingGroupEditError("");
+      setTrainingGroupEditId(group.id);
+      setTrainingGroupEditName(group.name);
+      setTrainingGroupEditPlayerIds(group.playerIds);
+      setTrainingGroupEditOpen(true);
+      return;
+    }
     const group = trainingScheduleGroups.find((item) => item.id === groupId);
     if (!group) {
       setTrainingAttendanceError("Сборният отбор не е намерен.");
@@ -3809,7 +3961,7 @@ function AdminMembersPageContent() {
     setTrainingGroupEditError("");
     setTrainingGroupEditId(group.id);
     setTrainingGroupEditGroups(initialGroups);
-    setTrainingGroupEditName(initialGroups.slice().sort((a, b) => Number(a) - Number(b)).join("/"));
+    setTrainingGroupEditName(group.name || initialGroups.slice().sort((a, b) => Number(a) - Number(b)).join("/"));
     setTrainingGroupEditOpen(true);
   };
 
@@ -3818,6 +3970,27 @@ function AdminMembersPageContent() {
     setTrainingGroupCreateSaving(true);
     setTrainingGroupCreateError("");
     try {
+      if (isCustomTrainingGroupMode) {
+        const name = trainingGroupCreateName.trim();
+        if (!name) {
+          throw new Error("Enter a group name.");
+        }
+        const response = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/custom-training-groups`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            playerIds: trainingGroupCreatePlayerIds,
+          }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload?.error || "Failed to create custom training group.");
+        }
+        setTrainingGroupCreateOpen(false);
+        await loadCustomTrainingGroups();
+        return;
+      }
       const selectedGroups = trainingGroupCreateGroups
         .map((value) => Number.parseInt(value, 10))
         .filter((value) => Number.isInteger(value));
@@ -3853,6 +4026,37 @@ function AdminMembersPageContent() {
     setTrainingGroupEditSaving(true);
     setTrainingGroupEditError("");
     try {
+      if (isCustomTrainingGroupMode) {
+        const name = trainingGroupEditName.trim();
+        if (!name) {
+          throw new Error("Enter a group name.");
+        }
+        const response = await fetch(
+          `/api/admin/clubs/${encodeURIComponent(clubId)}/custom-training-groups/${encodeURIComponent(trainingGroupEditId)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              playerIds: trainingGroupEditPlayerIds,
+            }),
+          },
+        );
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload?.error || "Failed to edit custom training group.");
+        }
+        setTrainingGroupEditOpen(false);
+        const refreshedGroups = await loadCustomTrainingGroups();
+        const fallbackId = refreshedGroups.some((group) => group.id === trainingGroupEditId)
+          ? trainingGroupEditId
+          : refreshedGroups[0]?.id ?? "";
+        setSelectedTrainingGroupId(fallbackId);
+        if (trainingAttendanceOpen && fallbackId) {
+          await fetchTrainingAttendance(undefined, undefined, fallbackId, "trainingGroups");
+        }
+        return;
+      }
       const selectedGroups = trainingGroupEditGroups
         .map((value) => Number.parseInt(value, 10))
         .filter((value) => Number.isInteger(value));
@@ -3865,6 +4069,7 @@ function AdminMembersPageContent() {
         .sort((a, b) => a - b)
         .map((value) => String(value))
         .join("/");
+      const nextName = trainingGroupEditName.trim() || generatedName;
 
       const response = await fetch(
         `/api/admin/clubs/${encodeURIComponent(clubId)}/training-groups/${encodeURIComponent(trainingGroupEditId)}`,
@@ -3872,7 +4077,7 @@ function AdminMembersPageContent() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: generatedName,
+            name: nextName,
             teamGroups: selectedGroups,
           }),
         },
@@ -3883,7 +4088,9 @@ function AdminMembersPageContent() {
       }
 
       setTrainingGroupEditOpen(false);
-      const refreshedGroups = await loadTrainingScheduleGroups();
+      const refreshedGroups = isCustomTrainingGroupMode
+        ? await loadCustomTrainingGroups()
+        : await loadTrainingScheduleGroups();
       if (trainingAttendanceView === "trainingGroups") {
         const hasSelected = refreshedGroups.some((group) => group.id === trainingGroupEditId);
         if (hasSelected) {
@@ -3916,7 +4123,9 @@ function AdminMembersPageContent() {
     setTrainingAttendanceError("");
     try {
       const response = await fetch(
-        `/api/admin/clubs/${encodeURIComponent(clubId)}/training-groups/${encodeURIComponent(selectedTrainingGroupId)}`,
+        isCustomTrainingGroupMode
+          ? `/api/admin/clubs/${encodeURIComponent(clubId)}/custom-training-groups/${encodeURIComponent(selectedTrainingGroupId)}`
+          : `/api/admin/clubs/${encodeURIComponent(clubId)}/training-groups/${encodeURIComponent(selectedTrainingGroupId)}`,
         {
           method: "DELETE",
         },
@@ -3931,7 +4140,9 @@ function AdminMembersPageContent() {
       setTrainingDaysEditorOpen(false);
       setTrainingDaysEditorError("");
       setTrainingNoteTargetDates([]);
-      const refreshedGroups = await loadTrainingScheduleGroups();
+      const refreshedGroups = isCustomTrainingGroupMode
+        ? await loadCustomTrainingGroups()
+        : await loadTrainingScheduleGroups();
       const fallbackId = refreshedGroups[0]?.id ?? "";
       setSelectedTrainingGroupId(fallbackId);
       if (trainingAttendanceView === "trainingGroups") {
@@ -3952,7 +4163,7 @@ function AdminMembersPageContent() {
     }
   };
 
-  const openTrainingDaysEditor = async (mode: "teamGroup" | "createGroup" | "trainingGroup" = "teamGroup") => {
+  const openTrainingDaysEditor = async (mode: "teamGroup" | "createGroup" | "trainingGroup" | "customGroup" = "teamGroup") => {
     if (!clubId) return;
     if (trainingDaysEditorOpen) {
       setTrainingDaysEditorOpen(false);
@@ -3970,8 +4181,39 @@ function AdminMembersPageContent() {
     setTrainingDateTimes({});
     setTrainingTimeMode("all");
     setTrainingDaysEditorLoading(true);
-    const loadedGroups = await loadTrainingScheduleGroups();
+    const loadedGroups = isCustomTrainingGroupMode ? [] : await loadTrainingScheduleGroups();
+    const loadedCustomGroups = isCustomTrainingGroupMode ? await loadCustomTrainingGroups() : [];
     try {
+      if (mode === "customGroup") {
+        const resolvedGroup =
+          loadedCustomGroups.find((group) => group.id === selectedTrainingGroupId) ??
+          customTrainingGroups.find((group) => group.id === selectedTrainingGroupId) ??
+          null;
+        if (!resolvedGroup) {
+          throw new Error("Select a custom training group.");
+        }
+        const nextWindowDates = [...resolvedGroup.trainingDates]
+          .map((value) => String(value ?? "").trim())
+          .filter((value) => schedulerCalendarDateSet.has(value))
+          .sort((a, b) => a.localeCompare(b));
+        const resolvedDateTimes = normalizeTrainingDateTimes(
+          resolvedGroup.trainingDateTimes,
+          nextWindowDates,
+          resolvedGroup.trainingTime ?? null,
+        );
+        const resolvedUniformTime = getUniformTrainingTime(nextWindowDates, resolvedDateTimes);
+        setSchedulerForm((prev) => ({
+          ...prev,
+          trainingDates: nextWindowDates,
+          trainingTime: resolvedUniformTime,
+        }));
+        setTrainingDaysInitialDates(nextWindowDates);
+        setTrainingDateTimes(resolvedDateTimes);
+        setTrainingDaysInitialDateTimes(resolvedDateTimes);
+        setTrainingTimeMode(inferTrainingTimeMode(nextWindowDates, resolvedDateTimes));
+        setTrainingDaysEditorOpen(true);
+        return;
+      }
       if (mode === "trainingGroup") {
         const resolvedGroup =
           loadedGroups.find((group) => group.id === selectedTrainingGroupId) ??
@@ -4127,7 +4369,7 @@ function AdminMembersPageContent() {
         id: group.id,
         name: group.name,
       }));
-      if (trainingDaysEditorMode === "trainingGroup") {
+      if (trainingDaysEditorMode === "trainingGroup" || trainingDaysEditorMode === "customGroup") {
         const normalizedTrainingTime = schedulerForm.trainingTime.trim();
         if (hasMissingTrainingTime) {
           throw new Error("Въведете валиден час на тренировка (HH:mm).");
@@ -4154,7 +4396,9 @@ function AdminMembersPageContent() {
           throw new Error("Графикът е същият като предишния.");
         }
         const groupResponse = await fetch(
-          `/api/admin/clubs/${encodeURIComponent(clubId)}/training-groups/${encodeURIComponent(selectedTrainingGroupId)}`,
+          trainingDaysEditorMode === "customGroup"
+            ? `/api/admin/clubs/${encodeURIComponent(clubId)}/custom-training-groups/${encodeURIComponent(selectedTrainingGroupId)}`
+            : `/api/admin/clubs/${encodeURIComponent(clubId)}/training-groups/${encodeURIComponent(selectedTrainingGroupId)}`,
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -4176,7 +4420,11 @@ function AdminMembersPageContent() {
         setTrainingDaysEditorCreateOpen(false);
         setTrainingDaysEditorGroupName("");
         setTrainingDaysEditorGroups([]);
-        await loadTrainingScheduleGroups();
+        if (trainingDaysEditorMode === "customGroup") {
+          await loadCustomTrainingGroups();
+        } else {
+          await loadTrainingScheduleGroups();
+        }
         await fetchTrainingAttendance(trainingAttendanceDate);
         setTrainingDaysEditorOpen(false);
         setTrainingDaysSuccessMessage(
@@ -4409,7 +4657,7 @@ function AdminMembersPageContent() {
         search.set("teamGroup", String(teamGroupFilter));
       }
       if (trainingGroupFilter) {
-        search.set("trainingGroupId", trainingGroupFilter);
+        search.set(isCustomTrainingGroupMode ? "customTrainingGroupId" : "trainingGroupId", trainingGroupFilter);
       }
       const query = search.size ? `?${search.toString()}` : "";
       const response = await fetch(
@@ -4577,7 +4825,7 @@ function AdminMembersPageContent() {
     setTrainingDaysEditorOpen(false);
     setTrainingDaysEditorError("");
     setTrainingNoteTargetDates([]);
-    const groups = await loadTrainingScheduleGroups();
+    const groups = isCustomTrainingGroupMode ? await loadCustomTrainingGroups() : await loadTrainingScheduleGroups();
     const resolvedGroupId =
       selectedTrainingGroupId && groups.some((g) => g.id === selectedTrainingGroupId)
         ? selectedTrainingGroupId
@@ -4587,6 +4835,13 @@ function AdminMembersPageContent() {
       await fetchTrainingAttendance(undefined, undefined, resolvedGroupId, "trainingGroups");
     } else {
       // No training groups — fall back to first standalone team group
+      if (isCustomTrainingGroupMode) {
+        setTrainingAttendancePlayers([]);
+        setTrainingAttendanceStats({ total: 0, attending: 0, optedOut: 0 });
+        setTrainingUpcomingDates([]);
+        setTrainingAttendanceDate("");
+        return;
+      }
       const firstStandalone = standaloneTeamGroups[0];
       if (firstStandalone !== undefined) {
         const yearStr = String(firstStandalone);
@@ -4642,7 +4897,9 @@ function AdminMembersPageContent() {
       return;
     }
 
-    const groups = trainingScheduleGroups.length > 0 ? trainingScheduleGroups : await loadTrainingScheduleGroups();
+    const groups = isCustomTrainingGroupMode
+      ? (customTrainingGroups.length > 0 ? customTrainingGroups : await loadCustomTrainingGroups())
+      : (trainingScheduleGroups.length > 0 ? trainingScheduleGroups : await loadTrainingScheduleGroups());
     const resolvedGroupId =
       selectedTrainingGroupId && groups.some((group) => group.id === selectedTrainingGroupId)
         ? selectedTrainingGroupId
@@ -4701,7 +4958,7 @@ function AdminMembersPageContent() {
         setTrainingAttendanceError("Изберете сборен отбор.");
         return;
       }
-      await openTrainingDaysEditor("trainingGroup");
+      await openTrainingDaysEditor(isCustomTrainingGroupMode ? "customGroup" : "trainingGroup");
       return;
     }
     await openTrainingDaysEditor("teamGroup");
@@ -4782,7 +5039,7 @@ function AdminMembersPageContent() {
           const search = new URLSearchParams({ date: targetDate });
           if (trainingAttendanceView === "trainingGroups") {
             if (selectedTrainingGroupId) {
-              search.set("trainingGroupId", selectedTrainingGroupId);
+              search.set(isCustomTrainingGroupMode ? "customTrainingGroupId" : "trainingGroupId", selectedTrainingGroupId);
             }
           } else if (teamGroupFilter !== null) {
             search.set("teamGroup", String(teamGroupFilter));
@@ -4820,7 +5077,9 @@ function AdminMembersPageContent() {
           trainingDate: datesToSave[0],
           note: trainingNote,
           ...(trainingAttendanceView === "trainingGroups"
-            ? { trainingGroupId: selectedTrainingGroupId || null }
+            ? isCustomTrainingGroupMode
+              ? { customTrainingGroupId: selectedTrainingGroupId || null }
+              : { trainingGroupId: selectedTrainingGroupId || null }
             : { teamGroup: selectedTeamGroup }),
         }),
       });
@@ -4840,7 +5099,9 @@ function AdminMembersPageContent() {
             trainingDate: targetDate,
             note: trainingNote,
             ...(trainingAttendanceView === "trainingGroups"
-              ? { trainingGroupId: selectedTrainingGroupId || null }
+              ? isCustomTrainingGroupMode
+                ? { customTrainingGroupId: selectedTrainingGroupId || null }
+                : { trainingGroupId: selectedTrainingGroupId || null }
               : { teamGroup: selectedTeamGroup }),
           }),
         });
@@ -4897,7 +5158,7 @@ function AdminMembersPageContent() {
             const search = new URLSearchParams({ date: targetDate });
             if (trainingAttendanceView === "trainingGroups") {
               if (selectedTrainingGroupId) {
-                search.set("trainingGroupId", selectedTrainingGroupId);
+                search.set(isCustomTrainingGroupMode ? "customTrainingGroupId" : "trainingGroupId", selectedTrainingGroupId);
               }
             } else if (trainingNoteTeamGroupFilter !== null) {
               search.set("teamGroup", String(trainingNoteTeamGroupFilter));
@@ -4962,7 +5223,7 @@ function AdminMembersPageContent() {
     const search = new URLSearchParams({ date: trainingAttendanceDate });
     if (trainingAttendanceView === "trainingGroups") {
       if (selectedTrainingGroupId) {
-        search.set("trainingGroupId", selectedTrainingGroupId);
+        search.set(isCustomTrainingGroupMode ? "customTrainingGroupId" : "trainingGroupId", selectedTrainingGroupId);
       }
     } else if (selectedTeamGroup !== null) {
       search.set("teamGroup", String(selectedTeamGroup));
@@ -5073,6 +5334,16 @@ function AdminMembersPageContent() {
             >
               <UsersIcon />
               <span>Неактивни</span>
+            </button>
+          )}
+          {isAdmin && clubId && (
+            <button
+              className="amp-download-links-btn amp-scheduler-settings-btn amp-btn--compact"
+              onClick={openTrainingGroupModeSettings}
+              type="button"
+            >
+              <UsersIcon />
+              <span>Групи</span>
             </button>
           )}
           <button className="amp-reports-btn amp-btn--compact" onClick={() => setReportsOpen(true)}>
@@ -5612,12 +5883,90 @@ function AdminMembersPageContent() {
           onConfirm={handleDeleteTeam}
         />
       )}
+      {trainingGroupModeSettingsOpen && isAdmin && (
+        <div
+          className="amp-overlay amp-overlay--confirm"
+          onClick={() => {
+            if (!trainingGroupModeSaving) {
+              setTrainingGroupModeSettingsOpen(false);
+              setTrainingGroupModeError("");
+            }
+          }}
+        >
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="amp-modal-tint" aria-hidden="true" />
+            <h2 className="amp-modal-title">
+              <span className="amp-modal-title-gradient">Настройки на групите</span>
+              <button
+                className="amp-modal-close"
+                onClick={() => {
+                  setTrainingGroupModeSettingsOpen(false);
+                  setTrainingGroupModeError("");
+                }}
+                aria-label="Затвори"
+                disabled={trainingGroupModeSaving}
+              >
+                <XIcon />
+              </button>
+            </h2>
+            <div className="amp-modal-body">
+              <div className="amp-training-view-switch" style={{ marginBottom: "14px" }}>
+                <button
+                  type="button"
+                  className={`amp-btn amp-btn--ghost amp-training-view-btn${trainingGroupModeDraft === "team_group" ? " is-active" : ""}`}
+                  onClick={() => setTrainingGroupModeDraft("team_group")}
+                  disabled={trainingGroupModeSaving}
+                >
+                  По набори
+                </button>
+                <button
+                  type="button"
+                  className={`amp-btn amp-btn--ghost amp-training-view-btn${trainingGroupModeDraft === "custom_group" ? " is-active" : ""}`}
+                  onClick={() => setTrainingGroupModeDraft("custom_group")}
+                  disabled={trainingGroupModeSaving}
+                >
+                  По избрани групи
+                </button>
+              </div>
+              <p className="amp-lbl" style={{ whiteSpace: "normal", textAlign: "center" }}>
+                Избраният начин ще определи как треньорите виждат групите и създават тренировъчни графици.
+              </p>
+              {trainingGroupModeError && <p className="amp-confirm-error">{trainingGroupModeError}</p>}
+              <div className="amp-modal-actions amp-modal-actions--end">
+                <button
+                  type="button"
+                  className="amp-btn amp-btn--ghost"
+                  onClick={() => {
+                    setTrainingGroupModeSettingsOpen(false);
+                    setTrainingGroupModeDraft(trainingGroupMode);
+                    setTrainingGroupModeError("");
+                  }}
+                  disabled={trainingGroupModeSaving}
+                >
+                  Отказ
+                </button>
+                <button
+                  type="button"
+                  className="amp-btn amp-btn--primary"
+                  onClick={() => void saveTrainingGroupMode(trainingGroupModeDraft)}
+                  disabled={trainingGroupModeSaving}
+                >
+                  {trainingGroupModeSaving ? "Запазване..." : "Запази"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {trainingGroupDeleteConfirmOpen && (
         <ConfirmDeleteTrainingGroupModal
           groupName={
-            trainingScheduleGroups.find((group) => group.id === selectedTrainingGroupId)?.name?.trim() ||
-            "този сборен отбор"
+            (isCustomTrainingGroupMode
+              ? customTrainingGroups.find((group) => group.id === selectedTrainingGroupId)?.name?.trim()
+              : trainingScheduleGroups.find((group) => group.id === selectedTrainingGroupId)?.name?.trim()) ||
+            (isCustomTrainingGroupMode ? "тази група" : "този сборен отбор")
           }
+          isCustomGroup={isCustomTrainingGroupMode}
           isDeleting={trainingGroupDeleteSaving}
           onCancel={() => {
             if (!trainingGroupDeleteSaving) {
@@ -5725,12 +6074,16 @@ function AdminMembersPageContent() {
                         disabled={trainingNoteSaving || trainingGroupCreateSaving}
                         style={{ width: "100%" }}
                       >
-                        {trainingGroupCreateSaving ? "Запазване..." : "Създай сборен отбор"}
+                        {trainingGroupCreateSaving
+                          ? "Запазване..."
+                          : isCustomTrainingGroupMode
+                            ? "Създай група"
+                            : "Създай сборен отбор"}
                       </button>
                     </div>
                     {trainingScheduleGroupsLoading ? (
                       <p className="amp-empty amp-empty--modal">Зареждане...</p>
-                    ) : (trainingScheduleGroups.length === 0 && standaloneTeamGroups.length === 0) ? (
+                    ) : (isCustomTrainingGroupMode ? customTrainingGroups.length === 0 : (trainingScheduleGroups.length === 0 && standaloneTeamGroups.length === 0)) ? (
                       <p className="amp-empty amp-empty--modal">Няма групи.</p>
                     ) : (
                       <>
@@ -5743,12 +6096,16 @@ function AdminMembersPageContent() {
                             onChange={(e) => void handleUnifiedGroupChange(e.target.value)}
                             disabled={trainingAttendanceLoading || trainingNoteSaving || trainingDaysEditorSaving || trainingScheduleGroupsLoading}
                           >
-                            {trainingScheduleGroups.map((group) => (
+                            {isCustomTrainingGroupMode ? customTrainingGroups.map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            )) : trainingScheduleGroups.map((group) => (
                               <option key={group.id} value={group.id}>
                                 {group.name}
                               </option>
                             ))}
-                            {standaloneTeamGroups.map((g) => (
+                            {!isCustomTrainingGroupMode && standaloneTeamGroups.map((g) => (
                               <option key={g} value={`year:${g}`}>
                                 Набор {g}
                               </option>
@@ -5763,7 +6120,11 @@ function AdminMembersPageContent() {
                               onClick={() => openTrainingGroupEditModal(selectedTrainingGroupId)}
                               disabled={trainingScheduleGroupsLoading || trainingGroupEditSaving || trainingGroupDeleteSaving}
                             >
-                              {trainingGroupEditSaving ? "Отваряне..." : "Редактирай сборен отбор"}
+                              {trainingGroupEditSaving
+                                ? "Отваряне..."
+                                : isCustomTrainingGroupMode
+                                  ? "Редактирай група"
+                                  : "Редактирай сборен отбор"}
                             </button>
                             <button
                               type="button"
@@ -5771,7 +6132,11 @@ function AdminMembersPageContent() {
                               onClick={() => setTrainingGroupDeleteConfirmOpen(true)}
                               disabled={trainingScheduleGroupsLoading || trainingGroupEditSaving || trainingGroupDeleteSaving}
                             >
-                              {trainingGroupDeleteSaving ? "Изтриване..." : "Изтрий сборен отбор"}
+                              {trainingGroupDeleteSaving
+                                ? "Изтриване..."
+                                : isCustomTrainingGroupMode
+                                  ? "Изтрий група"
+                                  : "Изтрий сборен отбор"}
                             </button>
                           </div>
                         )}
@@ -6128,7 +6493,7 @@ function AdminMembersPageContent() {
           <div className="amp-modal amp-modal--confirm amp-modal--training-days-editor" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
-              <span className="amp-modal-title-gradient">Редакция на сборен отбор</span>
+              <span className="amp-modal-title-gradient">{isCustomTrainingGroupMode ? "Редакция на група" : "Редакция на сборен отбор"}</span>
               <button
                 className="amp-modal-close"
                 onClick={() => {
@@ -6142,13 +6507,56 @@ function AdminMembersPageContent() {
               </button>
             </h2>
             <div className="amp-modal-body">
+              {isCustomTrainingGroupMode && (
+                <>
+                  <label className="amp-edit-field">
+                    <span className="amp-lbl">Име на групата</span>
+                    <input
+                      className="amp-edit-input"
+                      value={trainingGroupEditName}
+                      onChange={(e) => setTrainingGroupEditName(e.target.value)}
+                      disabled={trainingGroupEditSaving}
+                    />
+                  </label>
+                  <div className="amp-training-days-editor-header amp-training-days-editor-header--stack" style={{ marginTop: "10px" }}>
+                    <span className="amp-lbl">Играчите в групата</span>
+                    <div className="amp-group-check-grid">
+                      {availablePlayersForCustomGroupEdit.map((member) => {
+                        const isChecked = trainingGroupEditPlayerIds.includes(member.id);
+                        return (
+                          <label key={`custom-training-group-edit-${member.id}`} className={`amp-group-check-chip${isChecked ? " is-selected" : ""}${trainingGroupEditSaving ? " is-disabled" : ""}`}>
+                            <input
+                              className="amp-group-check-input"
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={trainingGroupEditSaving}
+                              onChange={(e) => {
+                                setTrainingGroupEditPlayerIds((prev) => e.target.checked
+                                  ? [...new Set([...prev, member.id])]
+                                  : prev.filter((item) => item !== member.id));
+                              }}
+                            />
+                            <span className="amp-group-check-box" aria-hidden="true" />
+                            <span className="amp-lbl amp-group-check-label">{member.fullName}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {availablePlayersForCustomGroupEdit.length === 0 && (
+                      <p className="amp-empty amp-empty--modal">Няма свободни играчи за добавяне.</p>
+                    )}
+                  </div>
+                </>
+              )}
+              {!isCustomTrainingGroupMode && (
+                <>
               <label className="amp-edit-field">
                 <span className="amp-lbl">Име на група</span>
                 <input
                   className="amp-edit-input"
                   value={trainingGroupEditName}
                   placeholder={trainingGroupEditGroups.length > 0 ? trainingGroupEditGroups.join("/") : "2012/2013"}
-                  readOnly
+                  onChange={(e) => setTrainingGroupEditName(e.target.value)}
                   disabled={trainingGroupEditSaving}
                 />
               </label>
@@ -6189,6 +6597,8 @@ function AdminMembersPageContent() {
                     : `Избрани набори: ${trainingGroupEditGroups.join(", ")}`}
                 </span>
               </div>
+                </>
+              )}
               {trainingGroupEditError && <p className="amp-confirm-error">{trainingGroupEditError}</p>}
               <div className="amp-modal-actions amp-modal-actions--end">
                 <button
@@ -6228,7 +6638,7 @@ function AdminMembersPageContent() {
           <div className="amp-modal amp-modal--confirm amp-modal--training-days-editor" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
-              <span className="amp-modal-title-gradient">Създай сборен отбор</span>
+              <span className="amp-modal-title-gradient">{isCustomTrainingGroupMode ? "Създай група" : "Създай сборен отбор"}</span>
               <button
                 className="amp-modal-close"
                 onClick={() => {
@@ -6242,6 +6652,50 @@ function AdminMembersPageContent() {
               </button>
             </h2>
             <div className="amp-modal-body">
+              {isCustomTrainingGroupMode && (
+                <>
+                  <label className="amp-edit-field">
+                    <span className="amp-lbl">Име на групата</span>
+                    <input
+                      className="amp-edit-input"
+                      value={trainingGroupCreateName}
+                      onChange={(e) => setTrainingGroupCreateName(e.target.value)}
+                      placeholder="Например: Сутрешна група"
+                      disabled={trainingGroupCreateSaving}
+                    />
+                  </label>
+                  <div className="amp-training-days-editor-header amp-training-days-editor-header--stack" style={{ marginTop: "10px" }}>
+                    <span className="amp-lbl">Играчите в групата</span>
+                    <div className="amp-group-check-grid">
+                      {availablePlayersForCustomGroupCreate.map((member) => {
+                        const isChecked = trainingGroupCreatePlayerIds.includes(member.id);
+                        return (
+                          <label key={`custom-training-group-create-${member.id}`} className={`amp-group-check-chip${isChecked ? " is-selected" : ""}${trainingGroupCreateSaving ? " is-disabled" : ""}`}>
+                            <input
+                              className="amp-group-check-input"
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={trainingGroupCreateSaving}
+                              onChange={(e) => {
+                                setTrainingGroupCreatePlayerIds((prev) => e.target.checked
+                                  ? [...new Set([...prev, member.id])]
+                                  : prev.filter((item) => item !== member.id));
+                              }}
+                            />
+                            <span className="amp-group-check-box" aria-hidden="true" />
+                            <span className="amp-lbl amp-group-check-label">{member.fullName}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {availablePlayersForCustomGroupCreate.length === 0 && (
+                      <p className="amp-empty amp-empty--modal">Няма свободни играчи за добавяне.</p>
+                    )}
+                  </div>
+                </>
+              )}
+              {!isCustomTrainingGroupMode && (
+                <>
               <div className="amp-training-days-editor-header amp-training-days-editor-header--stack">
                 <span className="amp-lbl">Набори за групата (минимум 2):</span>
                 <div className="amp-group-check-grid">
@@ -6279,6 +6733,8 @@ function AdminMembersPageContent() {
                     : `Избрани набори: ${trainingGroupCreateGroups.join(", ")} — Името ще бъде: ${trainingGroupCreateGroups.join("/")}`}
                 </span>
               </div>
+                </>
+              )}
               {trainingGroupCreateError && <p className="amp-confirm-error">{trainingGroupCreateError}</p>}
               <div className="amp-modal-actions amp-modal-actions--end">
                 <button
@@ -6298,7 +6754,11 @@ function AdminMembersPageContent() {
                   onClick={() => void saveTrainingGroupFromModal()}
                   disabled={trainingGroupCreateSaving}
                 >
-                  {trainingGroupCreateSaving ? "Създаване..." : "Създай сборен отбор"}
+                  {trainingGroupCreateSaving
+                    ? "Създаване..."
+                    : isCustomTrainingGroupMode
+                      ? "Създай група"
+                      : "Създай сборен отбор"}
                 </button>
               </div>
             </div>
@@ -6412,16 +6872,20 @@ function AdminMembersPageContent() {
                     >
                       {trainingDaysEditorMode === "trainingGroup"
                         ? `Сборен отбор: ${selectedTrainingGroup?.name ?? "-"}`
-                        : selectedTeamGroup === null
-                          ? "Набор: Всички"
-                          : `Набор: ${selectedTeamGroup}`}
+                        : trainingDaysEditorMode === "customGroup"
+                          ? `Персонализирана група: ${selectedCustomGroup?.name ?? "-"}`
+                          : selectedTeamGroup === null
+                            ? "Набор: Всички"
+                            : `Набор: ${selectedTeamGroup}`}
                     </span>
                     <span style={{ textAlign: "center" }}>
                       {trainingDaysEditorMode === "trainingGroup"
                         ? `Тези промени ще се запазят за сборен отбор ${selectedTrainingGroup?.name ?? "-"}.`
-                        : selectedTeamGroup === null
-                          ? "Тези промени ще се запазят за всички набори."
-                          : `Тези промени ще се запазят за набор ${selectedTeamGroup}.`}
+                        : trainingDaysEditorMode === "customGroup"
+                          ? `Тези промени ще се запазят за персонализирана група ${selectedCustomGroup?.name ?? "-"}.`
+                          : selectedTeamGroup === null
+                            ? "Тези промени ще се запазят за всички набори."
+                            : `Тези промени ще се запазят за набор ${selectedTeamGroup}.`}
                     </span>
                   </div>
                   {trainingDaysEditorMode !== "createGroup" && (
@@ -8074,21 +8538,25 @@ function ImportPhotosFromDriveModal({
 
 function ConfirmDeleteTrainingGroupModal({
   groupName,
+  isCustomGroup,
   isDeleting,
   onCancel,
   onConfirm,
 }: {
   groupName: string;
+  isCustomGroup: boolean;
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const subject = isCustomGroup ? "група" : "сборен отбор";
+  const subjectWithArticle = isCustomGroup ? "групата" : "сборния отбор";
   return (
     <div className="amp-overlay amp-overlay--confirm" onClick={isDeleting ? undefined : onCancel}>
       <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
         <div className="amp-modal-tint" aria-hidden="true" />
         <h2 className="amp-modal-title">
-          <span className="amp-modal-title-gradient">Потвърди изтриване на сборен отбор</span>
+          <span className="amp-modal-title-gradient">{`Потвърди изтриване на ${subject}`}</span>
           <button className="amp-modal-close" onClick={onCancel} aria-label="Затвори" disabled={isDeleting}>
             <XIcon />
           </button>
@@ -8099,7 +8567,7 @@ function ConfirmDeleteTrainingGroupModal({
             Сигурен ли си, че искаш да изтриеш <strong>{groupName}</strong>?
           </p>
           <p className="amp-confirm-subtext">
-            Това действие е необратимо и ще премахне сборния отбор и свързаните му тренировъчни дни.
+            {`Това действие е необратимо и ще премахне ${subjectWithArticle} и свързаните тренировъчни дни.`}
           </p>
 
           <div className="amp-modal-actions">
@@ -8107,7 +8575,7 @@ function ConfirmDeleteTrainingGroupModal({
               Отказ
             </button>
             <button className="amp-btn amp-btn--danger" onClick={onConfirm} disabled={isDeleting}>
-              {isDeleting ? "Изтриване..." : "Изтрий сборния отбор"}
+              {isDeleting ? "Изтриване..." : `Изтрий ${subjectWithArticle}`}
             </button>
           </div>
         </div>
