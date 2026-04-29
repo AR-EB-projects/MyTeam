@@ -3451,6 +3451,10 @@ function AdminMembersPageContent() {
     }
   }, [isAdmin]);
 
+  useEffect(() => {
+    setSelectedGroup("all");
+  }, [trainingGroupMode]);
+
   /* ── Derived ── */
   const groupOptions = [...new Set(
     members.filter((m) => m.isActive).map((m) => m.teamGroup).filter((g): g is number => g !== null)
@@ -3469,6 +3473,11 @@ function AdminMembersPageContent() {
   const selectedTrainingGroup = trainingScheduleGroups.find((group) => group.id === selectedTrainingGroupId) ?? null;
   const selectedCustomGroup = customTrainingGroups.find((group) => group.id === selectedTrainingGroupId) ?? null;
   const isCustomTrainingGroupMode = trainingGroupMode === "custom_group";
+  const activeMemberIdSet = new Set(members.filter((m) => m.isActive).map((m) => m.id));
+  const activeMembersByCustomGroup = customTrainingGroups.reduce<Record<string, number>>((acc, group) => {
+    acc[group.id] = group.playerIds.filter((id) => activeMemberIdSet.has(id)).length;
+    return acc;
+  }, {});
   const customTrainingGroupAssignedPlayerIds = new Set(customTrainingGroups.flatMap((group) => group.playerIds));
   const customTrainingGroupEditPlayerIdsSet = new Set(trainingGroupEditPlayerIds);
   const customTrainingGroupEditOriginalPlayerIds = new Set(
@@ -3596,7 +3605,10 @@ function AdminMembersPageContent() {
   const filtered = members.filter((m) => {
     if (!m.isActive) return false;
 
-    const matchGroup = selectedGroup === "all" || String(m.teamGroup) === selectedGroup;
+    const matchGroup = selectedGroup === "all"
+      || (isCustomTrainingGroupMode
+        ? (customTrainingGroups.find((g) => g.id === selectedGroup)?.playerIds ?? []).includes(m.id)
+        : String(m.teamGroup) === selectedGroup);
     if (!matchGroup) return false;
     if (!searchTerm.trim()) return true;
     const q = searchTerm.trim().toLowerCase();
@@ -5494,7 +5506,11 @@ function AdminMembersPageContent() {
               style={{ display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}
               onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
             >
-              {selectedGroup === "all" ? `Всички (${activeMembersCount})` : `${selectedGroup} (${(activeMembersByGroup as Record<string, number>)[selectedGroup] ?? 0})`}
+              {selectedGroup === "all"
+                ? `Всички (${activeMembersCount})`
+                : isCustomTrainingGroupMode
+                  ? `${customTrainingGroups.find((g) => g.id === selectedGroup)?.name ?? selectedGroup} (${activeMembersByCustomGroup[selectedGroup] ?? 0})`
+                  : `${selectedGroup} (${(activeMembersByGroup as Record<string, number>)[selectedGroup] ?? 0})`}
             </div>
             {isGroupDropdownOpen && (
               <>
@@ -5503,11 +5519,19 @@ function AdminMembersPageContent() {
                   <div className={`amp-custom-dropdown-item ${selectedGroup === "all" ? "active" : ""}`} onClick={() => { setSelectedGroup("all"); setIsGroupDropdownOpen(false); }}>
                     Всички ({activeMembersCount})
                   </div>
-                  {groupOptions.map((g) => (
-                    <div key={g} className={`amp-custom-dropdown-item ${selectedGroup === String(g) ? "active" : ""}`} onClick={() => { setSelectedGroup(String(g)); setIsGroupDropdownOpen(false); }}>
-                      {g} ({(activeMembersByGroup as Record<string, number>)[g] ?? 0})
-                    </div>
-                  ))}
+                  {isCustomTrainingGroupMode
+                    ? customTrainingGroups
+                        .filter((g) => (activeMembersByCustomGroup[g.id] ?? 0) > 0)
+                        .map((g) => (
+                          <div key={g.id} className={`amp-custom-dropdown-item ${selectedGroup === g.id ? "active" : ""}`} onClick={() => { setSelectedGroup(g.id); setIsGroupDropdownOpen(false); }}>
+                            {g.name} ({activeMembersByCustomGroup[g.id] ?? 0})
+                          </div>
+                        ))
+                    : groupOptions.map((g) => (
+                        <div key={g} className={`amp-custom-dropdown-item ${selectedGroup === String(g) ? "active" : ""}`} onClick={() => { setSelectedGroup(String(g)); setIsGroupDropdownOpen(false); }}>
+                          {g} ({(activeMembersByGroup as Record<string, number>)[g] ?? 0})
+                        </div>
+                      ))}
                 </div>
               </>
             )}
