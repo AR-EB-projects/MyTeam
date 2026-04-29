@@ -1586,8 +1586,6 @@ function InfiniteCarousel({ onExpand }) {
   const hasDraggedRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragStartPosRef = useRef(0);
-  const isUserScrollingRef = useRef(false);
-  const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const SPEED = 50; // px/s
   const GAP = 40;
@@ -1638,7 +1636,7 @@ function InfiniteCarousel({ onExpand }) {
     };
 
     const animate = (timestamp: number) => {
-      if (!pausedRef.current && !isDraggingRef.current && !isUserScrollingRef.current) {
+      if (!pausedRef.current && !isDraggingRef.current) {
         const dt = lastTimeRef.current != null ? timestamp - lastTimeRef.current : 0;
         posRef.current -= (SPEED * dt) / 1000;
         clampLoop();
@@ -1651,16 +1649,6 @@ function InfiniteCarousel({ onExpand }) {
 
     const onMouseEnter = () => { pausedRef.current = true; };
     const onMouseLeave = () => { pausedRef.current = false; };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      posRef.current -= e.deltaX || e.deltaY;
-      clampLoop();
-      track.style.transform = `translateX(${posRef.current}px)`;
-      isUserScrollingRef.current = true;
-      clearTimeout(userScrollTimeoutRef.current);
-      userScrollTimeoutRef.current = setTimeout(() => { isUserScrollingRef.current = false; }, 1000);
-    };
 
     const onMouseDown = (e: MouseEvent) => {
       isDraggingRef.current = true;
@@ -1715,7 +1703,6 @@ function InfiniteCarousel({ onExpand }) {
 
     container.addEventListener("mouseenter", onMouseEnter);
     container.addEventListener("mouseleave", onMouseLeave);
-    container.addEventListener("wheel", onWheel, { passive: false });
     container.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
@@ -1725,10 +1712,8 @@ function InfiniteCarousel({ onExpand }) {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      clearTimeout(userScrollTimeoutRef.current);
       container.removeEventListener("mouseenter", onMouseEnter);
       container.removeEventListener("mouseleave", onMouseLeave);
-      container.removeEventListener("wheel", onWheel);
       container.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
