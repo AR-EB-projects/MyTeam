@@ -156,7 +156,6 @@ export async function GET(
       notifications = items;
       unreadCount = count;
     } catch (notificationError) {
-      // Keep profile available if notification history table is not migrated yet.
       const code =
         typeof notificationError === "object" &&
         notificationError !== null &&
@@ -169,7 +168,7 @@ export async function GET(
       }
     }
 
-    const [paymentLogs, paymentWaivers, discountConfigs] = await Promise.all([
+    const [paymentLogs, paymentWaivers] = await Promise.all([
       prisma.paymentLog.findMany({
         where: { playerId: card.player.id },
         orderBy: { paidAt: "desc" },
@@ -190,10 +189,27 @@ export async function GET(
           createdBy: true,
         },
       }),
-      prisma.teamDiscountConfig.findMany({
+    ]);
+
+    let configs = await prisma.teamDiscountConfig.findMany({
+      where: {
+        clubId: card.player.clubId,
+        teamGroup: card.player.teamGroup ?? 0,
+        isVisible: true,
+      },
+      include: {
+        discount: true,
+      },
+      orderBy: {
+        order: "asc",
+      },
+    });
+
+    if (configs.length === 0 && (card.player.teamGroup ?? 0) !== 0) {
+      configs = await prisma.teamDiscountConfig.findMany({
         where: {
           clubId: card.player.clubId,
-          teamGroup: 0, // Using 0 for club-wide discounts
+          teamGroup: 0,
           isVisible: true,
         },
         include: {
@@ -202,8 +218,11 @@ export async function GET(
         orderBy: {
           order: "asc",
         },
-      }),
-    ]);
+      });
+    }
+
+    const assignedDiscounts = configs;
+    console.log("ASSIGNED DISCOUNTS JSON:", JSON.stringify(assignedDiscounts, null, 2));
 
     const waivedDates = paymentWaivers.map((item) => item.waivedFor);
     const pausedThisMonth = isCurrentMonthWaived(waivedDates);
@@ -261,7 +280,7 @@ export async function GET(
           readAt: item.readAt,
         })),
         unread_notifications: unreadCount,
-        discounts: discountConfigs.map((c) => ({
+        discounts: assignedDiscounts.map((c) => ({
           id: c.discount.id,
           name: c.discount.name,
           logoUrl: c.discount.logoUrl,
@@ -269,6 +288,7 @@ export async function GET(
           code: c.discount.code,
           storeUrl: c.discount.storeUrl,
           terms: c.discount.terms,
+          themeColor: c.discount.themeColor,
         })),
       },
       {
