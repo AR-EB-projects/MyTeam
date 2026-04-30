@@ -16,6 +16,7 @@ interface PartnerDiscount {
   validUntil: string | null;
   storeUrl: string | null;
   terms: string[];
+  themeColor: string | null;
 }
 
 interface TeamConfig {
@@ -41,6 +42,10 @@ export default function DiscountsPageClient() {
   const [editingPartner, setEditingPartner] = useState<Partial<PartnerDiscount> | null>(null);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [saving, setSaving] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -305,7 +310,23 @@ export default function DiscountsPageClient() {
                       <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.5)", fontWeight: "500", margin: 0 }}>{team.configs.filter(c => c.isVisible).length} активни отстъпки</p>
                     </div>
                   </div>
-                  <button className="add-btn" style={{ background: "#32cd32", color: "#000", fontWeight: "800", boxShadow: "0 0 20px rgba(50, 205, 50, 0.4)" }} onClick={() => setEditingTeam(team)}>
+                  <button className="add-btn" style={{ background: "#32cd32", color: "#000", fontWeight: "800", boxShadow: "0 0 20px rgba(50, 205, 50, 0.4)" }} onClick={() => {
+                          // Auto-populate all partners if missing
+                          const allPartnerIds = partners.map(p => p.id);
+                          const existingIds = team.configs.map(c => c.discountId);
+                          const missingIds = allPartnerIds.filter(id => !existingIds.includes(id));
+                          
+                          const fullConfigs = [
+                            ...team.configs,
+                            ...missingIds.map((id, idx) => ({
+                              discountId: id,
+                              order: team.configs.length + idx,
+                              isVisible: false
+                            }))
+                          ];
+                          
+                          setEditingTeam({ ...team, configs: fullConfigs });
+                        }}>
                     Настрой
                   </button>
                 </div>
@@ -436,29 +457,64 @@ export default function DiscountsPageClient() {
             </div>
 
             <div className="form-group">
+              <label className="form-label">Уебсайт (незадължително)</label>
+              <input 
+                type="url"
+                className="form-input" 
+                value={editingPartner.storeUrl || ""} 
+                onChange={e => setEditingPartner({...editingPartner, storeUrl: e.target.value || null})}
+                placeholder="https://example.com"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Цвят на темата (по подразбиране: #ff4d4d)</label>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <input 
+                  type="text"
+                  className="form-input" 
+                  style={{ flex: 1, fontFamily: "monospace", fontSize: "14px" }}
+                  value={editingPartner.themeColor || ""} 
+                  onChange={e => setEditingPartner({...editingPartner, themeColor: e.target.value})}
+                  placeholder="#ff4d4d"
+                />
+                <div style={{ 
+                  width: "44px", 
+                  height: "44px", 
+                  borderRadius: "10px", 
+                  background: editingPartner.themeColor || "#ff4d4d",
+                  border: "2px solid rgba(255,255,255,0.1)",
+                  boxShadow: `0 0 15px ${(editingPartner.themeColor || "#ff4d4d")}44`
+                }} />
+              </div>
+            </div>
+
+            <div className="form-group">
               <label className="form-label">Условия (напишете и натиснете Enter)</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "10px" }}>
                 {editingPartner.terms?.map((term, i) => (
                   <div key={i} style={{ 
-                    background: "rgba(255,255,255,0.05)", 
-                    padding: "6px 12px", 
-                    borderRadius: "8px", 
-                    fontSize: "13px", 
+                    background: "rgba(255,255,255,0.03)", 
+                    padding: "10px 16px", 
+                    borderRadius: "10px", 
+                    fontSize: "14px", 
                     display: "flex", 
-                    alignItems: "center", 
-                    gap: "8px",
-                    border: "1px solid rgba(255,255,255,0.1)"
+                    alignItems: "flex-start", 
+                    justifyContent: "space-between",
+                    gap: "12px",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    width: "100%"
                   }}>
-                    <span>{term}</span>
+                    <span style={{ textAlign: "left", flex: 1, color: "rgba(255,255,255,0.9)", lineHeight: "1.4" }}>{term}</span>
                     <button 
                       onClick={() => {
                         const newTerms = [...(editingPartner.terms || [])];
                         newTerms.splice(i, 1);
                         setEditingPartner({...editingPartner, terms: newTerms});
                       }}
-                      style={{ background: "none", border: "none", color: "#ff4444", cursor: "pointer", display: "flex", padding: 0 }}
+                      style={{ background: "none", border: "none", color: "#ff4d4d", cursor: "pointer", display: "flex", padding: "2px", opacity: 0.6 }}
                     >
-                      <X size={14} />
+                      <X size={16} />
                     </button>
                   </div>
                 ))}
@@ -500,48 +556,85 @@ export default function DiscountsPageClient() {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setEditingTeam(null)}><X size={24} /></button>
             
-            <div className="modal-header" style={{ textAlign: "center", marginBottom: "30px" }}>
-              <h2 className="modal-title" style={{ color: "#32cd32", fontSize: "28px", fontWeight: "900", marginBottom: "8px" }}>Настройка за {editingTeam.clubName}</h2>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>Изберете кои отстъпки да се виждат и ги подредете.</p>
+            <div style={{ marginBottom: "30px", textAlign: "center" }}>
+              <h2 style={{ color: "#32cd32", fontSize: "28px", fontWeight: "900", marginBottom: "8px" }}>Настройка за {editingTeam.clubName}</h2>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>Включете отстъпките за този отбор и ги подредете.</p>
             </div>
 
-            <div className="config-list" style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "30px" }}>
+            <div 
+              className="config-list" 
+              style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "30px", position: "relative" }}
+              onPointerMove={(e) => {
+                if (!draggingId || dragIndex === null) return;
+                const deltaY = e.clientY - startY;
+                setDragY(deltaY);
+
+                const rowHeight = 66; 
+                const newIndex = Math.max(0, Math.min(editingTeam.configs.length - 1, Math.round(dragIndex + deltaY / rowHeight)));
+                
+                if (newIndex !== dragIndex) {
+                  const newConfigs = [...editingTeam.configs].sort((a,b) => a.order - b.order);
+                  const [moved] = newConfigs.splice(dragIndex, 1);
+                  newConfigs.splice(newIndex, 0, moved);
+                  const finalConfigs = newConfigs.map((c, idx) => ({ ...c, order: idx }));
+                  
+                  // COMPENSATE STARTY TO KEEP IT STICKY
+                  const diff = (newIndex - dragIndex) * rowHeight;
+                  setStartY(prev => prev + diff);
+                  setDragY(deltaY - diff);
+                  setDragIndex(newIndex);
+                  setEditingTeam({ ...editingTeam, configs: finalConfigs });
+                }
+              }}
+              onPointerUp={() => {
+                setDraggingId(null);
+                setDragY(0);
+                setDragIndex(null);
+              }}
+              onPointerLeave={() => {
+                setDraggingId(null);
+                setDragY(0);
+                setDragIndex(null);
+              }}
+            >
               {editingTeam.configs.sort((a,b) => a.order - b.order).map((config, index) => {
                 const partner = partners.find(p => p.id === config.discountId);
                 if (!partner) return null;
+                
+                const isDragging = draggingId === config.discountId;
+
                 return (
                   <div 
                     key={config.discountId} 
-                    draggable
-                    onDragStart={(e) => e.dataTransfer.setData("index", index.toString())}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const fromIndex = parseInt(e.dataTransfer.getData("index"));
-                      const toIndex = index;
-                      const newConfigs = [...editingTeam.configs].sort((a,b) => a.order - b.order);
-                      const [moved] = newConfigs.splice(fromIndex, 1);
-                      newConfigs.splice(toIndex, 0, moved);
-                      
-                      // Re-map all orders
-                      const finalConfigs = newConfigs.map((c, idx) => ({ ...c, order: idx }));
-                      setEditingTeam({ ...editingTeam, configs: finalConfigs });
+                    onPointerDown={(e) => {
+                      setDraggingId(config.discountId);
+                      setDragIndex(index);
+                      setStartY(e.clientY);
+                      // @ts-ignore
+                      e.target.setPointerCapture(e.pointerId);
                     }}
-                    className="config-item"
+                    className={`config-item ${isDragging ? 'dragging' : ''}`}
                     style={{ 
-                      background: "rgba(255,255,255,0.03)", 
-                      border: "1px solid rgba(255,255,255,0.08)", 
+                      background: isDragging ? "rgba(50, 205, 50, 0.12)" : "rgba(255,255,255,0.03)", 
+                      border: isDragging ? "2px solid #32cd32" : "1px solid rgba(255,255,255,0.08)", 
                       padding: "12px 16px", 
                       borderRadius: "16px", 
                       display: "flex", 
                       alignItems: "center", 
                       justifyContent: "space-between",
                       cursor: "grab",
-                      transition: "background 0.2s"
+                      transition: isDragging ? "none" : "transform 0.4s cubic-bezier(0.2, 1, 0.2, 1), background 0.2s",
+                      transform: isDragging ? `translateY(${dragY}px) scale(1.04)` : "none",
+                      boxShadow: isDragging ? "0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(50, 205, 50, 0.3)" : "none",
+                      zIndex: isDragging ? 100 : 1,
+                      touchAction: "none",
+                      willChange: "transform",
+                      userSelect: "none",
+                      WebkitUserSelect: "none"
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                      <GripVertical size={16} style={{ color: "rgba(255,255,255,0.2)" }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: "15px", pointerEvents: "none" }}>
+                      <GripVertical size={16} style={{ color: isDragging ? "#32cd32" : "rgba(255,255,255,0.2)" }} />
                       <div className="partner-logo-wrap" style={{ width: "40px", height: "40px", margin: 0, background: "rgba(255,255,255,0.05)" }}>
                         <img src={partner.logoUrl || "/placeholder.png"} alt="" className="partner-logo" />
                       </div>
@@ -552,6 +645,7 @@ export default function DiscountsPageClient() {
 
                     <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                       <div 
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
                           const newConfigs = editingTeam.configs.map(c => 
@@ -580,50 +674,12 @@ export default function DiscountsPageClient() {
                           transition: "all 0.3s"
                         }} />
                       </div>
-                      
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newConfigs = editingTeam.configs.filter(c => c.discountId !== config.discountId);
-                          setEditingTeam({ ...editingTeam, configs: newConfigs });
-                        }}
-                        style={{ background: "none", border: "none", color: "rgba(255,77,77,0.5)", cursor: "pointer", padding: "4px" }}
-                      >
-                        <X size={18} />
-                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="available-partners" style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "30px" }}>
-              {partners.filter(p => !editingTeam.configs.some(c => c.discountId === p.id)).map(partner => (
-                <button
-                  key={partner.id}
-                  onClick={() => {
-                    const newConfigs = [
-                      ...editingTeam.configs,
-                      { clubId: editingTeam.clubId, teamGroup: 0, discountId: partner.id, order: editingTeam.configs.length, isVisible: true }
-                    ];
-                    setEditingTeam({ ...editingTeam, configs: newConfigs });
-                  }}
-                  style={{ 
-                    background: "rgba(255,255,255,0.03)", 
-                    color: "rgba(255,255,255,0.4)", 
-                    border: "1px solid rgba(255,255,255,0.08)", 
-                    padding: "8px 14px", 
-                    borderRadius: "10px", 
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  + {partner.name}
-                </button>
-              ))}
-            </div>
 
             <button 
               className="save-btn" 
