@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
         validUntil: body.validUntil ? new Date(body.validUntil) : null,
         storeUrl: body.storeUrl,
         terms: body.terms || [],
+        themeColor: body.themeColor,
       },
     });
     return NextResponse.json(discount);
@@ -75,6 +76,7 @@ export async function PUT(request: NextRequest) {
         validUntil: data.validUntil ? new Date(data.validUntil) : null,
         storeUrl: data.storeUrl,
         terms: data.terms || [],
+        themeColor: data.themeColor,
       },
     });
     return NextResponse.json(discount);

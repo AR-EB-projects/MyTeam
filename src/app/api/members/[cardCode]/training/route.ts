@@ -38,7 +38,7 @@ function normalizeStoredTrainingDateTimes(raw: unknown, trainingDates: string[])
       continue;
     }
     const time = typeof value === "string" ? value.trim() : "";
-    const normalized = normalizeTrainingTime(time);
+    const normalized = safeNormalizeTrainingTime(time);
     if (normalized) {
       result[date] = normalized;
     }
@@ -150,7 +150,6 @@ async function getMemberTrainingContext(cardCode: string) {
             },
           },
           customTrainingGroups: {
-            take: 1,
             select: {
               group: {
                 select: {
@@ -174,7 +173,7 @@ async function getMemberTrainingContext(cardCode: string) {
 
   const isCustomGroupMode = card.player.club.trainingGroupMode === "custom_group";
   const customGroup = isCustomGroupMode
-    ? card.player.customTrainingGroups[0]?.group ?? null
+    ? card.player.customTrainingGroups?.group ?? null
     : null;
 
   const groupSchedule = card.player.teamGroup === null
