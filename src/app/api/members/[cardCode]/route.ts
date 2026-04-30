@@ -169,7 +169,7 @@ export async function GET(
       }
     }
 
-    const [paymentLogs, paymentWaivers] = await Promise.all([
+    const [paymentLogs, paymentWaivers, discountConfigs] = await Promise.all([
       prisma.paymentLog.findMany({
         where: { playerId: card.player.id },
         orderBy: { paidAt: "desc" },
@@ -188,6 +188,19 @@ export async function GET(
           reason: true,
           createdAt: true,
           createdBy: true,
+        },
+      }),
+      prisma.teamDiscountConfig.findMany({
+        where: {
+          clubId: card.player.clubId,
+          teamGroup: 0, // Using 0 for club-wide discounts
+          isVisible: true,
+        },
+        include: {
+          discount: true,
+        },
+        orderBy: {
+          order: "asc",
         },
       }),
     ]);
@@ -248,6 +261,15 @@ export async function GET(
           readAt: item.readAt,
         })),
         unread_notifications: unreadCount,
+        discounts: discountConfigs.map((c) => ({
+          id: c.discount.id,
+          name: c.discount.name,
+          logoUrl: c.discount.logoUrl,
+          badgeText: c.discount.badgeText,
+          code: c.discount.code,
+          storeUrl: c.discount.storeUrl,
+          terms: c.discount.terms,
+        })),
       },
       {
         headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" },
