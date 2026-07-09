@@ -2324,7 +2324,7 @@ export default function MemberCardPage({
             )}
           </>)}
 
-          {canPublicEdit && member.onlinePaymentEnabled && (
+          {member.onlinePaymentEnabled && (
             <button
               className="pay-btn"
               onClick={openPaymentModal}
