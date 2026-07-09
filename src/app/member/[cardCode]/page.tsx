@@ -2182,7 +2182,7 @@ export default function MemberCardPage({
           </div>
           {canPublicEdit && (trainingLoading ? (
             <p className="training-empty">Зареждане...</p>
-          ) : trainingDays.length === 0 ? (
+          ) : trainingDays.length === 0 && memberMatches.length === 0 ? (
             <p className="training-empty">Няма настроени тренировъчни дни.</p>
           ) : (
             <div className="training-calendar">
@@ -2722,7 +2722,7 @@ export default function MemberCardPage({
               <div className="training-section" style={{ margin: 0 }}>
                 {trainingLoading ? (
                   <p className="training-empty">Зареждане...</p>
-                ) : trainingDays.length === 0 ? (
+                ) : trainingDays.length === 0 && memberMatches.length === 0 ? (
                   <p className="training-empty">Няма настроени тренировъчни дни.</p>
                 ) : (
                   <>
