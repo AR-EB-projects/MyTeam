@@ -7,6 +7,7 @@ import {
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { cloudinary } from "@/lib/cloudinary";
 import { publishMemberUpdated } from "@/lib/memberEvents";
+import { isIrisPayEnabledForClub } from "@/lib/irispay";
 import { getRollingThirtyDayPaymentWindow, isCurrentMonthWaived, resolveRollingThirtyDayStatus } from "@/lib/paymentStatus";
 import { isValidPhone, normalizePhone } from "@/lib/phone";
 
@@ -276,7 +277,7 @@ export async function GET(
         playerPhone: card.player.playerPhone,
         birthDate: card.player.birthDate,
         paymentWorkflow,
-        onlinePaymentEnabled: card.player.club?.id === "3600c653-f688-44eb-b63b-4e1c73385c01",
+        onlinePaymentEnabled: isIrisPayEnabledForClub(card.player.club?.id),
         defaultOnlineTrainingCredits: card.player.club?.defaultOnlineTrainingCredits ?? 0,
         remainingTrainingCredits: card.player.remainingTrainingCredits,
         status: paymentWorkflow === "calendar_month" && pausedThisMonth ? "paused" : resolvedStatus,
