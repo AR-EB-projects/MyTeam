@@ -598,7 +598,7 @@ export default function MemberCardPage({
     setIrisPayment(null);
     setSelectedPaymentDeleteMonths([]);
     setPaymentError(
-      !canManagePayments && isTrainingCreditBasedPayment && Number(member?.defaultOnlineTrainingCredits ?? 0) <= 0
+      isTrainingCreditBasedPayment && Number(member?.defaultOnlineTrainingCredits ?? 0) <= 0
         ? "Онлайн плащането за тренировки не е конфигурирано."
         : null,
     );
@@ -2328,10 +2328,6 @@ export default function MemberCardPage({
             <button
               className="pay-btn"
               onClick={openPaymentModal}
-              disabled={
-                hasActiveRollingPayment ||
-                hasActiveTrainingCreditsThirtyDayPayment
-              }
               title={
                 hasActiveRollingPayment
                   ? `Остават ${rollingRemainingText}`
@@ -3902,7 +3898,7 @@ export default function MemberCardPage({
                 )}
                 {paymentModalMode === "create" && (
                   <>
-                    {viewerRoleChecked && member.onlinePaymentEnabled && !isAdmin && !isCoach && (
+                    {viewerRoleChecked && member.onlinePaymentEnabled && (
                       <button
                         className="pm-btn pm-btn--submit"
                         onClick={handleIrisPayment}
