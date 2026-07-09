@@ -70,6 +70,8 @@ model Club {
   firstBillingMonth       DateTime?                   @map("first_billing_month") @db.Timestamptz(6)
   billingActivatedAt      DateTime?                   @map("billing_activated_at") @db.Timestamptz(6)
   defaultPaymentAmount    Decimal                     @default(0) @map("default_payment_amount") @db.Decimal(10, 2)
+  defaultOnlineTrainingCredits Int                    @default(0) @map("default_online_training_credits")
+  irisPayments            IrisPayment[]
   discountConfigs         TeamDiscountConfig[]
   matches                    ClubMatch[]
   trainingPlans              TrainingPlan[]
@@ -251,6 +253,7 @@ model Player {
   images               Image[]
   paymentLogs          PaymentLog[]
   paymentWaivers       PaymentWaiver[]
+  irisPayments          IrisPayment[]
   playerNotification   PlayerNotification[]
   adminNotifications   AdminNotification[]
   club                 Club                            @relation(fields: [clubId], references: [id], onDelete: Cascade)
@@ -414,9 +417,51 @@ model PaymentLog {
   recordedBy String   @default("admin") @map("recorded_by")
   paidFor    DateTime @map("paid_for") @db.Timestamptz(6)
   player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  irisPayment IrisPayment?
 
   @@index([playerId])
   @@map("payment_logs")
+}
+
+enum IrisPaymentStatus {
+  WAITING
+  FAILED
+  CONFIRMED
+
+  @@map("iris_payment_status")
+}
+
+model IrisPayment {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clubId           String            @map("club_id") @db.Uuid
+  playerId         String            @map("player_id") @db.Uuid
+  paymentHash      String?           @unique @map("payment_hash")
+  accountId        String?           @map("account_id")
+  paymentLink      String?           @map("payment_link")
+  shortPaymentLink String?           @map("short_payment_link")
+  orderId          String            @unique @map("order_id")
+  amount           Decimal           @db.Decimal(10, 2)
+  currency         String            @default("EUR")
+  paidFor          DateTime          @map("paid_for") @db.Timestamptz(6)
+  paidThrough      DateTime?         @map("paid_through") @db.Timestamptz(6)
+  trainingCredits  Int?              @map("training_credits")
+  status           IrisPaymentStatus @default(WAITING)
+  paymentLogId     String?           @unique @map("payment_log_id") @db.Uuid
+  rawCreatePayload Json?             @map("raw_create_payload")
+  rawStatusPayload Json?             @map("raw_status_payload")
+  rawWebhookPayload Json?            @map("raw_webhook_payload")
+  confirmedAt      DateTime?         @map("confirmed_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  club       Club        @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  player     Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  paymentLog PaymentLog? @relation(fields: [paymentLogId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+  @@index([playerId])
+  @@index([status])
+  @@map("iris_payments")
 }
 
 model PaymentWaiver {

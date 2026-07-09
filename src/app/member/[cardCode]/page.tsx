@@ -15,6 +15,8 @@ interface MemberProfile {
   clubSports?: string | null;
   clubLogoUrl?: string | null;
   paymentWorkflow?: "calendar_month" | "rolling_30_days" | "training_credits" | "training_credits_30_days";
+  onlinePaymentEnabled?: boolean;
+  defaultOnlineTrainingCredits?: number;
   remainingTrainingCredits?: number;
   avatarUrl?: string | null;
   jerseyNumber?: string | null;
@@ -90,6 +92,18 @@ interface TrainingDayStatus {
   trainingFieldPieceNames?: string[];
   limitedEvent?: LimitedEventInfo | null;
   sessions: TrainingSessionItem[];
+}
+
+interface IrisOnlinePayment {
+  id: string;
+  orderId: string;
+  paymentHash: string;
+  paymentLink: string;
+  shortPaymentLink?: string | null;
+  amount: string;
+  currency: string;
+  status: "WAITING" | "FAILED" | "CONFIRMED";
+  qrUrl: string;
 }
 
 interface MemberMatch {
@@ -335,6 +349,7 @@ export default function MemberCardPage({
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCoach, setIsCoach] = useState(false);
+  const [viewerRoleChecked, setViewerRoleChecked] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
   const [isPushEnabled, setIsPushEnabled] = useState(false);
@@ -394,6 +409,9 @@ export default function MemberCardPage({
   const [selectedYM, setSelectedYM] = useState<{ year: number; month: number } | null>(null);
   const [selectedPaymentDeleteMonths, setSelectedPaymentDeleteMonths] = useState<Array<{ year: number; month: number }>>([]);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [irisPaymentLoading, setIrisPaymentLoading] = useState(false);
+  const [irisStatusLoading, setIrisStatusLoading] = useState(false);
+  const [irisPayment, setIrisPayment] = useState<IrisOnlinePayment | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentTrainingCredits, setPaymentTrainingCredits] = useState("");
   const [trainingCreditLoading, setTrainingCreditLoading] = useState(false);
@@ -570,15 +588,20 @@ export default function MemberCardPage({
 
     return candidate;
   })();
+  const paymentModalYM = firstUnpaidYM ?? { year: today.getFullYear(), month: today.getMonth() };
 
   const openPaymentModal = () => {
-    if (!firstUnpaidYM) return;
     setPaymentModalMode("create");
-    setCalendarYear(firstUnpaidYM.year);
-    setSelectedYM(firstUnpaidYM);
+    setCalendarYear(paymentModalYM.year);
+    setSelectedYM(paymentModalYM);
     setPaymentTrainingCredits("");
+    setIrisPayment(null);
     setSelectedPaymentDeleteMonths([]);
-    setPaymentError(null);
+    setPaymentError(
+      !canManagePayments && isTrainingCreditBasedPayment && Number(member?.defaultOnlineTrainingCredits ?? 0) <= 0
+        ? "Онлайн плащането за тренировки не е конфигурирано."
+        : null,
+    );
     setPaymentModalOpen(true);
   };
 
@@ -1140,14 +1163,17 @@ export default function MemberCardPage({
         if (!response.ok) {
           setIsAdmin(false);
           setIsCoach(false);
+          setViewerRoleChecked(true);
           return;
         }
         const payload = (await response.json()) as { isAdmin?: boolean; isCoach?: boolean };
         setIsAdmin(Boolean(payload.isAdmin));
         setIsCoach(Boolean(payload.isCoach));
+        setViewerRoleChecked(true);
       } catch {
         setIsAdmin(false);
         setIsCoach(false);
+        setViewerRoleChecked(true);
       }
     };
 
@@ -1381,6 +1407,78 @@ export default function MemberCardPage({
       setPaymentError(e instanceof Error ? e.message : "Възникна грешка");
     } finally {
       setPaymentLoading(false);
+    }
+  };
+
+  const handleIrisPayment = async () => {
+    if (!selectedYM || !member) return;
+    if (hasActiveRollingPayment) {
+      setPaymentError(`Остават ${rollingRemainingText}`);
+      return;
+    }
+    if (hasActiveTrainingCreditsThirtyDayPayment) {
+      setPaymentError("Онлайн плащане е достъпно, когато тренировките станат 0 или 30-дневният срок изтече.");
+      return;
+    }
+    if (isTrainingCreditBasedPayment && Number(member.defaultOnlineTrainingCredits ?? 0) <= 0) {
+      setPaymentError("Онлайн плащането за тренировки не е конфигурирано.");
+      return;
+    }
+
+    setIrisPaymentLoading(true);
+    setPaymentError(null);
+    setIrisPayment(null);
+    try {
+      const response = await fetch(`/api/members/${normalizedCardCode}/irispay/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paidFor: isThirtyDayBasedPayment || isTrainingCreditBasedPayment ? new Date().toISOString() : toISOMonth(selectedYM),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === "string" && payload.error.trim()
+            ? payload.error
+            : "Грешка при създаване на онлайн плащане",
+        );
+      }
+      setIrisPayment(payload.payment as IrisOnlinePayment);
+    } catch (e) {
+      setPaymentError(e instanceof Error ? e.message : "Възникна грешка");
+    } finally {
+      setIrisPaymentLoading(false);
+    }
+  };
+
+  const handleIrisStatusCheck = async () => {
+    if (!irisPayment) return;
+    setIrisStatusLoading(true);
+    setPaymentError(null);
+    try {
+      const response = await fetch(
+        `/api/members/${normalizedCardCode}/irispay/payment/${encodeURIComponent(irisPayment.paymentHash)}`,
+        { cache: "no-store" },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === "string" && payload.error.trim()
+            ? payload.error
+            : "Грешка при проверка на плащането",
+        );
+      }
+      const nextStatus = payload.status as IrisOnlinePayment["status"];
+      setIrisPayment((prev) => prev ? { ...prev, status: nextStatus } : prev);
+      if (nextStatus === "CONFIRMED") {
+        const refreshed = await fetch(`/api/members/${normalizedCardCode}`, { cache: "no-store" });
+        if (refreshed.ok) setMember(await refreshed.json());
+      }
+    } catch (e) {
+      setPaymentError(e instanceof Error ? e.message : "Възникна грешка");
+    } finally {
+      setIrisStatusLoading(false);
     }
   };
 
@@ -2225,6 +2323,26 @@ export default function MemberCardPage({
               <p className="training-credit-success">{trainingCreditSuccess}</p>
             )}
           </>)}
+
+          {canPublicEdit && member.onlinePaymentEnabled && (
+            <button
+              className="pay-btn"
+              onClick={openPaymentModal}
+              disabled={
+                hasActiveRollingPayment ||
+                hasActiveTrainingCreditsThirtyDayPayment
+              }
+              title={
+                hasActiveRollingPayment
+                  ? `Остават ${rollingRemainingText}`
+                  : hasActiveTrainingCreditsThirtyDayPayment
+                    ? `Остават ${remainingTrainingCredits} тренировки и ${rollingRemainingText}`
+                    : undefined
+              }
+            >
+              Плати онлайн
+            </button>
+          )}
 
           <button className="add-btn member-action-btn training-schedule-btn" onClick={() => void openTrainingModal()}>
             График
@@ -3545,7 +3663,7 @@ export default function MemberCardPage({
         )}
 
         {/* ══ PAYMENT MODAL ══ */}
-        {paymentModalOpen && firstUnpaidYM && (
+        {paymentModalOpen && (
           <div className="pm-overlay" onClick={() => setPaymentModalOpen(false)}>
             <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
 
@@ -3581,27 +3699,33 @@ export default function MemberCardPage({
                       </span>
                     </div>
                   )}
-                  <label className="pm-training-credit-label" htmlFor="paymentTrainingCredits">
-                    Нов брой тренировки
-                  </label>
-                  <input
-                    id="paymentTrainingCredits"
-                    className="pm-training-credit-input"
-                    type="number"
-                    min="1"
-                    max="999"
-                    inputMode="numeric"
-                    value={paymentTrainingCredits}
-                    onChange={(event) => {
-                      setPaymentTrainingCredits(event.target.value);
-                      setPaymentError(null);
-                    }}
-                    placeholder="Напр. 8"
-                    disabled={paymentLoading}
-                  />
+                  {canManagePayments && (
+                    <>
+                      <label className="pm-training-credit-label" htmlFor="paymentTrainingCredits">
+                        Нов брой тренировки
+                      </label>
+                      <input
+                        id="paymentTrainingCredits"
+                        className="pm-training-credit-input"
+                        type="number"
+                        min="1"
+                        max="999"
+                        inputMode="numeric"
+                        value={paymentTrainingCredits}
+                        onChange={(event) => {
+                          setPaymentTrainingCredits(event.target.value);
+                          setPaymentError(null);
+                        }}
+                        placeholder="Напр. 8"
+                        disabled={paymentLoading}
+                      />
+                    </>
+                  )}
                   <p className="pm-training-credit-help">
                     {hasActiveTrainingCreditsThirtyDayPayment
                       ? "Новото плащане е достъпно, когато тренировките станат 0 или 30-дневният срок изтече."
+                      : !canManagePayments
+                        ? `При онлайн плащане ще бъдат добавени ${member.defaultOnlineTrainingCredits ?? 0} тренировки.`
                       : isTrainingCreditsThirtyDayPayment
                       ? "При потвърждение тренировките ще се заменят с този брой и ще важат 30 дни от днес."
                       : "При потвърждение оставащите тренировки ще се заменят с този брой."}
@@ -3637,7 +3761,7 @@ export default function MemberCardPage({
                 <span className="pm-info-val">
                   {paymentModalMode === "delete"
                     ? "Може да изберете един или повече"
-                    : `${MONTH_NAMES_BG_FULL[firstUnpaidYM.month]} ${firstUnpaidYM.year}`}
+                    : `${MONTH_NAMES_BG_FULL[paymentModalYM.month]} ${paymentModalYM.year}`}
                 </span>
               </div>
 
@@ -3659,7 +3783,7 @@ export default function MemberCardPage({
                   const state = getMonthState(ym);
                   const inAdvanceRange =
                     !!selectedYM &&
-                    cmpYM(ym, firstUnpaidYM) >= 0 &&
+                    cmpYM(ym, paymentModalYM) >= 0 &&
                     cmpYM(ym, selectedYM) <= 0 &&
                     state !== "paid" &&
                     state !== "waived" &&
@@ -3707,14 +3831,54 @@ export default function MemberCardPage({
                 <div className="pm-selected-summary">
                   <span className="pm-selected-lbl">Избрано:</span>
                   <span className="pm-selected-val">
-                    {cmpYM(selectedYM, firstUnpaidYM) > 0
-                      ? `${MONTH_NAMES_BG_FULL[firstUnpaidYM.month]} ${firstUnpaidYM.year} - ${MONTH_NAMES_BG_FULL[selectedYM.month]} ${selectedYM.year}`
+                    {cmpYM(selectedYM, paymentModalYM) > 0
+                      ? `${MONTH_NAMES_BG_FULL[paymentModalYM.month]} ${paymentModalYM.year} - ${MONTH_NAMES_BG_FULL[selectedYM.month]} ${selectedYM.year}`
                       : `${MONTH_NAMES_BG_FULL[selectedYM.month]} ${selectedYM.year}`}
                   </span>
                 </div>
               )}
 
                 </>
+              )}
+
+              {irisPayment && (
+                <div className="pm-iris-panel">
+                  <div className="pm-iris-head">
+                    <span className="pm-iris-title">IRISPay</span>
+                    <span className={`pm-iris-status pm-iris-status--${irisPayment.status.toLowerCase()}`}>
+                      {irisPayment.status === "CONFIRMED"
+                        ? "Потвърдено"
+                        : irisPayment.status === "FAILED"
+                          ? "Неуспешно"
+                          : "Очаква плащане"}
+                    </span>
+                  </div>
+                  <div className="pm-iris-amount">
+                    {irisPayment.amount} {irisPayment.currency}
+                  </div>
+                  <img
+                    className="pm-iris-qr"
+                    src={irisPayment.qrUrl}
+                    alt="IRISPay QR код"
+                  />
+                  <div className="pm-iris-actions">
+                    <a
+                      className="pm-btn pm-btn--submit pm-iris-link"
+                      href={irisPayment.shortPaymentLink || irisPayment.paymentLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Отвори плащане
+                    </a>
+                    <button
+                      className="pm-btn pm-btn--cancel"
+                      onClick={handleIrisStatusCheck}
+                      disabled={irisStatusLoading}
+                    >
+                      {irisStatusLoading ? "Проверка..." : "Провери статус"}
+                    </button>
+                  </div>
+                </div>
               )}
 
               {paymentError && (
@@ -3737,27 +3901,48 @@ export default function MemberCardPage({
                   </button>
                 )}
                 {paymentModalMode === "create" && (
-                  <button
-                    className="pm-btn pm-btn--submit"
-                    onClick={handlePayment}
-                    disabled={
-                      !selectedYM ||
-                      paymentLoading ||
-                      selectedPaymentDeleteMonths.length > 0 ||
-                      hasActiveRollingPayment ||
-                      hasActiveTrainingCreditsThirtyDayPayment ||
-                      (isTrainingCreditBasedPayment && (!Number.isInteger(Number(paymentTrainingCredits)) || Number(paymentTrainingCredits) < 1))
-                    }
-                    title={
-                      hasActiveRollingPayment
-                        ? `Остават ${rollingRemainingText}`
-                        : hasActiveTrainingCreditsThirtyDayPayment
-                          ? `Остават ${remainingTrainingCredits} тренировки и ${rollingRemainingText}`
-                          : undefined
-                    }
-                  >
-                    {paymentLoading ? "Обработка..." : "Потвърди плащане"}
-                  </button>
+                  <>
+                    {viewerRoleChecked && member.onlinePaymentEnabled && !isAdmin && !isCoach && (
+                      <button
+                        className="pm-btn pm-btn--submit"
+                        onClick={handleIrisPayment}
+                        disabled={
+                          !selectedYM ||
+                          irisPaymentLoading ||
+                          paymentLoading ||
+                          selectedPaymentDeleteMonths.length > 0 ||
+                          hasActiveRollingPayment ||
+                          hasActiveTrainingCreditsThirtyDayPayment ||
+                          (isTrainingCreditBasedPayment && Number(member.defaultOnlineTrainingCredits ?? 0) <= 0)
+                        }
+                      >
+                        {irisPaymentLoading ? "Създаване..." : "Плати онлайн"}
+                      </button>
+                    )}
+                    {canManagePayments && (
+                      <button
+                        className="pm-btn pm-btn--submit"
+                        onClick={handlePayment}
+                        disabled={
+                          !selectedYM ||
+                          paymentLoading ||
+                          selectedPaymentDeleteMonths.length > 0 ||
+                          hasActiveRollingPayment ||
+                          hasActiveTrainingCreditsThirtyDayPayment ||
+                          (isTrainingCreditBasedPayment && (!Number.isInteger(Number(paymentTrainingCredits)) || Number(paymentTrainingCredits) < 1))
+                        }
+                        title={
+                          hasActiveRollingPayment
+                            ? `Остават ${rollingRemainingText}`
+                            : hasActiveTrainingCreditsThirtyDayPayment
+                              ? `Остават ${remainingTrainingCredits} тренировки и ${rollingRemainingText}`
+                              : undefined
+                        }
+                      >
+                        {paymentLoading ? "Обработка..." : "Потвърди плащане"}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
 

@@ -100,6 +100,7 @@ export async function GET(
                 imageUrl: true,
                 emblemUrl: true,
                 paymentWorkflow: true,
+                defaultOnlineTrainingCredits: true,
               },
             },
             images: {
@@ -275,6 +276,8 @@ export async function GET(
         playerPhone: card.player.playerPhone,
         birthDate: card.player.birthDate,
         paymentWorkflow,
+        onlinePaymentEnabled: card.player.club?.id === "3600c653-f688-44eb-b63b-4e1c73385c01",
+        defaultOnlineTrainingCredits: card.player.club?.defaultOnlineTrainingCredits ?? 0,
         remainingTrainingCredits: card.player.remainingTrainingCredits,
         status: paymentWorkflow === "calendar_month" && pausedThisMonth ? "paused" : resolvedStatus,
         firstBillingMonth: card.player.firstBillingMonth,
