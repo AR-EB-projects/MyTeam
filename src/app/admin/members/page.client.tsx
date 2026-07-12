@@ -42,6 +42,7 @@ import {
   ChartColumnIcon,
   PencilIcon,
   ReceiptIcon,
+  FileIcon,
   UsersIcon,
   ClipboardListIcon,
   DownloadIcon,
@@ -874,6 +875,12 @@ function AdminMembersPageContent() {
   const [pendingTeamGroupWarningGroups, setPendingTeamGroupWarningGroups] = useState<Array<{ id: string; name: string }>>([]);
   const [importSheetsOpen, setImportSheetsOpen] = useState(false);
   const [importPhotosOpen, setImportPhotosOpen] = useState(false);
+  const [rulesModalOpen, setRulesModalOpen] = useState(false);
+  const [rulesDocumentUrl, setRulesDocumentUrl] = useState<string | null>(null);
+  const [rulesLoading, setRulesLoading] = useState(false);
+  const [rulesUploading, setRulesUploading] = useState(false);
+  const [rulesDeleting, setRulesDeleting] = useState(false);
+  const [rulesError, setRulesError] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const [guideImgExpanded, setGuideImgExpanded] = useState(false);
@@ -1120,6 +1127,62 @@ function AdminMembersPageContent() {
     setPaymentAmountError("");
     setPaymentAmountSuccess("");
     setPaymentAmountModalOpen(true);
+  };
+
+  const openRulesModal = async () => {
+    if (!clubId) return;
+    setRulesError("");
+    setRulesDocumentUrl(null);
+    setRulesModalOpen(true);
+    setRulesLoading(true);
+    try {
+      const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules`);
+      if (res.ok) {
+        const data = await res.json() as { hasRulesDocument: boolean };
+        setRulesDocumentUrl(data.hasRulesDocument ? "exists" : null);
+      }
+    } catch {
+      // non-critical
+    } finally {
+      setRulesLoading(false);
+    }
+  };
+
+  const handleRulesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !clubId) return;
+    if (file.type !== "application/pdf") { setRulesError("Само PDF файлове са разрешени."); return; }
+    if (file.size > 20 * 1024 * 1024) { setRulesError("Файлът е твърде голям (макс. 20 MB)."); return; }
+    setRulesError("");
+    setRulesUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules`, { method: "POST", body: formData });
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok) { setRulesError(data.error ?? "Грешка при качване."); return; }
+      setRulesDocumentUrl("exists");
+    } catch {
+      setRulesError("Грешка при качване.");
+    } finally {
+      setRulesUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRulesDelete = async () => {
+    if (!clubId) return;
+    setRulesError("");
+    setRulesDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules`, { method: "DELETE" });
+      if (res.ok) { setRulesDocumentUrl(null); }
+      else { const data = await res.json() as { error?: string }; setRulesError(data.error ?? "Грешка при изтриване."); }
+    } catch {
+      setRulesError("Грешка при изтриване.");
+    } finally {
+      setRulesDeleting(false);
+    }
   };
 
   const closePaymentAmountModal = () => {
@@ -5553,6 +5616,16 @@ function AdminMembersPageContent() {
               <span>Месечна такса</span>
             </button>
           )}
+          {(isAdmin || isCoach) && clubId === "0d877238-6f51-4ffe-b04f-d285904f5c8b" && (
+            <button
+              className="amp-download-links-btn amp-scheduler-settings-btn amp-btn--compact"
+              onClick={() => void openRulesModal()}
+              type="button"
+            >
+              <FileIcon size={16} />
+              <span>Правилник</span>
+            </button>
+          )}
           {isAdmin && clubId && (
             <button
               className="amp-download-links-btn amp-scheduler-settings-btn amp-btn--compact"
@@ -6358,6 +6431,65 @@ function AdminMembersPageContent() {
                   {paymentAmountSaving ? "Запазване..." : "Запази"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {rulesModalOpen && (isAdmin || isCoach) && clubId && (
+        <div className="amp-overlay" onClick={() => { if (!rulesUploading && !rulesDeleting) setRulesModalOpen(false); }}>
+          <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="amp-modal-tint" aria-hidden="true" />
+            <h2 className="amp-modal-title">
+              <span className="amp-modal-title-gradient">Правилник</span>
+              <button
+                className="amp-modal-close"
+                onClick={() => setRulesModalOpen(false)}
+                aria-label="Затвори"
+                disabled={rulesUploading || rulesDeleting}
+              >
+                <XIcon />
+              </button>
+            </h2>
+            <div className="amp-modal-body">
+              {rulesLoading ? (
+                <p className="amp-payment-workflow-note">Зареждане...</p>
+              ) : rulesDocumentUrl ? (
+                <>
+                  <p className="amp-payment-workflow-note">Правилникът е качен. Можете да го видите или замените.</p>
+                  <div className="amp-modal-actions" style={{ flexDirection: "column", gap: "8px" }}>
+                    <a
+                      href={`/api/admin/clubs/${encodeURIComponent(clubId ?? "")}/rules/pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="amp-btn amp-btn--primary"
+                      style={{ textAlign: "center", textDecoration: "none" }}
+                    >
+                      Виж правилника
+                    </a>
+                    <label className={`amp-btn amp-btn--ghost${rulesUploading ? " amp-btn--ghost" : ""}`} style={{ textAlign: "center", cursor: rulesUploading ? "default" : "pointer" }}>
+                      {rulesUploading ? "Качване..." : "Замени с нов PDF"}
+                      <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => void handleRulesUpload(e)} disabled={rulesUploading || rulesDeleting} />
+                    </label>
+                    <button
+                      className="amp-btn amp-btn--danger"
+                      type="button"
+                      onClick={() => void handleRulesDelete()}
+                      disabled={rulesDeleting || rulesUploading}
+                    >
+                      {rulesDeleting ? "Изтриване..." : "Изтрий правилника"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="amp-payment-workflow-note">Няма качен правилник. Качете PDF файл.</p>
+                  <label className={`amp-btn amp-btn--primary${rulesUploading ? " amp-btn--ghost" : ""}`} style={{ display: "block", textAlign: "center", cursor: rulesUploading ? "default" : "pointer", marginTop: "8px" }}>
+                    {rulesUploading ? "Качване..." : "Качи PDF"}
+                    <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => void handleRulesUpload(e)} disabled={rulesUploading} />
+                  </label>
+                </>
+              )}
+              {rulesError && <p className="amp-confirm-error" style={{ marginTop: "8px" }}>{rulesError}</p>}
             </div>
           </div>
         </div>

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   const session = await verifyAdminToken(token);
-  if (!session || !session.roles.includes("coach") || session.roles.includes("admin")) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

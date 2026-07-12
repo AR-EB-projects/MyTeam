@@ -102,6 +102,7 @@ export async function GET(
                 emblemUrl: true,
                 paymentWorkflow: true,
                 defaultOnlineTrainingCredits: true,
+                rulesDocumentUrl: true,
               },
             },
             images: {
@@ -279,6 +280,7 @@ export async function GET(
         paymentWorkflow,
         onlinePaymentEnabled: isIrisPayEnabledForClub(card.player.club?.id),
         defaultOnlineTrainingCredits: card.player.club?.defaultOnlineTrainingCredits ?? 0,
+        clubRulesUrl: card.player.club?.id === "0d877238-6f51-4ffe-b04f-d285904f5c8b" ? (card.player.club.rulesDocumentUrl ?? null) : null,
         remainingTrainingCredits: card.player.remainingTrainingCredits,
         status: paymentWorkflow === "calendar_month" && pausedThisMonth ? "paused" : resolvedStatus,
         firstBillingMonth: card.player.firstBillingMonth,

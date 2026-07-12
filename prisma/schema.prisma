@@ -54,6 +54,9 @@ model Club {
   trainingFieldSelections Json?                       @map("training_field_selections")
   trainingWindowDays      Int                         @default(30) @map("training_window_days")
   trainingGroupMode       String                      @default("team_group") @map("training_group_mode")
+  rulesDocumentUrl        String?                     @map("rules_document_url")
+  rulesDocumentPublicId   String?                     @map("rules_document_public_id")
+  rulesDocument           Bytes?                      @map("rules_document")
   players                 Player[]
   adminPushSubscriptions  AdminPushSubscription[]
   adminNotifications      AdminNotification[]

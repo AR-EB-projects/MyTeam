@@ -14,6 +14,7 @@ interface MemberProfile {
   clubName?: string | null;
   clubSports?: string | null;
   clubLogoUrl?: string | null;
+  clubRulesUrl?: string | null;
   paymentWorkflow?: "calendar_month" | "rolling_30_days" | "training_credits" | "training_credits_30_days";
   onlinePaymentEnabled?: boolean;
   defaultOnlineTrainingCredits?: number;
@@ -2343,6 +2344,17 @@ export default function MemberCardPage({
           <button className="add-btn member-action-btn training-schedule-btn" onClick={() => void openTrainingModal()}>
             График
           </button>
+
+          {member.clubRulesUrl && (
+            <a
+              href={`/api/members/${normalizedCardCode}/rules`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="add-btn member-action-btn rules-btn"
+            >
+              Виж правилника
+            </a>
+          )}
 
           {canPublicEdit && (trainingLoading ? (
             <p className="training-next-hint">Зареждане на следваща тренировка...</p>

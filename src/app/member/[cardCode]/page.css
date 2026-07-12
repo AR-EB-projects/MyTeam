@@ -375,6 +375,14 @@
   order: -1;
 }
 
+.rules-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  order: 0;
+}
+
 .training-section {
   margin-top: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
