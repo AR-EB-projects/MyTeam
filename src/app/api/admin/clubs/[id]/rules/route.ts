@@ -19,14 +19,13 @@ export async function GET(
 
   const { id } = await params;
 
-  const club = await prisma.club.findUnique({
-    where: { id },
-    select: { rulesDocumentUrl: true },
+  const docs = await prisma.clubRulesDocument.findMany({
+    where: { clubId: id },
+    select: { id: true, name: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (!club) return NextResponse.json({ error: "Club not found" }, { status: 404 });
-
-  return NextResponse.json({ hasRulesDocument: club.rulesDocumentUrl !== null });
+  return NextResponse.json({ documents: docs });
 }
 
 export async function POST(
@@ -56,31 +55,10 @@ export async function POST(
   if (file.size > MAX_SIZE_BYTES) return NextResponse.json({ error: "File too large (max 20 MB)" }, { status: 400 });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-
-  await prisma.club.update({
-    where: { id },
-    data: { rulesDocument: buffer, rulesDocumentUrl: "stored" },
+  const doc = await prisma.clubRulesDocument.create({
+    data: { clubId: id, name: file.name, document: buffer },
+    select: { id: true, name: true },
   });
 
-  return NextResponse.json({ success: true });
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await verifySession(request);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { id } = await params;
-
-  const club = await prisma.club.findUnique({ where: { id }, select: { id: true } });
-  if (!club) return NextResponse.json({ error: "Club not found" }, { status: 404 });
-
-  await prisma.club.update({
-    where: { id },
-    data: { rulesDocument: null, rulesDocumentUrl: null },
-  });
-
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ document: doc });
 }

@@ -15,19 +15,14 @@ export async function GET(
     select: {
       player: {
         select: {
-          club: { select: { rulesDocument: true } },
+          club: { select: { id: true, rulesDocuments: { select: { id: true, name: true }, orderBy: { createdAt: "asc" } } } },
         },
       },
     },
   });
 
-  const pdf = card?.player?.club?.rulesDocument;
-  if (!pdf) return new NextResponse("Not found", { status: 404 });
+  const club = card?.player?.club;
+  if (!club) return NextResponse.json({ documents: [] });
 
-  return new NextResponse(new Uint8Array(pdf), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "inline",
-    },
-  });
+  return NextResponse.json({ documents: club.rulesDocuments });
 }

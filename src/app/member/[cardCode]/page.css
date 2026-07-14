@@ -383,6 +383,42 @@
   order: 0;
 }
 
+.rules-modal {
+  max-width: 340px;
+}
+
+.rules-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.rules-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rules-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s ease;
+}
+
+.rules-modal-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .training-section {
   margin-top: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);

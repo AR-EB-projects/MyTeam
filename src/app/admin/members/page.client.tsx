@@ -876,10 +876,10 @@ function AdminMembersPageContent() {
   const [importSheetsOpen, setImportSheetsOpen] = useState(false);
   const [importPhotosOpen, setImportPhotosOpen] = useState(false);
   const [rulesModalOpen, setRulesModalOpen] = useState(false);
-  const [rulesDocumentUrl, setRulesDocumentUrl] = useState<string | null>(null);
+  const [rulesDocs, setRulesDocs] = useState<{ id: string; name: string }[]>([]);
   const [rulesLoading, setRulesLoading] = useState(false);
   const [rulesUploading, setRulesUploading] = useState(false);
-  const [rulesDeleting, setRulesDeleting] = useState(false);
+  const [rulesDeletingId, setRulesDeletingId] = useState<string | null>(null);
   const [rulesError, setRulesError] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
@@ -1132,14 +1132,14 @@ function AdminMembersPageContent() {
   const openRulesModal = async () => {
     if (!clubId) return;
     setRulesError("");
-    setRulesDocumentUrl(null);
+    setRulesDocs([]);
     setRulesModalOpen(true);
     setRulesLoading(true);
     try {
       const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules`);
       if (res.ok) {
-        const data = await res.json() as { hasRulesDocument: boolean };
-        setRulesDocumentUrl(data.hasRulesDocument ? "exists" : null);
+        const data = await res.json() as { documents: { id: string; name: string }[] };
+        setRulesDocs(data.documents);
       }
     } catch {
       // non-critical
@@ -1159,9 +1159,9 @@ function AdminMembersPageContent() {
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules`, { method: "POST", body: formData });
-      const data = await res.json() as { success?: boolean; error?: string };
+      const data = await res.json() as { document?: { id: string; name: string }; error?: string };
       if (!res.ok) { setRulesError(data.error ?? "Грешка при качване."); return; }
-      setRulesDocumentUrl("exists");
+      if (data.document) setRulesDocs((prev) => [...prev, data.document!]);
     } catch {
       setRulesError("Грешка при качване.");
     } finally {
@@ -1170,18 +1170,18 @@ function AdminMembersPageContent() {
     }
   };
 
-  const handleRulesDelete = async () => {
+  const handleRulesDelete = async (docId: string) => {
     if (!clubId) return;
     setRulesError("");
-    setRulesDeleting(true);
+    setRulesDeletingId(docId);
     try {
-      const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules`, { method: "DELETE" });
-      if (res.ok) { setRulesDocumentUrl(null); }
+      const res = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/rules/${encodeURIComponent(docId)}`, { method: "DELETE" });
+      if (res.ok) { setRulesDocs((prev) => prev.filter((d) => d.id !== docId)); }
       else { const data = await res.json() as { error?: string }; setRulesError(data.error ?? "Грешка при изтриване."); }
     } catch {
       setRulesError("Грешка при изтриване.");
     } finally {
-      setRulesDeleting(false);
+      setRulesDeletingId(null);
     }
   };
 
@@ -6436,7 +6436,7 @@ function AdminMembersPageContent() {
         </div>
       )}
       {rulesModalOpen && (isAdmin || isCoach) && clubId && (
-        <div className="amp-overlay" onClick={() => { if (!rulesUploading && !rulesDeleting) setRulesModalOpen(false); }}>
+        <div className="amp-overlay" onClick={() => { if (!rulesUploading && !rulesDeletingId) setRulesModalOpen(false); }}>
           <div className="amp-modal amp-modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="amp-modal-tint" aria-hidden="true" />
             <h2 className="amp-modal-title">
@@ -6445,7 +6445,7 @@ function AdminMembersPageContent() {
                 className="amp-modal-close"
                 onClick={() => setRulesModalOpen(false)}
                 aria-label="Затвори"
-                disabled={rulesUploading || rulesDeleting}
+                disabled={rulesUploading || !!rulesDeletingId}
               >
                 <XIcon />
               </button>
@@ -6453,39 +6453,40 @@ function AdminMembersPageContent() {
             <div className="amp-modal-body">
               {rulesLoading ? (
                 <p className="amp-payment-workflow-note">Зареждане...</p>
-              ) : rulesDocumentUrl ? (
-                <>
-                  <p className="amp-payment-workflow-note">Правилникът е качен. Можете да го видите или замените.</p>
-                  <div className="amp-modal-actions" style={{ flexDirection: "column", gap: "8px" }}>
-                    <a
-                      href={`/api/admin/clubs/${encodeURIComponent(clubId ?? "")}/rules/pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="amp-btn amp-btn--primary"
-                      style={{ textAlign: "center", textDecoration: "none" }}
-                    >
-                      Виж правилника
-                    </a>
-                    <label className={`amp-btn amp-btn--ghost${rulesUploading ? " amp-btn--ghost" : ""}`} style={{ textAlign: "center", cursor: rulesUploading ? "default" : "pointer" }}>
-                      {rulesUploading ? "Качване..." : "Замени с нов PDF"}
-                      <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => void handleRulesUpload(e)} disabled={rulesUploading || rulesDeleting} />
-                    </label>
-                    <button
-                      className="amp-btn amp-btn--danger"
-                      type="button"
-                      onClick={() => void handleRulesDelete()}
-                      disabled={rulesDeleting || rulesUploading}
-                    >
-                      {rulesDeleting ? "Изтриване..." : "Изтрий правилника"}
-                    </button>
-                  </div>
-                </>
               ) : (
                 <>
-                  <p className="amp-payment-workflow-note">Няма качен правилник. Качете PDF файл.</p>
-                  <label className={`amp-btn amp-btn--primary${rulesUploading ? " amp-btn--ghost" : ""}`} style={{ display: "block", textAlign: "center", cursor: rulesUploading ? "default" : "pointer", marginTop: "8px" }}>
+                  {rulesDocs.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
+                      {rulesDocs.map((doc) => (
+                        <div key={doc.id} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                          <a
+                            href={`/api/admin/clubs/${encodeURIComponent(clubId)}/rules/${encodeURIComponent(doc.id)}/pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="amp-btn amp-btn--primary"
+                            style={{ flex: 1, textAlign: "center", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          >
+                            {doc.name}
+                          </a>
+                          <button
+                            className="amp-btn amp-btn--danger"
+                            type="button"
+                            onClick={() => void handleRulesDelete(doc.id)}
+                            disabled={!!rulesDeletingId || rulesUploading}
+                            style={{ flexShrink: 0 }}
+                          >
+                            {rulesDeletingId === doc.id ? "..." : "Изтрий"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {rulesDocs.length === 0 && !rulesUploading && (
+                    <p className="amp-payment-workflow-note" style={{ marginBottom: "8px" }}>Няма качени документи.</p>
+                  )}
+                  <label className={`amp-btn amp-btn--ghost`} style={{ display: "block", textAlign: "center", cursor: rulesUploading ? "default" : "pointer" }}>
                     {rulesUploading ? "Качване..." : "Качи PDF"}
-                    <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => void handleRulesUpload(e)} disabled={rulesUploading} />
+                    <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={(e) => void handleRulesUpload(e)} disabled={rulesUploading || !!rulesDeletingId} />
                   </label>
                 </>
               )}

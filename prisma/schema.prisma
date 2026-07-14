@@ -57,6 +57,7 @@ model Club {
   rulesDocumentUrl        String?                     @map("rules_document_url")
   rulesDocumentPublicId   String?                     @map("rules_document_public_id")
   rulesDocument           Bytes?                      @map("rules_document")
+  rulesDocuments          ClubRulesDocument[]
   players                 Player[]
   adminPushSubscriptions  AdminPushSubscription[]
   adminNotifications      AdminNotification[]
@@ -225,6 +226,18 @@ model FieldPiece {
 
   @@index([fieldId])
   @@map("field_pieces")
+}
+
+model ClubRulesDocument {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clubId    String   @map("club_id") @db.Uuid
+  name      String
+  document  Bytes
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId])
+  @@map("club_rules_documents")
 }
 
 model User {
