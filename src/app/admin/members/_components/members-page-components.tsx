@@ -45,6 +45,10 @@ export * from "../_utils/members-page-utils";
 export * from "./members-page-icons";
 export type * from "../_types/members-page-types";
 
+function sortByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.name.localeCompare(b.name, "bg", { sensitivity: "base", numeric: true }));
+}
+
 // Attendance Coach Dashboard Component
 function AttendanceDashboard({
   onClose,
@@ -174,7 +178,7 @@ function AttendanceDashboard({
               .filter((g) => g.id && g.teamGroups.length >= 2)
               .filter((g) => !coachGroupId || g.teamGroups.some((teamGroup) => playerTeamGroups.includes(teamGroup)))
             : [];
-          setScheduleGroups(groups);
+          setScheduleGroups(sortByName(groups));
         }
 
         if (coachGroupsRes.ok) {
@@ -187,7 +191,7 @@ function AttendanceDashboard({
               })
               .filter((g) => g.id && g.name)
             : [];
-          setCoachGroupsList(cgs);
+          setCoachGroupsList(sortByName(cgs));
         }
       } catch {
         // silent
@@ -226,8 +230,9 @@ function AttendanceDashboard({
             })
             .filter((g) => g.id && g.name)
           : [];
-        setCustomTrainingGroupsList(groups);
-        setSelectedCustomGroupId(groups.length > 0 ? groups[0].id : "");
+        const sortedGroups = sortByName(groups);
+        setCustomTrainingGroupsList(sortedGroups);
+        setSelectedCustomGroupId(sortedGroups.length > 0 ? sortedGroups[0].id : "");
       } catch {
         // silent
       }
@@ -876,7 +881,7 @@ function ReportsDialog({
             })
             .filter((g) => g.id && g.name)
           : [];
-        setCoachGroupsList(cgs);
+        setCoachGroupsList(sortByName(cgs));
       } catch {
         // silent
       }
@@ -906,7 +911,7 @@ function ReportsDialog({
             })
             .filter((g) => g.id && g.name)
           : [];
-        setCustomTrainingGroupsList(groups);
+        setCustomTrainingGroupsList(sortByName(groups));
         setFilterCustomGroupId("");
       } catch {
         // silent

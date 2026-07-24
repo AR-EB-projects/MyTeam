@@ -86,6 +86,10 @@ import type {
 } from "./_components/members-page-components";
 
 /* ── Weekly schedule (Тази седмица): vertical list by day ── */
+function sortByName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => a.name.localeCompare(b.name, "bg", { sensitivity: "base", numeric: true }));
+}
+
 function sortWeekSessionsForDay(a: TrainingWeekSessionItem, b: TrainingWeekSessionItem): number {
   const minutes = (s: TrainingWeekSessionItem) => {
     const t = s.trainingTime?.trim() ?? "";
@@ -3120,14 +3124,15 @@ function AdminMembersPageContent() {
           } satisfies TrainingScheduleGroup;
         }).filter((group) => group.id && group.teamGroups.length >= 2)
         : [];
-      setTrainingScheduleGroups(groups);
+      const sortedGroups = sortByName(groups);
+      setTrainingScheduleGroups(sortedGroups);
       setSelectedTrainingGroupId((prev) => {
-        if (prev && groups.some((group) => group.id === prev)) {
+        if (prev && sortedGroups.some((group) => group.id === prev)) {
           return prev;
         }
-        return groups[0]?.id ?? "";
+        return sortedGroups[0]?.id ?? "";
       });
-      return groups;
+      return sortedGroups;
     } catch {
       setTrainingScheduleGroups([]);
       setSelectedTrainingGroupId("");
@@ -3236,14 +3241,15 @@ function AdminMembersPageContent() {
           } satisfies CustomTrainingGroup;
         }).filter((group) => group.id && group.name)
         : [];
-      setCustomTrainingGroups(groups);
+      const sortedGroups = sortByName(groups);
+      setCustomTrainingGroups(sortedGroups);
       setSelectedTrainingGroupId((prev) => {
-        if (prev && groups.some((group) => group.id === prev)) {
+        if (prev && sortedGroups.some((group) => group.id === prev)) {
           return prev;
         }
-        return groups[0]?.id ?? "";
+        return sortedGroups[0]?.id ?? "";
       });
-      return groups;
+      return sortedGroups;
     } catch {
       setCustomTrainingGroups([]);
       setSelectedTrainingGroupId("");
@@ -3287,8 +3293,9 @@ function AdminMembersPageContent() {
           })
           .filter((g) => g.id && g.name)
         : [];
-      setCoachGroups(groups);
-      return groups;
+      const sortedGroups = sortByName(groups);
+      setCoachGroups(sortedGroups);
+      return sortedGroups;
     } catch {
       return [];
     }
