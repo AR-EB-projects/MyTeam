@@ -4602,9 +4602,12 @@ function AdminMembersPageContent() {
     }
   };
 
-  const fetchTrainingWeekSessions = async () => {
+  const fetchTrainingWeekSessions = async (options?: { silent?: boolean }) => {
     if (!clubId) return;
-    setTrainingWeekLoading(true);
+    const showLoading = !options?.silent;
+    if (showLoading) {
+      setTrainingWeekLoading(true);
+    }
     setTrainingAttendanceError("");
     try {
       const response = await fetch(
@@ -4660,12 +4663,16 @@ function AdminMembersPageContent() {
       console.log("[WeekSchedule] sessions", sessions);
       return sessions;
     } catch (error) {
-      setTrainingWeekDates([]);
-      setTrainingWeekSessions([]);
+      if (showLoading) {
+        setTrainingWeekDates([]);
+        setTrainingWeekSessions([]);
+      }
       setTrainingAttendanceError(error instanceof Error ? error.message : "Възникна грешка.");
       return [];
     } finally {
-      setTrainingWeekLoading(false);
+      if (showLoading) {
+        setTrainingWeekLoading(false);
+      }
     }
   };
 
@@ -5352,7 +5359,7 @@ function AdminMembersPageContent() {
     const streamUrl = `/api/admin/clubs/${encodeURIComponent(clubId)}/training-attendance/stream`;
     const source = new EventSource(streamUrl, { withCredentials: true });
     const handleUpdate = () => {
-      void fetchTrainingWeekSessions();
+      void fetchTrainingWeekSessions({ silent: true });
     };
     source.addEventListener("attendance-update", handleUpdate);
     return () => {
@@ -5367,7 +5374,7 @@ function AdminMembersPageContent() {
       return;
     }
     const interval = window.setInterval(() => {
-      void fetchTrainingWeekSessions();
+      void fetchTrainingWeekSessions({ silent: true });
     }, 15000);
     return () => {
       window.clearInterval(interval);
@@ -5381,7 +5388,7 @@ function AdminMembersPageContent() {
     }
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        void fetchTrainingWeekSessions();
+        void fetchTrainingWeekSessions({ silent: true });
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
