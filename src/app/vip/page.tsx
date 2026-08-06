@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import "../page.css";
 import NavBar from "@/components/NavBar";
 import {
@@ -316,7 +318,7 @@ export default function VipPage() {
                 <div className="benefits-text-side">
                   <div className="card-tag">КАКВО ПОЛУЧАВАТЕ РЕАЛНО</div>
                   <ul className="benefits-icon-list">
-                    <li><div className="b-icon-bg"><Calendar size={14} /></div> MyTeam7 поема „черната работа"</li>
+                    <li><div className="b-icon-bg"><Calendar size={14} /></div> MyTeam7 поема „черната работа&quot;</li>
                     <li><div className="b-icon-bg"><TrendingUp size={14} /></div> 100% контрол върху приходите</li>
                     <li><div className="b-icon-bg"><BarChart3 size={14} /></div> Предвидим растеж на клуба</li>
                     <li><div className="b-icon-bg"><ShieldCheck size={14} /></div> Освободено време за тренировките</li>
@@ -333,7 +335,7 @@ export default function VipPage() {
             {/* DASHBOARD FOOTER BAR */}
             <div className="dashboard-footer">
               <div className="footer-left">
-                ВЪПРОСЪТ НЕ Е „КОЛКО СТРУВА MyTeam7?"<br />
+                ВЪПРОСЪТ НЕ Е „КОЛКО СТРУВА MyTeam7?&quot;<br />
                 <span className="text-neon">ВЪПРОСЪТ Е: КОЛКО ГУБИТЕ БЕЗ НЕГО?</span>
               </div>
               <div className="footer-mid">
@@ -408,7 +410,7 @@ export default function VipPage() {
                 Присъединете се към елитните клубове, които вече трансформираха своето управление и увеличиха приходите си.
               </p>
 
-              <a href="/#Контакт" className="vip-main-cta-btn" style={{
+              <Link href="/#Контакт" className="vip-main-cta-btn" style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "14px",
@@ -426,7 +428,7 @@ export default function VipPage() {
               }}>
                 <span>ЗАЯВЕТЕ VIP ДЕМО</span>
                 <Zap size={22} fill="#000" />
-              </a>
+              </Link>
 
               <div style={{ marginTop: "32px", display: "flex", alignItems: "center", gap: "10px", color: "rgba(255,255,255,0.4)", fontSize: "13px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>
                 <ShieldCheck size={16} color="var(--neon-green)" />

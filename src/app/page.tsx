@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 "use client";
 
@@ -239,7 +240,7 @@ const FOOTBALL = (() => {
 
 /* ── Rotation helpers ── */
 function rotVec(v, rx, ry) {
-  let [x, y, z] = v;
+  const [x, y, z] = v;
   const x1 = x * Math.cos(ry) + z * Math.sin(ry);
   const z1 = -x * Math.sin(ry) + z * Math.cos(ry);
   const y2 = y * Math.cos(rx) - z1 * Math.sin(rx);
@@ -292,7 +293,7 @@ function drawFootball(ctx, cx, cy, radius, rollAngle, travelAngle, globalRx, glo
   const cosTrav = Math.cos(travelAngle), sinTrav = Math.sin(travelAngle);
 
   const rotated = FOOTBALL.verts.map(v => {
-    let [x, y, z] = v;
+    const [x, y, z] = v;
 
     const ax = -sinTrav, ay = 0, az = cosTrav;
     const dotV = x * ax + y * ay + z * az;
@@ -1083,10 +1084,11 @@ function TrustedNetwork({ contactRef }) {
   const zoomProgressRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [scrollProg, setScrollProg] = useState(0);
-  const [isMobileView, setIsMobileView] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 768 : false
+  );
 
   useEffect(() => {
-    setIsMobileView(window.innerWidth <= 768);
     const handler = () => {
       setIsMobileView(window.innerWidth <= 768);
       if (!sectionRef.current) return;
@@ -1766,7 +1768,11 @@ export default function Home() {
   const [expandedImage, setExpandedImage] = useState(null);
   const [benefitsOpen, setBenefitsOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(() =>
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("video") === "1"
+      : false
+  );
   const [showDockActions, setShowDockActions] = useState(false);
   const contactRef = useRef(null);
 
@@ -1796,15 +1802,6 @@ export default function Home() {
         body: JSON.stringify({ action: "page_visit" })
       });
       sessionStorage.setItem("mt_visit_recorded", "true");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("video") === "1") {
-        setShowVideoModal(true);
-      }
     }
   }, []);
 

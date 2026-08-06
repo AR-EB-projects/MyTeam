@@ -8,8 +8,8 @@ export function MicrosoftClarity() {
 
   useEffect(() => {
     if (localStorage.getItem("gdpr-consent-accepted") === "true") {
-      setConsented(true);
-      return;
+      const timer = window.setTimeout(() => setConsented(true), 0);
+      return () => window.clearTimeout(timer);
     }
 
     const onStorage = (e: StorageEvent) => {

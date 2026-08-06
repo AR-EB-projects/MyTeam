@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       select: { id: true, clickedAt: true, action: true },
     });
 
-    const chatbotStats = chatbotGroups.reduce((acc: any, g: any) => {
+    const chatbotStats = chatbotGroups.reduce<Record<string, number>>((acc, g) => {
       acc[g.action] = g._count._all;
       return acc;
     }, {});
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       clicks: rawClicks,
       chatbotStats
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error fetching page clicks:", err);
     return NextResponse.json({ total: 0, clicks: [], chatbotStats: {}, error: String(err) }, { status: 500 });
   }

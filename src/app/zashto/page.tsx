@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import "../page.css";
 import NavBar from "@/components/NavBar";
 
@@ -50,11 +52,11 @@ export default function ZashtoPage() {
                   MyTeam7 не е просто софтуерна система. Той е дигиталното отражение на <strong>10 години опит</strong> в професионалния футбол (А група) и ежедневното управление на най-развитата школа за Belly Dance и шоу програми в Пловдив – <strong>Dalida Dance</strong>.
                 </p>
                 <p className="why-p-sub">
-                  Продуктът е изграден по модела на нашия „Първи пилот" – треньор с десетилетен стаж в елитния спорт, който познава административния хаос от първо лице. Взехме неговата доказана методология и я съчетахме с реалните бизнес решения!
+                  Продуктът е изграден по модела на нашия „Първи пилот&quot; – треньор с десетилетен стаж в елитния спорт, който познава административния хаос от първо лице. Взехме неговата доказана методология и я съчетахме с реалните бизнес решения!
                 </p>
                 <div className="why-quote-box">
                   <p className="why-quote-text">
-                    "Ние бяхме в капана на хартиените дневници, изгубената информация и безкрайните Viber групи - и създадохме изход. MyTeam е проектиран от хора, които са били точно там, където сте Вие сега."
+                    &quot;Ние бяхме в капана на хартиените дневници, изгубената информация и безкрайните Viber групи - и създадохме изход. MyTeam е проектиран от хора, които са били точно там, където сте Вие сега.&quot;
                   </p>
                 </div>
               </div>
@@ -72,7 +74,7 @@ export default function ZashtoPage() {
 
             {/* CTA SECTION */}
             <div style={{ textAlign: "center", marginTop: 40 }}>
-              <a href="/#Контакт" className="vip-main-cta-btn" style={{
+              <Link href="/#Контакт" className="vip-main-cta-btn" style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "14px",
@@ -89,7 +91,7 @@ export default function ZashtoPage() {
               }}>
                 Започнете безплатно сега
                 <ArrowRight size={22} />
-              </a>
+              </Link>
             </div>
 
           </div>

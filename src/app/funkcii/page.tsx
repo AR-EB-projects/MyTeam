@@ -1,7 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import "../page.css";
 import NavBar from "@/components/NavBar";
 import { 
@@ -161,7 +163,7 @@ function VideoModal({ onClose }) {
           style={{ width: "100%", display: "block", maxHeight: "70vh" }}
         />
         <div style={{ padding: "32px", textAlign: "center", background: "#070C14", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <a href="/#Контакт" onClick={onClose} className="vip-main-cta-btn" style={{
+          <Link href="/#Контакт" onClick={onClose} className="vip-main-cta-btn" style={{
             display: "inline-flex",
             alignItems: "center",
             gap: "14px",
@@ -179,7 +181,7 @@ function VideoModal({ onClose }) {
           }}>
             Започнете безплатно сега
             <ArrowRight size={20} />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

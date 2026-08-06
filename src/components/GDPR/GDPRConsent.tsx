@@ -12,7 +12,8 @@ export const GDPRConsent: React.FC = () => {
     useEffect(() => {
         const consent = localStorage.getItem("gdpr-consent-accepted");
         if (!consent) {
-            setIsVisible(true);
+            const timer = window.setTimeout(() => setIsVisible(true), 0);
+            return () => window.clearTimeout(timer);
         }
     }, []);
 
@@ -38,7 +39,7 @@ export const GDPRConsent: React.FC = () => {
                         Това приложение използва локално съхранение и бисквитки за осигуряване на функционалността на Вашата членска карта, следене на присъствията и получаване на известия. 
                     </p>
                     <p className="text-secondary text-small">
-                        С натискането на бутона "Приемам", Вие се съгласявате с нашата{" "}
+                        С натискането на бутона &quot;Приемам&quot;, Вие се съгласявате с нашата{" "}
                         <Link href="/privacy" className="legal-link" target="_blank" rel="noopener noreferrer">Политика за поверителност</Link> и{" "}
                         <Link href="/terms" className="legal-link" target="_blank" rel="noopener noreferrer">Общи условия</Link>, регулирани от Българското законодателство (ЗЗЛД) и Регламент (ЕС) 2016/679 (GDPR).
                     </p>

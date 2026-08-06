@@ -673,8 +673,7 @@ export default function DiscountsPageClient() {
                       setDraggingId(config.discountId);
                       setDragIndex(index);
                       setStartY(e.clientY);
-                      // @ts-ignore
-                      e.target.setPointerCapture(e.pointerId);
+                      e.currentTarget.setPointerCapture(e.pointerId);
                     }}
                     className={`config-item ${isDragging ? 'dragging' : ''}`}
                     style={{ 

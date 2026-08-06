@@ -1,7 +1,7 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, HelpCircle, Crown, Cpu, Tag, MessageSquare, X as CloseX } from "lucide-react";
 
@@ -45,7 +45,7 @@ export default function NavBar() {
   return (
     <nav className={`navbar ${scrolled ? "navbar-scrolled" : ""} ${isMenuOpen ? "navbar-open" : ""}`}>
       <div className="navbar-container">
-        <a href="/" className="navbar-logo">
+        <Link href="/" className="navbar-logo">
           <img
             src="/myteam-logo.webp"
             alt="MyTeam Logo"
@@ -53,7 +53,7 @@ export default function NavBar() {
             onContextMenu={(e) => e.preventDefault()}
             onDragStart={(e) => e.preventDefault()}
           />
-        </a>
+        </Link>
 
         {/* Mobile Burger Toggle */}
         <button className="burger-menu" onClick={toggleMenu} aria-label="Menu">
@@ -89,18 +89,18 @@ export default function NavBar() {
               );
             })}
 
-            <a
+            <Link
               href="/#Контакт"
               className={`nav-demo-btn nav-desktop-cta ${!showBtn ? "cta-hidden" : ""}`}
             >
               БЕЗПЛАТНА ВИДЕО КОНСУЛТАЦИЯ
-            </a>
+            </Link>
           </div>
 
           <div className="mobile-menu-footer">
-            <a href="/#Контакт" onClick={() => setIsMenuOpen(false)} className="nav-demo-btn">
+            <Link href="/#Контакт" onClick={() => setIsMenuOpen(false)} className="nav-demo-btn">
               БЕЗПЛАТНА ВИДЕО КОНСУЛТАЦИЯ
-            </a>
+            </Link>
           </div>
         </div>
       </div>

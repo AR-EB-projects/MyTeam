@@ -604,7 +604,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
                 <span style={{ color: "#e0e0e0", fontSize: "14px", lineHeight: "1.5" }}>
                   Превъртете надолу и изберете{" "}
                   <strong style={{ color: "rgb(201, 168, 76)" }}>
-                    "+ Добавяне към начален екран"
+                    &quot;+ Добавяне към начален екран&quot;
                   </strong>
                 </span>
               </div>
@@ -621,7 +621,7 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
                 <span style={{ color: "#e0e0e0", fontSize: "14px", lineHeight: "1.5" }}>
                   Отворете приложението от началния екран и натиснете{" "}
                   <strong style={{ color: "rgb(201, 168, 76)" }}>
-                    "Активиране на известия"
+                    &quot;Активиране на известия&quot;
                   </strong>
                 </span>
               </div>

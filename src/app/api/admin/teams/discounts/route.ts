@@ -6,6 +6,12 @@ import {
   buildCloudinaryUrlFromUploadPath,
 } from "@/lib/cloudinaryImagePath";
 
+type DiscountConfigInput = {
+  discountId: string;
+  order: number;
+  isVisible?: boolean;
+};
+
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("admin_session")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -90,7 +96,7 @@ export async function POST(request: NextRequest) {
       }),
       // Create new configs
       prisma.teamDiscountConfig.createMany({
-        data: discountConfigs.map((config: any) => ({
+        data: discountConfigs.map((config: DiscountConfigInput) => ({
           clubId,
           teamGroup,
           discountId: config.discountId,

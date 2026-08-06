@@ -41,10 +41,14 @@ const OPTIONS = [
   }
 ];
 
+const INITIAL_MESSAGES: { sender: "bot" | "user", text: string | React.ReactNode, id: number }[] = [
+  { sender: "bot", text: "Здравейте! 👋 My Team е тук, за да направи управлението на Вашия клуб по-лесно. Кое от изброените е най-голямото Ви предизвикателство в момента?", id: 1 },
+];
+
 export default function ChatBot({ scrollToContact }: { scrollToContact: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [stage, setStage] = useState(CHAT_STAGES.HOOK);
-  const [messages, setMessages] = useState<{ sender: "bot" | "user", text: string | React.ReactNode, id: number }[]>([]);
+  const [messages, setMessages] = useState<{ sender: "bot" | "user", text: string | React.ReactNode, id: number }[]>(INITIAL_MESSAGES);
   const [hasMounted, setHasMounted] = useState(false);
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -54,19 +58,21 @@ export default function ChatBot({ scrollToContact }: { scrollToContact: () => vo
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setHasMounted(true);
-    setMessages([{ sender: "bot", text: "Здравейте! 👋 My Team е тук, за да направи управлението на Вашия клуб по-лесно. Кое от изброените е най-голямото Ви предизвикателство в момента?", id: 1 }]);
+    const mountTimer = window.setTimeout(() => setHasMounted(true), 0);
 
     const timer = setTimeout(() => {
       setShowNotification(true);
     }, 30000); 
 
-    return () => clearTimeout(timer);
+    return () => {
+      window.clearTimeout(mountTimer);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleRestartChat = () => {
     setStage(CHAT_STAGES.HOOK);
-    setMessages([{ sender: "bot", text: "Здравейте! 👋 My Team е тук, за да направи управлението на Вашия клуб по-лесно. Кое от изброените е най-голямото Ви предизвикателство в момента?", id: 1 }]);
+    setMessages(INITIAL_MESSAGES);
     setSelectedOption(null);
   };
 
