@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
     const players = (await prisma.player.findMany({
       where: {
         ...(clubId ? { clubId } : {}),
+        isActive: true,
       },
       select: {
         id: true,
