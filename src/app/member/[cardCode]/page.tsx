@@ -74,6 +74,7 @@ interface TrainingSessionItem {
   trainingTime?: string;
   trainingDurationMinutes?: number;
   trainingFieldName?: string | null;
+  trainingFieldType?: string | null;
   trainingFieldPieces?: string[];
   trainingFieldPieceNames?: string[];
   limitedEvent?: LimitedEventInfo | null;
@@ -89,6 +90,7 @@ interface TrainingDayStatus {
   trainingDurationMinutes?: number;
   note: string;
   trainingFieldName?: string | null;
+  trainingFieldType?: string | null;
   trainingFieldPieces?: string[];
   trainingFieldPieceNames?: string[];
   limitedEvent?: LimitedEventInfo | null;
@@ -146,6 +148,22 @@ const TRAINING_WEEKDAY_SHORT_BG = Array.from({ length: 7 }, (_, index) =>
     .format(new Date(Date.UTC(2024, 0, 1 + index)))
     .replace(".", ""),
 );
+
+const TRAINING_FIELD_TYPES = new Set(["football", "basketball", "tennis", "volleyball", "boxing", "karate", "swimming"]);
+
+function normalizeTrainingFieldType(raw: unknown, fallbackSport?: string | null): string {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (TRAINING_FIELD_TYPES.has(value)) return value;
+
+  const sport = String(fallbackSport ?? "").trim().toLowerCase();
+  if (/basket|баскетбол/.test(sport)) return "basketball";
+  if (/tenis|тенис/.test(sport)) return "tennis";
+  if (/voley|волей/.test(sport)) return "volleyball";
+  if (/box|бокс/.test(sport)) return "boxing";
+  if (/karat|karate|карате|taekwon|таекуондо|judo|джудо/.test(sport)) return "karate";
+  if (/swim|плув|басейн/.test(sport)) return "swimming";
+  return "football";
+}
 
 const STATUS_MAP = {
   paid: { label: "ТАКСА: ПЛАТЕНА", cls: "green glow" },
@@ -714,6 +732,10 @@ export default function MemberCardPage({
       }
 
       const payload = await response.json();
+      const trainingPayloadClubSports =
+        String(payload?.clubSports ?? "").trim() ||
+        member?.clubSports ||
+        null;
       const days = Array.isArray(payload?.dates)
         ? payload.dates
           .map((item: unknown) => {
@@ -732,6 +754,7 @@ export default function MemberCardPage({
                 ? Number(raw.trainingDurationMinutes)
                 : undefined,
               trainingFieldName: String(raw.trainingFieldName ?? "").trim() || null,
+              trainingFieldType: normalizeTrainingFieldType(raw.trainingFieldType, trainingPayloadClubSports),
               trainingFieldPieces: Array.isArray(raw.trainingFieldPieces)
                 ? raw.trainingFieldPieces.map((name) => String(name ?? "").trim()).filter(Boolean)
                 : [],
@@ -781,6 +804,7 @@ export default function MemberCardPage({
                       trainingTime: String(raw.trainingTime ?? "").trim(),
                       trainingDurationMinutes: Number.isInteger(Number(raw.trainingDurationMinutes)) ? Number(raw.trainingDurationMinutes) : undefined,
                       trainingFieldName: String(raw.trainingFieldName ?? "").trim() || null,
+                      trainingFieldType: normalizeTrainingFieldType(raw.trainingFieldType, trainingPayloadClubSports),
                       trainingFieldPieces: Array.isArray(raw.trainingFieldPieces) ? (raw.trainingFieldPieces as unknown[]).map((n) => String(n ?? "").trim()).filter(Boolean) : [],
                       trainingFieldPieceNames: Array.isArray(raw.trainingFieldPieceNames) ? (raw.trainingFieldPieceNames as unknown[]).map((n) => String(n ?? "").trim()).filter(Boolean) : [],
                       limitedEvent: parseLimitedEvent(raw.limitedEvent),
@@ -795,6 +819,7 @@ export default function MemberCardPage({
                     trainingTime: String(rs.trainingTime ?? "").trim(),
                     trainingDurationMinutes: Number.isInteger(Number(rs.trainingDurationMinutes)) ? Number(rs.trainingDurationMinutes) : undefined,
                     trainingFieldName: String(rs.trainingFieldName ?? "").trim() || null,
+                    trainingFieldType: normalizeTrainingFieldType(rs.trainingFieldType, trainingPayloadClubSports),
                     trainingFieldPieces: Array.isArray(rs.trainingFieldPieces) ? (rs.trainingFieldPieces as unknown[]).map((n) => String(n ?? "").trim()).filter(Boolean) : [],
                     trainingFieldPieceNames: Array.isArray(rs.trainingFieldPieceNames) ? (rs.trainingFieldPieceNames as unknown[]).map((n) => String(n ?? "").trim()).filter(Boolean) : [],
                     limitedEvent: parseLimitedEvent(rs.limitedEvent),
@@ -2956,13 +2981,14 @@ export default function MemberCardPage({
                                       : ["Цял терен"];
                                   const selectedPieces = trainingDetailsItem.trainingFieldPieceNames ?? [];
                                   const isWholeFieldSelected = selectedPieces.length === 0;
+                                  const fieldType = normalizeTrainingFieldType(trainingDetailsItem.trainingFieldType, member?.clubSports);
                                   return (
                                     <div className="member-training-field-visual">
                                       <div className={`member-training-field-name${isWholeFieldSelected ? " member-training-field-name--selected" : ""}`}>
                                         {trainingDetailsItem.trainingFieldName}
                                       </div>
                                       <div
-                                        className="member-training-field-pitch"
+                                        className={`member-training-field-pitch member-training-field-pitch--${fieldType}`}
                                         style={{ gridTemplateColumns: `repeat(${pieces.length}, minmax(0, 1fr))` }}
                                         aria-label={`Терен ${trainingDetailsItem.trainingFieldName}`}
                                       >
@@ -2999,13 +3025,14 @@ export default function MemberCardPage({
                                     : ["Цял терен"];
                                 const selectedPieces = session.trainingFieldPieceNames ?? [];
                                 const isWholeFieldSelected = selectedPieces.length === 0;
+                                const fieldType = normalizeTrainingFieldType(session.trainingFieldType, member?.clubSports);
                                 return (
                                   <div className="member-training-field-visual" style={{ marginBottom: 8 }}>
                                     <div className={`member-training-field-name${isWholeFieldSelected ? " member-training-field-name--selected" : ""}`}>
                                       {session.trainingFieldName}
                                     </div>
                                     <div
-                                      className="member-training-field-pitch"
+                                      className={`member-training-field-pitch member-training-field-pitch--${fieldType}`}
                                       style={{ gridTemplateColumns: `repeat(${pieces.length}, minmax(0, 1fr))` }}
                                     >
                                       {pieces.map((piece, pieceIndex) => {

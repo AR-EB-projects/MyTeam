@@ -217,6 +217,7 @@ async function getMemberTrainingContext(cardCode: string) {
           club: {
             select: {
               id: true,
+              sports: true,
               trainingDates: true,
               trainingDateTimes: true,
               trainingTime: true,
@@ -424,6 +425,7 @@ async function getMemberTrainingContext(cardCode: string) {
     playerId: card.playerId,
     playerName: card.player.fullName,
     clubId: card.player.clubId,
+    clubSports: card.player.club.sports,
     playerTeamGroup: card.player.teamGroup,
     playerCustomGroupIds: card.player.customTrainingGroups.map((g) => g.group.id),
     playerCoachGroupIds: card.player.coachGroups.map((g) => g.id),
@@ -486,6 +488,7 @@ type SessionItem = {
   trainingTime: string;
   trainingDurationMinutes: number;
   trainingFieldName: string | null;
+  trainingFieldType: string | null;
   trainingFieldPieces: string[];
   trainingFieldPieceNames: string[];
   limitedEvent: Omit<LimitedEventComputed, "scopeKey"> | null;
@@ -496,7 +499,7 @@ function buildGroupSession(
   scopeKey: string,
   date: string,
   limitedEventsForDate: LimitedEventComputed[],
-  fieldById: Map<string, { id: string; name: string; pieces: { id: string; name: string }[] }>,
+  fieldById: Map<string, { id: string; name: string; fieldType: string; pieces: { id: string; name: string }[] }>,
   noteByScopeDate: Map<string, string>,
 ): SessionItem {
   const groupDateTimes = normalizeStoredTrainingDateTimes(group.trainingDateTimes, group.trainingDates);
@@ -523,6 +526,7 @@ function buildGroupSession(
     trainingTime,
     trainingDurationMinutes: group.trainingDurationMinutes,
     trainingFieldName: field?.name ?? null,
+    trainingFieldType: field?.fieldType ?? null,
     trainingFieldPieces: allPieceNames,
     trainingFieldPieceNames: selectedPieceNames,
     limitedEvent,
@@ -707,6 +711,7 @@ export async function GET(
           select: {
             id: true,
             name: true,
+            fieldType: true,
             pieces: {
               select: { id: true, name: true },
               orderBy: { sortOrder: "asc" },
@@ -741,6 +746,7 @@ export async function GET(
 
   return NextResponse.json({
     clubId: context.clubId,
+    clubSports: context.clubSports,
     cardCode: context.cardCode,
     trainingWeekdays: context.trainingWeekdays,
     trainingWindowDays: context.trainingWindowDays,
@@ -793,6 +799,7 @@ export async function GET(
             trainingTime: session?.trainingTime ?? context.trainingDateTimes[date] ?? context.fallbackTrainingTime ?? "",
             trainingDurationMinutes: session?.trainingDurationMinutes ?? context.trainingDurationMinutes,
             trainingFieldName: field?.name ?? null,
+            trainingFieldType: field?.fieldType ?? null,
             trainingFieldPieces: allPieceNames,
             trainingFieldPieceNames: selectedPieceNames,
             limitedEvent: leRow
@@ -822,6 +829,7 @@ export async function GET(
         trainingTime: firstSession.trainingTime,
         trainingDurationMinutes: firstSession.trainingDurationMinutes,
         trainingFieldName: firstSession.trainingFieldName,
+        trainingFieldType: firstSession.trainingFieldType,
         trainingFieldPieces: firstSession.trainingFieldPieces,
         trainingFieldPieceNames: firstSession.trainingFieldPieceNames,
         limitedEvent: firstSession.limitedEvent,

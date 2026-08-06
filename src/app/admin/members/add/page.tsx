@@ -332,23 +332,12 @@ function AddMemberPageContent() {
               style={{ objectFit: "contain", borderRadius: "8px" }}
             />
           ) : (
-            <svg viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg" className="add-member-logo">
-              <path d="M60 2 L115 20 L115 85 Q115 120 60 138 Q5 120 5 85 L5 20 Z" fill="#1a5c1a" stroke="#32cd32" strokeWidth="3" />
-              <path d="M60 8 L109 24 L109 83 Q109 114 60 132 Q11 114 11 83 L11 24 Z" fill="#0d3d0d" />
-              <rect x="15" y="18" width="90" height="22" rx="2" fill="#1a5c1a" />
-              <text x="60" y="33" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="800" fontFamily="Arial, sans-serif">{clubData?.name?.toUpperCase() || "ОТБОР"}</text>
-              <rect x="20" y="44" width="16" height="40" fill="#ffffff" />
-              <rect x="36" y="44" width="16" height="40" fill="#32cd32" />
-              <rect x="52" y="44" width="16" height="40" fill="#ffffff" />
-              <rect x="68" y="44" width="16" height="40" fill="#32cd32" />
-              <rect x="84" y="44" width="16" height="40" fill="#ffffff" />
-              <circle cx="60" cy="64" r="14" fill="#1a5c1a" stroke="#32cd32" strokeWidth="1.5" />
-              <circle cx="60" cy="64" r="10" fill="none" stroke="#ffffff" strokeWidth="1" />
-              <text x="60" y="68" textAnchor="middle" fill="#ffffff" fontSize="12">⚽</text>
-              <rect x="15" y="88" width="90" height="20" rx="2" fill="#1a5c1a" />
-              <text x="60" y="102" textAnchor="middle" fill="#ffffff" fontSize="8.5" fontWeight="700" fontFamily="Arial, sans-serif">MYTEAM APP</text>
-              <text x="60" y="122" textAnchor="middle" fill="#32cd32" fontSize="14" fontWeight="800" fontFamily="Arial, sans-serif">2024</text>
-            </svg>
+            <img
+              src="/myteam-logo.webp"
+              alt="MyTeam Logo"
+              className="add-member-logo"
+              style={{ objectFit: "contain", borderRadius: "8px" }}
+            />
           )}
           <h1 className="add-member-title">Добави нов състезател</h1>
           <div className="add-member-title-line" />
