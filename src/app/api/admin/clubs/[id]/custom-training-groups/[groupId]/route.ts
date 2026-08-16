@@ -181,6 +181,7 @@ export async function PATCH(
     trainingFieldId?: unknown;
     trainingFieldPieceIds?: unknown;
     trainingFieldSelections?: unknown;
+    conflictCheckDates?: unknown;
     color?: unknown;
   };
   const hasName = Object.prototype.hasOwnProperty.call(payload, "name");
@@ -219,6 +220,15 @@ export async function PATCH(
 
     let nextTrainingDates = existing.trainingDates ?? [];
     if (hasTrainingDates) nextTrainingDates = normalizeTrainingDates(payload.trainingDates);
+    const conflictCheckDates = Array.isArray(payload.conflictCheckDates)
+      ? Array.from(
+          new Set(
+            payload.conflictCheckDates
+              .map((value) => String(value ?? "").trim())
+              .filter((date) => nextTrainingDates.includes(date)),
+          ),
+        ).sort((a, b) => a.localeCompare(b))
+      : undefined;
     const fallbackTrainingTime = hasTrainingTime ? normalizeTrainingTime(payload.trainingTime) : existing.trainingTime ?? null;
     const rawTrainingDateTimes = hasTrainingDateTimes ? payload.trainingDateTimes : existing.trainingDateTimes;
     const nextTrainingDateTimes = nextTrainingDates.length > 0
@@ -282,6 +292,7 @@ export async function PATCH(
       }
       try {
         const conflictCheck = pickTrainingConflictCheckInput({
+          checkDates: conflictCheckDates,
           previousDates: existing.trainingDates ?? [],
           previousDateTimes: existing.trainingDateTimes,
           previousDurationMinutes: existing.trainingDurationMinutes,

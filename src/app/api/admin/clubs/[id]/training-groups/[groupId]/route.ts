@@ -203,6 +203,7 @@ export async function PATCH(
     trainingFieldId?: unknown;
     trainingFieldPieceIds?: unknown;
     trainingFieldSelections?: unknown;
+    conflictCheckDates?: unknown;
   };
   const hasNameField = Object.prototype.hasOwnProperty.call(payload, "name");
   const hasTeamGroupsField = Object.prototype.hasOwnProperty.call(payload, "teamGroups");
@@ -259,6 +260,7 @@ export async function PATCH(
     }
 
     let nextTrainingDates: string[] | undefined;
+    let conflictCheckDates: string[] | undefined;
     let nextTrainingWeekdays: number[] | undefined;
     let nextTrainingTime: string | null | undefined;
     if (hasTrainingDatesField) {
@@ -273,6 +275,15 @@ export async function PATCH(
       nextTrainingWeekdays = Array.from(
         new Set(nextTrainingDates.map((date) => getWeekdayMondayFirst(date, FIXED_TIME_ZONE)).filter((value) => value >= 1 && value <= 7)),
       ).sort((a, b) => a - b);
+      if (Array.isArray(payload.conflictCheckDates)) {
+        conflictCheckDates = Array.from(
+          new Set(
+            payload.conflictCheckDates
+              .map((value) => String(value ?? "").trim())
+              .filter((date) => nextTrainingDates?.includes(date)),
+          ),
+        ).sort((a, b) => a.localeCompare(b));
+      }
     }
     if (hasTrainingTimeField) {
       try {
@@ -353,6 +364,7 @@ export async function PATCH(
           fallbackTrainingTime,
         });
         const conflictCheck = pickTrainingConflictCheckInput({
+          checkDates: conflictCheckDates,
           previousDates: group.trainingDates ?? [],
           previousDateTimes: group.trainingDateTimes,
           previousDurationMinutes: group.trainingDurationMinutes,

@@ -149,6 +149,7 @@ function pickFieldSelections(
 }
 
 export function pickTrainingConflictCheckInput(input: {
+  checkDates?: string[];
   previousDates: string[];
   previousDateTimes: unknown;
   previousDurationMinutes: number;
@@ -172,6 +173,9 @@ export function pickTrainingConflictCheckInput(input: {
   const previousDateTimes = normalizeStoredDateTimes(input.previousDateTimes);
   const previousFieldSelections = normalizeStoredFieldSelections(input.previousFieldSelections);
   const nextFieldSelections = input.nextFieldSelections ?? {};
+  const checkDateSet = input.checkDates
+    ? new Set(input.checkDates.filter((date) => input.nextDates.includes(date)))
+    : null;
 
   const globalChange =
     input.previousDurationMinutes !== input.nextDurationMinutes ||
@@ -180,6 +184,9 @@ export function pickTrainingConflictCheckInput(input: {
     !areStringArraysEqual(input.previousFieldPieceIds, input.nextFieldPieceIds);
 
   const trainingDates = input.nextDates.filter((date) => {
+    if (checkDateSet && !checkDateSet.has(date)) {
+      return false;
+    }
     if (globalChange || !previousDateSet.has(date)) {
       return true;
     }

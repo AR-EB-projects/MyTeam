@@ -278,6 +278,7 @@ export async function PUT(
   const rawTrainingFieldId = (body as { trainingFieldId?: unknown }).trainingFieldId;
   const rawTrainingFieldPieceId = (body as { trainingFieldPieceIds?: unknown }).trainingFieldPieceIds;
   const rawTrainingFieldSelections = (body as { trainingFieldSelections?: unknown }).trainingFieldSelections;
+  const rawConflictCheckDates = (body as { conflictCheckDates?: unknown }).conflictCheckDates;
   const rawWeekdays = (body as { trainingWeekdays?: unknown }).trainingWeekdays;
   const rawWindowDays = Number.parseInt(String((body as { trainingWindowDays?: unknown }).trainingWindowDays ?? ""), 10);
   const rawTeamGroup = (body as { teamGroup?: unknown }).teamGroup;
@@ -369,6 +370,7 @@ export async function PUT(
   }
 
   let trainingDates: string[] = [];
+  let conflictCheckDates: string[] | undefined;
   if (Array.isArray(rawTrainingDates)) {
     const todayIso = getTodayIsoDateInTimeZone(FIXED_TIME_ZONE);
     const start = isoDateToUtcMidnight(todayIso).getTime();
@@ -390,6 +392,15 @@ export async function PUT(
     }
 
     trainingDates = Array.from(new Set(trainingDates)).sort((a, b) => a.localeCompare(b));
+    if (Array.isArray(rawConflictCheckDates)) {
+      conflictCheckDates = Array.from(
+        new Set(
+          rawConflictCheckDates
+            .map((value) => String(value ?? "").trim())
+            .filter((date) => trainingDates.includes(date)),
+        ),
+      ).sort((a, b) => a.localeCompare(b));
+    }
   } else {
     const trainingWeekdays = Array.isArray(rawWeekdays)
       ? Array.from(
@@ -467,6 +478,7 @@ export async function PUT(
         fallbackTrainingTime: trainingTime,
       });
       const conflictCheck = pickTrainingConflictCheckInput({
+        checkDates: conflictCheckDates,
         previousDates: previousTrainingSchedule?.trainingDates ?? [],
         previousDateTimes: previousTrainingSchedule?.trainingDateTimes,
         previousDurationMinutes: previousTrainingSchedule?.trainingDurationMinutes ?? trainingDurationMinutes,

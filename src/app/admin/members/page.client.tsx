@@ -3932,6 +3932,7 @@ function AdminMembersPageContent() {
         trainingFieldPieceIds: primaryTrainingFieldSelection.trainingFieldPieceIds,
         trainingFieldSelections: mergedTrainingFieldSelections,
         trainingDateTimes: mergedTrainingDateTimes,
+        conflictCheckDates: schedulerForm.trainingDates,
         teamGroup: selectedTeamGroup,
       }),
     });
@@ -4060,6 +4061,7 @@ function AdminMembersPageContent() {
               trainingFieldPieceIds: primaryTrainingFieldSelection.trainingFieldPieceIds,
               trainingFieldSelections: mergedTrainingFieldSelectionsForPayload,
               trainingDateTimes: mergedTrainingDateTimesForPayload,
+              conflictCheckDates: nextTrainingDates,
             }),
           },
         );
