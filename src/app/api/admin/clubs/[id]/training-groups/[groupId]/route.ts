@@ -13,7 +13,12 @@ import {
   sendTrainingScheduleNotifications,
   shouldNotifyForTrainingDatesChange,
 } from "@/lib/push/trainingScheduleNotifications";
-import { assertNoTrainingFieldConflict, assertNoTrainingTimeConflict, checkTrainingAwayMatchConflict } from "@/lib/trainingFieldConflicts";
+import {
+  assertNoTrainingFieldConflict,
+  assertNoTrainingTimeConflict,
+  checkTrainingAwayMatchConflict,
+  pickTrainingConflictCheckInput,
+} from "@/lib/trainingFieldConflicts";
 import {
   clubHasTrainingFields,
   parseTrainingFieldSelection,
@@ -347,29 +352,51 @@ export async function PATCH(
           trainingDates: finalTrainingDates,
           fallbackTrainingTime,
         });
+        const conflictCheck = pickTrainingConflictCheckInput({
+          previousDates: group.trainingDates ?? [],
+          previousDateTimes: group.trainingDateTimes,
+          previousDurationMinutes: group.trainingDurationMinutes,
+          previousFieldId: group.trainingFieldId ?? null,
+          previousFieldPieceIds: group.trainingFieldPieceIds ?? [],
+          previousFieldSelections: group.trainingFieldSelections,
+          previousTeamGroups: group.teamGroups,
+          nextDates: finalTrainingDates,
+          nextDateTimes: finalTrainingDateTimes,
+          nextDurationMinutes: nextTrainingDurationMinutes,
+          nextFieldId: nextTrainingFieldId,
+          nextFieldPieceIds: nextTrainingFieldPieceIds,
+          nextFieldSelections: nextTrainingFieldSelections,
+          nextTeamGroups,
+        });
         if (hasTrainingFields) {
           await assertNoTrainingFieldConflict({
             clubId,
-            trainingDates: finalTrainingDates,
-            trainingDateTimes: finalTrainingDateTimes,
+            trainingDates: conflictCheck.trainingDates,
+            trainingDateTimes: conflictCheck.trainingDateTimes,
             trainingDurationMinutes: nextTrainingDurationMinutes,
             trainingFieldId: nextTrainingFieldId,
             trainingFieldPieceIds: nextTrainingFieldPieceIds,
-            trainingFieldSelections: nextTrainingFieldSelections,
+            trainingFieldSelections: conflictCheck.trainingFieldSelections,
             exclude: { type: "trainingGroup", id: groupId },
             excludeTeamGroups: nextTeamGroups,
           });
         }
         await assertNoTrainingTimeConflict({
           clubId,
-          trainingDates: finalTrainingDates,
-          trainingDateTimes: finalTrainingDateTimes,
+          trainingDates: conflictCheck.trainingDates,
+          trainingDateTimes: conflictCheck.trainingDateTimes,
           trainingDurationMinutes: nextTrainingDurationMinutes,
           exclude: { type: "trainingGroup", id: groupId },
           excludeTeamGroups: nextTeamGroups,
           ignoreFieldResourceSchedules: hasTrainingFields,
         });
-        const matchConflict = await checkTrainingAwayMatchConflict({ clubId, trainingDates: finalTrainingDates, trainingDateTimes: finalTrainingDateTimes, durationMinutes: nextTrainingDurationMinutes, teamGroups: nextTeamGroups });
+        const matchConflict = await checkTrainingAwayMatchConflict({
+          clubId,
+          trainingDates: conflictCheck.trainingDates,
+          trainingDateTimes: conflictCheck.trainingDateTimes,
+          durationMinutes: nextTrainingDurationMinutes,
+          teamGroups: nextTeamGroups,
+        });
         if (matchConflict.blocking) return NextResponse.json({ error: matchConflict.blocking }, { status: 400 });
         trainingMatchWarning = matchConflict.warning;
       } catch (error) {

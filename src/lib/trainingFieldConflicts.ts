@@ -105,6 +105,105 @@ function getFieldSelectionForDate(
   };
 }
 
+function areNumberArraysEqual(a: number[] | undefined, b: number[] | undefined): boolean {
+  const left = [...(a ?? [])].sort((x, y) => x - y);
+  const right = [...(b ?? [])].sort((x, y) => x - y);
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function areStringArraysEqual(a: string[] | undefined, b: string[] | undefined): boolean {
+  const left = [...(a ?? [])].sort();
+  const right = [...(b ?? [])].sort();
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function areFieldSelectionsEqual(
+  a: { trainingFieldId: string | null; trainingFieldPieceIds: string[] },
+  b: { trainingFieldId: string | null; trainingFieldPieceIds: string[] },
+): boolean {
+  return a.trainingFieldId === b.trainingFieldId &&
+    areStringArraysEqual(a.trainingFieldPieceIds, b.trainingFieldPieceIds);
+}
+
+function pickDateTimes(raw: Record<string, string>, dates: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const date of dates) {
+    if (raw[date]) {
+      result[date] = raw[date];
+    }
+  }
+  return result;
+}
+
+function pickFieldSelections(
+  raw: Record<string, { trainingFieldId: string | null; trainingFieldPieceIds: string[] }>,
+  dates: string[],
+) {
+  const result: Record<string, { trainingFieldId: string | null; trainingFieldPieceIds: string[] }> = {};
+  for (const date of dates) {
+    if (raw[date]) {
+      result[date] = raw[date];
+    }
+  }
+  return result;
+}
+
+export function pickTrainingConflictCheckInput(input: {
+  previousDates: string[];
+  previousDateTimes: unknown;
+  previousDurationMinutes: number;
+  previousFieldId?: string | null;
+  previousFieldPieceIds?: string[];
+  previousFieldSelections?: unknown;
+  previousTeamGroups?: number[];
+  nextDates: string[];
+  nextDateTimes: Record<string, string>;
+  nextDurationMinutes: number;
+  nextFieldId?: string | null;
+  nextFieldPieceIds?: string[];
+  nextFieldSelections?: Record<string, { trainingFieldId: string | null; trainingFieldPieceIds: string[] }>;
+  nextTeamGroups?: number[];
+}): {
+  trainingDates: string[];
+  trainingDateTimes: Record<string, string>;
+  trainingFieldSelections: Record<string, { trainingFieldId: string | null; trainingFieldPieceIds: string[] }>;
+} {
+  const previousDateSet = new Set(input.previousDates);
+  const previousDateTimes = normalizeStoredDateTimes(input.previousDateTimes);
+  const previousFieldSelections = normalizeStoredFieldSelections(input.previousFieldSelections);
+  const nextFieldSelections = input.nextFieldSelections ?? {};
+
+  const globalChange =
+    input.previousDurationMinutes !== input.nextDurationMinutes ||
+    !areNumberArraysEqual(input.previousTeamGroups, input.nextTeamGroups) ||
+    input.previousFieldId !== input.nextFieldId ||
+    !areStringArraysEqual(input.previousFieldPieceIds, input.nextFieldPieceIds);
+
+  const trainingDates = input.nextDates.filter((date) => {
+    if (globalChange || !previousDateSet.has(date)) {
+      return true;
+    }
+    if ((previousDateTimes[date] ?? "") !== (input.nextDateTimes[date] ?? "")) {
+      return true;
+    }
+    const previousSelection = previousFieldSelections[date] ?? {
+      trainingFieldId: input.previousFieldId ?? null,
+      trainingFieldPieceIds: input.previousFieldPieceIds ?? [],
+    };
+    const nextSelection = nextFieldSelections[date] ?? {
+      trainingFieldId: input.nextFieldId ?? null,
+      trainingFieldPieceIds: input.nextFieldPieceIds ?? [],
+    };
+    return !areFieldSelectionsEqual(previousSelection, nextSelection);
+  });
+
+  return {
+    trainingDates,
+    trainingDateTimes: pickDateTimes(input.nextDateTimes, trainingDates),
+    trainingFieldSelections: pickFieldSelections(nextFieldSelections, trainingDates),
+  };
+}
+
 function isSameExcludedSchedule(
   schedule: ExistingSchedule,
   exclude: TrainingFieldConflictInput["exclude"],

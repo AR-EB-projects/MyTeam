@@ -14,7 +14,12 @@ import {
   sendTrainingScheduleNotifications,
   shouldNotifyForTrainingDatesChange,
 } from "@/lib/push/trainingScheduleNotifications";
-import { assertNoTrainingFieldConflict, assertNoTrainingTimeConflict, checkTrainingAwayMatchConflict } from "@/lib/trainingFieldConflicts";
+import {
+  assertNoTrainingFieldConflict,
+  assertNoTrainingTimeConflict,
+  checkTrainingAwayMatchConflict,
+  pickTrainingConflictCheckInput,
+} from "@/lib/trainingFieldConflicts";
 import {
   clubHasTrainingFields,
   normalizeStoredTrainingFieldSelections,
@@ -407,6 +412,29 @@ export async function PUT(
   if (!hasTrainingFields) {
     trainingFieldSelection = { trainingFieldId: null, trainingFieldPieceIds: [] };
   }
+  const previousTrainingSchedule = teamGroup === null
+    ? await prisma.club.findUnique({
+        where: { id },
+        select: {
+          trainingDates: true,
+          trainingDateTimes: true,
+          trainingDurationMinutes: true,
+          trainingFieldId: true,
+          trainingFieldPieceIds: true,
+          trainingFieldSelections: true,
+        },
+      })
+    : await prisma.clubTrainingGroupSchedule.findUnique({
+        where: { clubId_teamGroup: { clubId: id, teamGroup } },
+        select: {
+          trainingDates: true,
+          trainingDateTimes: true,
+          trainingDurationMinutes: true,
+          trainingFieldId: true,
+          trainingFieldPieceIds: true,
+          trainingFieldSelections: true,
+        },
+      });
   let trainingDateTimes: Record<string, string> = {};
   let trainingFieldSelections: Record<string, { trainingFieldId: string | null; trainingFieldPieceIds: string[] }> = {};
   let schedulerMatchWarning: string | null = null;
@@ -438,15 +466,31 @@ export async function PUT(
         trainingDates,
         fallbackTrainingTime: trainingTime,
       });
+      const conflictCheck = pickTrainingConflictCheckInput({
+        previousDates: previousTrainingSchedule?.trainingDates ?? [],
+        previousDateTimes: previousTrainingSchedule?.trainingDateTimes,
+        previousDurationMinutes: previousTrainingSchedule?.trainingDurationMinutes ?? trainingDurationMinutes,
+        previousFieldId: previousTrainingSchedule?.trainingFieldId ?? null,
+        previousFieldPieceIds: previousTrainingSchedule?.trainingFieldPieceIds ?? [],
+        previousFieldSelections: previousTrainingSchedule?.trainingFieldSelections,
+        previousTeamGroups: teamGroup === null ? [] : [teamGroup],
+        nextDates: trainingDates,
+        nextDateTimes: trainingDateTimes,
+        nextDurationMinutes: trainingDurationMinutes,
+        nextFieldId: trainingFieldSelection.trainingFieldId,
+        nextFieldPieceIds: trainingFieldSelection.trainingFieldPieceIds,
+        nextFieldSelections: trainingFieldSelections,
+        nextTeamGroups: teamGroup === null ? [] : [teamGroup],
+      });
       if (hasTrainingFields) {
         await assertNoTrainingFieldConflict({
           clubId: id,
-          trainingDates,
-          trainingDateTimes,
+          trainingDates: conflictCheck.trainingDates,
+          trainingDateTimes: conflictCheck.trainingDateTimes,
           trainingDurationMinutes,
           trainingFieldId: trainingFieldSelection.trainingFieldId,
           trainingFieldPieceIds: trainingFieldSelection.trainingFieldPieceIds,
-          trainingFieldSelections,
+          trainingFieldSelections: conflictCheck.trainingFieldSelections,
           exclude: teamGroup === null
             ? { type: "club" }
             : { type: "teamGroup", teamGroup },
@@ -455,8 +499,8 @@ export async function PUT(
       }
       await assertNoTrainingTimeConflict({
         clubId: id,
-        trainingDates,
-        trainingDateTimes,
+        trainingDates: conflictCheck.trainingDates,
+        trainingDateTimes: conflictCheck.trainingDateTimes,
         trainingDurationMinutes,
         exclude: teamGroup === null
           ? { type: "club" }
@@ -464,7 +508,13 @@ export async function PUT(
         excludeTeamGroups: teamGroup === null ? [] : [teamGroup],
         ignoreFieldResourceSchedules: hasTrainingFields,
       });
-      const matchConflict = await checkTrainingAwayMatchConflict({ clubId: id, trainingDates, trainingDateTimes, durationMinutes: trainingDurationMinutes, teamGroups: teamGroup !== null ? [teamGroup] : [] });
+      const matchConflict = await checkTrainingAwayMatchConflict({
+        clubId: id,
+        trainingDates: conflictCheck.trainingDates,
+        trainingDateTimes: conflictCheck.trainingDateTimes,
+        durationMinutes: trainingDurationMinutes,
+        teamGroups: teamGroup !== null ? [teamGroup] : [],
+      });
       if (matchConflict.blocking) return NextResponse.json({ error: matchConflict.blocking }, { status: 400 });
       schedulerMatchWarning = matchConflict.warning;
     } catch (error) {
@@ -479,21 +529,7 @@ export async function PUT(
     new Set(trainingDates.map((date) => getWeekdayMondayFirst(date, FIXED_TIME_ZONE)).filter((value) => value >= 1 && value <= 7)),
   ).sort((a, b) => a - b);
 
-  const previousGroupSchedule = teamGroup === null
-    ? null
-    : await prisma.clubTrainingGroupSchedule.findUnique({
-        where: {
-          clubId_teamGroup: {
-            clubId: id,
-            teamGroup,
-          },
-        },
-        select: {
-          trainingDates: true,
-          trainingTime: true,
-          trainingDateTimes: true,
-        },
-      });
+  const previousGroupSchedule = teamGroup === null ? null : previousTrainingSchedule;
 
   const updated = await prisma.club.update({
     where: { id },
