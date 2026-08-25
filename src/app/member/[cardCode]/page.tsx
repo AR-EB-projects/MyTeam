@@ -4,6 +4,7 @@ import { use, useEffect, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { uploadImage } from "@/lib/uploadImage";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
+import { getCompatiblePushSubscription } from "@/lib/push/browser";
 import "./page.css";
 
 interface MemberProfile {
@@ -293,19 +294,6 @@ function buildTrainingCalendarMonth(year: number, month: number) {
     label: `${MONTH_NAMES_BG_FULL[month] ?? ""} ${year}`,
     cells,
   };
-}
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const normalized = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(normalized);
-  const output = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; i += 1) {
-    output[i] = rawData.charCodeAt(i);
-  }
-
-  return output;
 }
 
 function formatIsoDateForBgDisplay(isoDate: string): string {
@@ -1239,7 +1227,26 @@ export default function MemberCardPage({
         const registration = await navigator.serviceWorker.register("/sw.js");
         await navigator.serviceWorker.ready;
         const existingSubscription = await registration.pushManager.getSubscription();
-        setIsPushEnabled(Boolean(existingSubscription));
+        if (!existingSubscription) {
+          setIsPushEnabled(false);
+          return;
+        }
+
+        const search = new URLSearchParams({
+          endpoint: existingSubscription.endpoint,
+        });
+        const response = await fetch(
+          `/api/members/${encodeURIComponent(normalizedCardCode)}/push-subscriptions?${search.toString()}`,
+          { cache: "no-store" }
+        );
+
+        if (!response.ok) {
+          setIsPushEnabled(false);
+          return;
+        }
+
+        const payload = (await response.json()) as { isActive?: unknown };
+        setIsPushEnabled(Boolean(payload.isActive));
       } catch (subscriptionError) {
         console.error("Detect push subscription error:", subscriptionError);
         setIsPushEnabled(false);
@@ -1292,13 +1299,7 @@ export default function MemberCardPage({
 
       const { publicKey } = (await keyResponse.json()) as { publicKey: string };
 
-      const existingSubscription = await registration.pushManager.getSubscription();
-      const subscription =
-        existingSubscription ||
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
-        }));
+      const subscription = await getCompatiblePushSubscription(registration, publicKey);
 
       const saveResponse = await fetch(
         `/api/members/${encodeURIComponent(normalizedCardCode)}/push-subscriptions`,

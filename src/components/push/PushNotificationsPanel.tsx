@@ -1,19 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const normalized = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(normalized);
-  const output = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; i += 1) {
-    output[i] = rawData.charCodeAt(i);
-  }
-
-  return output;
-}
+import { getCompatiblePushSubscription } from "@/lib/push/browser";
 
 function detectIPhoneSafari() {
   const ua = navigator.userAgent;
@@ -143,8 +131,31 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
       try {
         const registration = await registerServiceWorker();
         const currentSubscription = await registration.pushManager.getSubscription();
+        if (!currentSubscription) {
+          if (!cancelled) {
+            setIsSubscribed(false);
+          }
+          return;
+        }
+
+        const search = new URLSearchParams({
+          endpoint: currentSubscription.endpoint,
+        });
+        const response = await fetch(
+          `/api/members/${encodeURIComponent(cardCode)}/push-subscriptions?${search.toString()}`,
+          { cache: "no-store" }
+        );
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setIsSubscribed(false);
+          }
+          return;
+        }
+
+        const payload = (await response.json()) as { isActive?: unknown };
         if (!cancelled) {
-          setIsSubscribed(Boolean(currentSubscription));
+          setIsSubscribed(Boolean(payload.isActive));
         }
       } catch (error) {
         console.error("Service worker registration error:", error);
@@ -192,8 +203,6 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
       }
 
       const registration = await registerServiceWorker();
-      const existingSubscription = await registration.pushManager.getSubscription();
-
       const publicKeyResponse = await fetch("/api/push/public-key", { cache: "no-store" });
       if (!publicKeyResponse.ok) {
         const errorPayload = await publicKeyResponse
@@ -203,15 +212,11 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
       }
 
       const { publicKey } = (await publicKeyResponse.json()) as { publicKey: string };
-      let subscription = existingSubscription;
+      let subscription: PushSubscription;
 
-      if (!subscription) {
-        try {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
-          });
-        } catch (subscribeError) {
+      try {
+        subscription = await getCompatiblePushSubscription(registration, publicKey);
+      } catch (subscribeError) {
           const diagnostics = await getPushSubscribeDiagnostics(registration, publicKey);
 
           if (
@@ -254,7 +259,6 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
             diagnostics,
           });
           throw subscribeError;
-        }
       }
 
       const saveResponse = await fetch(

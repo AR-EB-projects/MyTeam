@@ -11,6 +11,51 @@ import { parseBrowserPushSubscription } from "@/lib/push/validation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ cardCode: string }> }
+) {
+  const { cardCode } = await params;
+  const normalizedCardCode = cardCode.trim().toUpperCase();
+  const endpoint = request.nextUrl.searchParams.get("endpoint")?.trim() ?? "";
+
+  if (!endpoint) {
+    return NextResponse.json({ error: "endpoint is required" }, { status: 400 });
+  }
+
+  const card = await prisma.card.findFirst({
+    where: {
+      cardCode: normalizedCardCode,
+      isActive: true,
+    },
+    select: {
+      playerId: true,
+    },
+  });
+
+  if (!card) {
+    return NextResponse.json({ error: "Member not found" }, { status: 404 });
+  }
+
+  try {
+    const subscription = await prisma.pushSubscription.findUnique({
+      where: { endpoint },
+      select: { playerId: true, isActive: true },
+    });
+
+    return NextResponse.json({
+      success: true,
+      isActive: Boolean(subscription?.isActive && subscription.playerId === card.playerId),
+    });
+  } catch (error) {
+    console.error("Push subscription GET error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch push subscription state." },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ cardCode: string }> }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
 import { uploadImage, validateImageFile } from "@/lib/uploadImage";
 import { isValidPhone } from "@/lib/phone";
+import { getCompatiblePushSubscription } from "@/lib/push/browser";
 import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
 import "./page.css";
 import {
@@ -64,7 +65,6 @@ import {
   normalizeTrainingFieldSelections,
   inferTrainingTimeMode,
   parseSelectedTeamGroup,
-  urlBase64ToUint8Array,
   buildCalendarMonths,
 } from "./_components/members-page-components";
 import type {
@@ -1311,20 +1311,14 @@ function AdminMembersPageContent() {
 
       await navigator.serviceWorker.register("/sw.js");
       const registration = await navigator.serviceWorker.ready;
-      let subscription = await registration.pushManager.getSubscription();
 
-      if (!subscription) {
-        const publicKeyResponse = await fetch("/api/push/public-key", { cache: "no-store" });
-        if (!publicKeyResponse.ok) {
-          const payload = await publicKeyResponse.json().catch(() => ({ error: "Missing VAPID configuration" }));
-          throw new Error(String(payload.error ?? "Failed to get VAPID public key"));
-        }
-        const { publicKey } = (await publicKeyResponse.json()) as { publicKey: string };
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
-        });
+      const publicKeyResponse = await fetch("/api/push/public-key", { cache: "no-store" });
+      if (!publicKeyResponse.ok) {
+        const payload = await publicKeyResponse.json().catch(() => ({ error: "Missing VAPID configuration" }));
+        throw new Error(String(payload.error ?? "Failed to get VAPID public key"));
       }
+      const { publicKey } = (await publicKeyResponse.json()) as { publicKey: string };
+      const subscription = await getCompatiblePushSubscription(registration, publicKey);
 
       const saveResponse = await fetch(`/api/admin/clubs/${encodeURIComponent(clubId)}/push-subscriptions`, {
         method: "POST",
