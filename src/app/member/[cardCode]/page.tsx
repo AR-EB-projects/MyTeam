@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { use, useEffect, useState, type CSSProperties } from "react";
+import { use, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { uploadImage } from "@/lib/uploadImage";
 import { extractUploadPathFromCloudinaryUrl } from "@/lib/cloudinaryImagePath";
@@ -420,6 +420,7 @@ export default function MemberCardPage({
   const [irisPaymentLoading, setIrisPaymentLoading] = useState(false);
   const [irisStatusLoading, setIrisStatusLoading] = useState(false);
   const [irisPayment, setIrisPayment] = useState<IrisOnlinePayment | null>(null);
+  const irisPaymentRequestIdRef = useRef(0);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentTrainingCredits, setPaymentTrainingCredits] = useState("");
   const [trainingCreditLoading, setTrainingCreditLoading] = useState(false);
@@ -657,6 +658,9 @@ export default function MemberCardPage({
     if (cmpYM(ym, firstUnpaidYM) < 0) return;
     setSelectedPaymentDeleteMonths([]);
     setSelectedYM(ym);
+    if (irisPayment || irisPaymentLoading) {
+      void createIrisPaymentForSelection(ym);
+    }
   };
 
   // Fetch notifications
@@ -1438,8 +1442,8 @@ export default function MemberCardPage({
     }
   };
 
-  const handleIrisPayment = async () => {
-    if (!selectedYM || !member) return;
+  const createIrisPaymentForSelection = async (targetYM: { year: number; month: number }) => {
+    if (!member) return;
     if (hasActiveRollingPayment) {
       setPaymentError(`Остават ${rollingRemainingText}`);
       return;
@@ -1453,6 +1457,8 @@ export default function MemberCardPage({
       return;
     }
 
+    const requestId = irisPaymentRequestIdRef.current + 1;
+    irisPaymentRequestIdRef.current = requestId;
     setIrisPaymentLoading(true);
     setPaymentError(null);
     setIrisPayment(null);
@@ -1461,10 +1467,11 @@ export default function MemberCardPage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          paidFor: isThirtyDayBasedPayment || isTrainingCreditBasedPayment ? new Date().toISOString() : toISOMonth(selectedYM),
+          paidFor: isThirtyDayBasedPayment || isTrainingCreditBasedPayment ? new Date().toISOString() : toISOMonth(targetYM),
         }),
       });
       const payload = await response.json().catch(() => ({}));
+      if (requestId !== irisPaymentRequestIdRef.current) return;
       if (!response.ok) {
         throw new Error(
           typeof payload?.error === "string" && payload.error.trim()
@@ -1474,10 +1481,18 @@ export default function MemberCardPage({
       }
       setIrisPayment(payload.payment as IrisOnlinePayment);
     } catch (e) {
+      if (requestId !== irisPaymentRequestIdRef.current) return;
       setPaymentError(e instanceof Error ? e.message : "Възникна грешка");
     } finally {
-      setIrisPaymentLoading(false);
+      if (requestId === irisPaymentRequestIdRef.current) {
+        setIrisPaymentLoading(false);
+      }
     }
+  };
+
+  const handleIrisPayment = async () => {
+    if (!selectedYM) return;
+    await createIrisPaymentForSelection(selectedYM);
   };
 
   const handleIrisStatusCheck = async () => {
@@ -3829,11 +3844,17 @@ export default function MemberCardPage({
 
               {/* Year nav */}
               <div className="pm-year-nav">
-                <button className="pm-year-btn" onClick={() => setCalendarYear((y) => y - 1)}>
+                <button
+                  className="pm-year-btn"
+                  onClick={() => setCalendarYear((y) => y - 1)}
+                >
                   <ChevronIcon direction="left" />
                 </button>
                 <span className="pm-year-label">{calendarYear}</span>
-                <button className="pm-year-btn" onClick={() => setCalendarYear((y) => y + 1)}>
+                <button
+                  className="pm-year-btn"
+                  onClick={() => setCalendarYear((y) => y + 1)}
+                >
                   <ChevronIcon direction="right" />
                 </button>
               </div>
