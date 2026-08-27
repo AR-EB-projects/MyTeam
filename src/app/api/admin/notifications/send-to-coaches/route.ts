@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { buildNotificationPayload } from "@/lib/push/templates";
-import { sendPushToClubAdmins } from "@/lib/push/adminService";
+import { sendPushToAllClubAdminScopes } from "@/lib/push/adminService";
 import { saveAdminNotificationHistory } from "@/lib/push/adminHistory";
 
 export const runtime = "nodejs";
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
   const results = await Promise.all(
     clubs.map(async (club) => {
-      const sendResult = await sendPushToClubAdmins(club.id, pushPayload);
+      const sendResult = await sendPushToAllClubAdminScopes(club.id, pushPayload);
       await saveAdminNotificationHistory({ clubId: club.id, type: "admin_message", payload: pushPayload });
       return { clubId: club.id, ...sendResult };
     }),

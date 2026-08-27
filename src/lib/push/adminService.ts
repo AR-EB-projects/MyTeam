@@ -190,3 +190,76 @@ export async function sendPushToClubAdmins(
     deactivated,
   };
 }
+
+export async function sendPushToAllClubAdminScopes(
+  clubId: string,
+  payload: PushNotificationPayload,
+): Promise<SendAdminPushResult> {
+  const subscriptions = await prisma.adminPushSubscription.findMany({
+    where: {
+      clubId,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      endpoint: true,
+      p256dh: true,
+      auth: true,
+      createdAt: true,
+    },
+  });
+
+  if (subscriptions.length === 0) {
+    return { total: 0, sent: 0, failed: 0, deactivated: 0 };
+  }
+
+  ensureWebPushConfigured();
+
+  let sent = 0;
+  let failed = 0;
+  let deactivated = 0;
+  const body = JSON.stringify(payload);
+
+  await Promise.all(
+    subscriptions.map(async (subscription) => {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth,
+            },
+          },
+          body,
+        );
+        sent += 1;
+      } catch (error) {
+        failed += 1;
+        const statusCode = getPushErrorStatusCode(error);
+
+        if (shouldDeactivateSubscription(statusCode, subscription.createdAt)) {
+          deactivated += 1;
+          await prisma.adminPushSubscription.update({
+            where: { id: subscription.id },
+            data: { isActive: false },
+          });
+        } else if (statusCode === 404) {
+          console.warn(
+            "Admin push endpoint returned 404 but was kept active because it is too new:",
+            subscription.id,
+          );
+        }
+
+        console.error("Admin push delivery error:", error);
+      }
+    }),
+  );
+
+  return {
+    total: subscriptions.length,
+    sent,
+    failed,
+    deactivated,
+  };
+}
