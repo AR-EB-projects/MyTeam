@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { buildNotificationPayload } from "@/lib/push/templates";
-import { sendPushToAllClubAdminScopes, sendPushToClubAdmins } from "@/lib/push/adminService";
+import { sendPushToClubAdmins } from "@/lib/push/adminService";
 import { saveAdminNotificationHistory } from "@/lib/push/adminHistory";
 
 export const runtime = "nodejs";
@@ -45,24 +45,65 @@ export async function POST(request: NextRequest) {
 
   const clubs = await prisma.club.findMany({
     where: { id: { in: rawClubIds } },
-    select: { id: true },
+    select: {
+      id: true,
+      coachGroups: {
+        select: { id: true },
+      },
+    },
   });
   if (clubs.length === 0) {
     return NextResponse.json({ error: "No clubs found" }, { status: 404 });
   }
 
-  const pushPayload = buildNotificationPayload({
-    type: "admin_message",
-    trainerMessage: message,
-    url: "/admin/members",
-  });
-
   const results = await Promise.all(
     clubs.map(async (club) => {
-      const sendResult = includeCoachGroupPages
-        ? await sendPushToAllClubAdminScopes(club.id, pushPayload)
-        : await sendPushToClubAdmins(club.id, pushPayload, null);
-      await saveAdminNotificationHistory({ clubId: club.id, type: "admin_message", payload: pushPayload });
+      const scopes: Array<{ coachGroupId: string | null; url: string }> = [
+        {
+          coachGroupId: null,
+          url: `/admin/members?clubId=${encodeURIComponent(club.id)}`,
+        },
+        ...(includeCoachGroupPages
+          ? club.coachGroups.map((group) => ({
+              coachGroupId: group.id,
+              url: `/admin/members?clubId=${encodeURIComponent(club.id)}&coachGroupId=${encodeURIComponent(group.id)}`,
+            }))
+          : []),
+      ];
+
+      const scopeResults = await Promise.all(
+        scopes.map(async (scope) => {
+          const pushPayload = buildNotificationPayload({
+            type: "admin_message",
+            trainerMessage: message,
+            url: scope.url,
+          });
+          const sendResult = await sendPushToClubAdmins(
+            club.id,
+            pushPayload,
+            scope.coachGroupId,
+          );
+          await saveAdminNotificationHistory({
+            clubId: club.id,
+            type: "admin_message",
+            payload: pushPayload,
+            coachGroupId: scope.coachGroupId,
+          });
+          return sendResult;
+        }),
+      );
+
+      const sendResult = scopeResults.reduce(
+        (acc, result) => {
+          acc.total += result.total;
+          acc.sent += result.sent;
+          acc.failed += result.failed;
+          acc.deactivated += result.deactivated;
+          return acc;
+        },
+        { total: 0, sent: 0, failed: 0, deactivated: 0 },
+      );
+
       return { clubId: club.id, ...sendResult };
     }),
   );
