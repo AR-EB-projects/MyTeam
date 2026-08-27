@@ -100,9 +100,11 @@ export async function verifyAndApplyIrisPayment(input: {
     const claim = await tx.irisPayment.updateMany({
       where: {
         id: pendingPayment.id,
-        status: "WAITING",
+        paymentLogId: null,
       },
       data: {
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
         rawStatusPayload: statusPayload,
         ...(input.webhookPayload ? { rawWebhookPayload: input.webhookPayload } : {}),
       },
@@ -125,10 +127,7 @@ export async function verifyAndApplyIrisPayment(input: {
       if (!currentPayment) {
         throw new Error("IRIS payment transaction not found");
       }
-      return {
-        alreadyFinalized: true,
-        paymentLogId: currentPayment.paymentLogId,
-      };
+      throw new Error("IRIS payment could not be finalized");
     }
 
     const result = await finalizeResolvedMemberPayment({
@@ -143,11 +142,9 @@ export async function verifyAndApplyIrisPayment(input: {
     await tx.irisPayment.update({
       where: { id: pendingPayment.id },
       data: {
-        status: "CONFIRMED",
         paymentLogId: primaryPaymentLogId,
         rawStatusPayload: statusPayload,
         ...(input.webhookPayload ? { rawWebhookPayload: input.webhookPayload } : {}),
-        confirmedAt: new Date(),
       },
     });
 
