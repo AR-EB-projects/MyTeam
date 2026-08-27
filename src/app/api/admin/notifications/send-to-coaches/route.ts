@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyAdminToken } from "@/lib/adminAuth";
 import { buildNotificationPayload } from "@/lib/push/templates";
-import { sendPushToAllClubAdminScopes } from "@/lib/push/adminService";
+import { sendPushToAllClubAdminScopes, sendPushToClubAdmins } from "@/lib/push/adminService";
 import { saveAdminNotificationHistory } from "@/lib/push/adminHistory";
 
 export const runtime = "nodejs";
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const payload = body as { clubIds?: unknown; message?: unknown };
+  const payload = body as { clubIds?: unknown; message?: unknown; includeCoachGroupPages?: unknown };
 
   if (typeof payload.message !== "string" || !payload.message.trim()) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   const message = payload.message.trim();
+  const includeCoachGroupPages = payload.includeCoachGroupPages === true;
 
   const clubs = await prisma.club.findMany({
     where: { id: { in: rawClubIds } },
@@ -58,7 +59,9 @@ export async function POST(request: NextRequest) {
 
   const results = await Promise.all(
     clubs.map(async (club) => {
-      const sendResult = await sendPushToAllClubAdminScopes(club.id, pushPayload);
+      const sendResult = includeCoachGroupPages
+        ? await sendPushToAllClubAdminScopes(club.id, pushPayload)
+        : await sendPushToClubAdmins(club.id, pushPayload, null);
       await saveAdminNotificationHistory({ clubId: club.id, type: "admin_message", payload: pushPayload });
       return { clubId: club.id, ...sendResult };
     }),

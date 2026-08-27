@@ -94,6 +94,43 @@
 
 .mp-demo-actions { display: flex; flex-direction: column; gap: 8px; }
 
+.mp-coach-scope {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.mp-coach-scope-option {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  color: #ffffff;
+  padding: 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mp-coach-scope-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #32cd32;
+}
+
+.mp-coach-scope-option.is-selected {
+  background: rgba(50,205,50,0.14);
+  border-color: rgba(50,205,50,0.5);
+}
+
+.mp-coach-scope-option:has(input:disabled) {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .mp-demo-picker {
   position: relative;
   margin-bottom: 10px;

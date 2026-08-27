@@ -74,6 +74,7 @@ export default function AdminPlayersPage() {
   const [coachClubIds, setCoachClubIds] = useState<string[]>([]);
   const [coachClubPickerOpen, setCoachClubPickerOpen] = useState(false);
   const [coachClubSearch, setCoachClubSearch] = useState("");
+  const [coachMessageScope, setCoachMessageScope] = useState<"main" | "all">("main");
   const [isSendingCoach, setIsSendingCoach] = useState(false);
   const coachPickerRef = useRef<HTMLDivElement | null>(null);
 
@@ -238,7 +239,11 @@ export default function AdminPlayersPage() {
       const response = await fetch("/api/admin/notifications/send-to-coaches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clubIds: coachClubIds, message: coachMessage.trim() }),
+        body: JSON.stringify({
+          clubIds: coachClubIds,
+          message: coachMessage.trim(),
+          includeCoachGroupPages: coachMessageScope === "all",
+        }),
       });
       const data = (await response.json().catch(() => ({}))) as { sent?: number; total?: number; error?: string };
       if (!response.ok) {
@@ -518,6 +523,28 @@ export default function AdminPlayersPage() {
               boxSizing: "border-box",
             }}
           />
+          <div className="mp-coach-scope" role="radiogroup" aria-label="Обхват на съобщението">
+            <label className={`mp-coach-scope-option${coachMessageScope === "main" ? " is-selected" : ""}`}>
+              <input
+                type="radio"
+                name="coachMessageScope"
+                checked={coachMessageScope === "main"}
+                onChange={() => setCoachMessageScope("main")}
+                disabled={isSendingCoach}
+              />
+              <span>Само главната страница</span>
+            </label>
+            <label className={`mp-coach-scope-option${coachMessageScope === "all" ? " is-selected" : ""}`}>
+              <input
+                type="radio"
+                name="coachMessageScope"
+                checked={coachMessageScope === "all"}
+                onChange={() => setCoachMessageScope("all")}
+                disabled={isSendingCoach}
+              />
+              <span>Главната и треньорските групи</span>
+            </label>
+          </div>
           <div className="mp-demo-actions">
             <button
               className="mp-demo-btn mp-demo-btn--yellow"
