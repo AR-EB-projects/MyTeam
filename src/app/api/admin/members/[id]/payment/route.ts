@@ -12,6 +12,7 @@ import {
   toYearMonth,
   compareYearMonth,
 } from "@/lib/paymentStatus";
+import { updatePlayerStatusAfterPayment } from "@/lib/memberPayment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -160,25 +161,23 @@ export async function POST(
       );
     }
 
-    // Create payment log
-    const paymentLog = await prisma.paymentLog.create({
-      data: {
-        playerId: id,
-        paidFor: paidForDate,
-        recordedBy: "admin",
-      },
-    });
+    const paymentLog = await prisma.$transaction(async (tx) => {
+      const createdPayment = await tx.paymentLog.create({
+        data: {
+          playerId: id,
+          paidFor: paidForDate,
+          recordedBy: "admin",
+        },
+      });
 
-    // Update player's last payment date
-    await prisma.player.update({
-      where: { id },
-      data: {
-        status: "paid",
-        lastPaymentDate: new Date(),
-        ...(remainingTrainingCreditsUpdate !== undefined
-          ? { remainingTrainingCredits: remainingTrainingCreditsUpdate }
-          : {}),
-      },
+      await updatePlayerStatusAfterPayment({
+        tx,
+        playerId: id,
+        remainingTrainingCredits: remainingTrainingCreditsUpdate,
+        paymentRecordedAt: createdPayment.paidAt,
+      });
+
+      return createdPayment;
     });
 
     const memberUrl = player.cards[0]?.cardCode

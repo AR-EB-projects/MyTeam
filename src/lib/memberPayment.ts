@@ -8,6 +8,7 @@ import {
   getRollingThirtyDayPaymentWindow,
   normalizeToDayStart,
   normalizeToMonthStart,
+  resolvePaymentStatus,
   toMonthKey,
   toYearMonth,
   type YearMonth,
@@ -37,6 +38,55 @@ export type ResolvedMemberPayment = {
 };
 
 type MemberPaymentTx = Pick<typeof prisma, "player" | "paymentLog" | "paymentWaiver">;
+
+export async function updatePlayerStatusAfterPayment(input: {
+  tx: MemberPaymentTx;
+  playerId: string;
+  remainingTrainingCredits?: number | null;
+  paymentRecordedAt?: Date;
+}) {
+  const player = await input.tx.player.findUnique({
+    where: { id: input.playerId },
+    select: {
+      firstBillingMonth: true,
+      remainingTrainingCredits: true,
+      club: { select: { paymentWorkflow: true } },
+      paymentLogs: { select: { paidFor: true } },
+      paymentWaivers: { select: { waivedFor: true } },
+    },
+  });
+
+  if (!player) {
+    throw new Error("Player not found");
+  }
+
+  const remainingTrainingCredits =
+    input.remainingTrainingCredits ?? player.remainingTrainingCredits;
+  const status = resolvePaymentStatus({
+    workflow: player.club.paymentWorkflow,
+    paidDates: player.paymentLogs.map((log) => log.paidFor),
+    waivedDates: player.paymentWaivers.map((waiver) => waiver.waivedFor),
+    remainingTrainingCredits,
+    firstBillingMonth: player.firstBillingMonth
+      ? toYearMonth(player.firstBillingMonth)
+      : null,
+    firstBillingDate: player.firstBillingMonth,
+  });
+
+  await input.tx.player.update({
+    where: { id: input.playerId },
+    data: {
+      status,
+      lastPaymentDate: input.paymentRecordedAt ?? new Date(),
+      ...(input.remainingTrainingCredits !== null &&
+      input.remainingTrainingCredits !== undefined
+        ? { remainingTrainingCredits: input.remainingTrainingCredits }
+        : {}),
+    },
+  });
+
+  return status;
+}
 
 function ymToDate(ym: YearMonth): Date {
   return new Date(Date.UTC(ym.year, ym.month, 1));
@@ -257,15 +307,10 @@ export async function finalizeResolvedMemberPayment(input: {
     );
   }
 
-  await input.tx.player.update({
-    where: { id: input.playerId },
-    data: {
-      status: "paid",
-      lastPaymentDate: new Date(),
-      ...(input.trainingCredits !== null && input.trainingCredits !== undefined
-        ? { remainingTrainingCredits: input.trainingCredits }
-        : {}),
-    },
+  await updatePlayerStatusAfterPayment({
+    tx: input.tx,
+    playerId: input.playerId,
+    remainingTrainingCredits: input.trainingCredits,
   });
 
   return { paymentLogIds: paymentLogs.map((log) => log.id) };

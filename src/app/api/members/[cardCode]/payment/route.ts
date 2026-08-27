@@ -18,6 +18,7 @@ import {
   toYearMonth,
   type YearMonth,
 } from "@/lib/paymentStatus";
+import { updatePlayerStatusAfterPayment } from "@/lib/memberPayment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -198,15 +199,10 @@ export async function POST(
         })),
       });
 
-      await tx.player.update({
-        where: { id: card.playerId },
-        data: {
-          status: "paid",
-          lastPaymentDate: new Date(),
-          ...(remainingTrainingCreditsUpdate !== undefined
-            ? { remainingTrainingCredits: remainingTrainingCreditsUpdate }
-            : {}),
-        },
+      await updatePlayerStatusAfterPayment({
+        tx,
+        playerId: card.playerId,
+        remainingTrainingCredits: remainingTrainingCreditsUpdate,
       });
     });
 
