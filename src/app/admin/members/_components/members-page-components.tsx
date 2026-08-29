@@ -2199,6 +2199,9 @@ function PlayerCard({
     member.nfcTagId ||
     "";
   const groupDots = member.customTrainingGroupColors ?? [];
+  const nameParts = member.fullName.trim().split(/\s+/).filter(Boolean);
+  const firstName = nameParts[0] ?? "";
+  const restName = nameParts.slice(1).join(" ");
 
   return (
     <div className="pc-card" onClick={onClick}>
@@ -2218,10 +2221,9 @@ function PlayerCard({
 
         {/* Name + badge */}
         <div className="pc-info">
-          <div className="pc-name-container">
-            {member.fullName.split(' ').map((part, index) => (
-              <span key={index} className="pc-name-row">{part}</span>
-            ))}
+          <div className="pc-name-container" title={member.fullName}>
+            <span className="pc-name-row">{firstName}</span>
+            {restName ? <span className="pc-name-row">{restName}</span> : null}
           </div>
           <div className="pc-badges">
             <span className="amp-badge" style={{ color: s.color, background: s.bg, border: `1px solid ${s.border}` }}>

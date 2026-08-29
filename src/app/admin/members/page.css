@@ -614,13 +614,15 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 4px;
-  max-width: 56px;
+  align-items: center;
+  gap: 5px;
+  margin-left: 4px;
+  max-width: 48px;
 }
 
 .pc-custom-group-dot {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.35);
   flex-shrink: 0;
@@ -630,6 +632,7 @@
 .pc-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -655,8 +658,9 @@
 .pc-name-container {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 .pc-name-row {
@@ -664,17 +668,30 @@
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Mobile name adjustments */
 @media (max-width: 480px) {
+  .pc-content {
+    gap: 10px;
+    padding: 0 12px;
+  }
+
   .pc-name-container {
     gap: 1px;
   }
 
   .pc-name-row {
-    font-size: 15px;
-    line-height: 1.1;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .pc-actions {
+    gap: 8px;
   }
 }
 
@@ -682,6 +699,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .pc-actions {
