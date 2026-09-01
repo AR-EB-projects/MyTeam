@@ -308,15 +308,32 @@ export function PushNotificationsPanel({ cardCode }: PushNotificationsPanelProps
       }
 
       const endpoint = subscription.endpoint;
-      await subscription.unsubscribe();
 
-      await fetch(`/api/members/${encodeURIComponent(cardCode)}/push-subscriptions`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ endpoint }),
-      });
+      const deleteResponse = await fetch(
+        `/api/members/${encodeURIComponent(cardCode)}/push-subscriptions`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ endpoint }),
+        }
+      );
+
+      if (!deleteResponse.ok) {
+        const payload = await deleteResponse.json().catch(() => ({
+          error: "Failed to disable subscription",
+        }));
+        throw new Error(String(payload.error ?? "Failed to disable subscription"));
+      }
+
+      const deletePayload = (await deleteResponse.json().catch(() => ({}))) as {
+        shouldUnsubscribeBrowser?: unknown;
+      };
+
+      if (deletePayload.shouldUnsubscribeBrowser !== false) {
+        await subscription.unsubscribe();
+      }
 
       setIsSubscribed(false);
       setStatusMessage("Известията са изключени.");

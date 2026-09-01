@@ -52,10 +52,12 @@ export interface SavePushSubscriptionInput {
 export async function savePushSubscription(input: SavePushSubscriptionInput) {
   return await prisma.pushSubscription.upsert({
     where: {
-      endpoint: input.subscription.endpoint,
+      playerId_endpoint: {
+        playerId: input.memberId,
+        endpoint: input.subscription.endpoint,
+      },
     },
     update: {
-      playerId: input.memberId,
       p256dh: input.subscription.keys.p256dh,
       auth: input.subscription.keys.auth,
       userAgent: input.userAgent ?? undefined,
@@ -84,6 +86,20 @@ export async function deactivatePushSubscription(endpoint: string, memberId?: st
       isActive: false,
     },
   });
+}
+
+export async function hasOtherActivePushSubscriptions(endpoint: string, memberId: string) {
+  const count = await prisma.pushSubscription.count({
+    where: {
+      endpoint,
+      isActive: true,
+      playerId: {
+        not: memberId,
+      },
+    },
+  });
+
+  return count > 0;
 }
 
 export interface SendPushResult {

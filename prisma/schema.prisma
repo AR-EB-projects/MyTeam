@@ -500,7 +500,7 @@ model PaymentWaiver {
 model PushSubscription {
   id        String   @id @default(uuid())
   playerId  String   @db.Uuid
-  endpoint  String   @unique
+  endpoint  String
   p256dh    String
   auth      String
   userAgent String?
@@ -510,6 +510,7 @@ model PushSubscription {
   updatedAt DateTime @updatedAt
   member    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
+  @@unique([playerId, endpoint])
   @@index([playerId, isActive])
   @@map("push_subscriptions")
 }

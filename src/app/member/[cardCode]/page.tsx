@@ -1371,7 +1371,6 @@ export default function MemberCardPage({
       }
 
       const endpoint = existingSubscription.endpoint;
-      await existingSubscription.unsubscribe();
 
       const deleteResponse = await fetch(
         `/api/members/${encodeURIComponent(normalizedCardCode)}/push-subscriptions`,
@@ -1389,6 +1388,14 @@ export default function MemberCardPage({
             ? payload.error
             : "Failed to disable push notifications."
         );
+      }
+
+      const deletePayload = (await deleteResponse.json().catch(() => ({}))) as {
+        shouldUnsubscribeBrowser?: unknown;
+      };
+
+      if (deletePayload.shouldUnsubscribeBrowser !== false) {
+        await existingSubscription.unsubscribe();
       }
 
       setIsPushEnabled(false);

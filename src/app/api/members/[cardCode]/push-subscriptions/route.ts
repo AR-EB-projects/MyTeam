@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { inferDeviceLabel } from "@/lib/push/device";
 import {
   deactivatePushSubscription,
+  hasOtherActivePushSubscriptions,
   savePushSubscription,
 } from "@/lib/push/service";
 import { notifyMemberPushEnabled } from "@/lib/push/notifyMemberPushEnabled";
@@ -39,13 +40,18 @@ export async function GET(
 
   try {
     const subscription = await prisma.pushSubscription.findUnique({
-      where: { endpoint },
+      where: {
+        playerId_endpoint: {
+          playerId: card.playerId,
+          endpoint,
+        },
+      },
       select: { playerId: true, isActive: true },
     });
 
     return NextResponse.json({
       success: true,
-      isActive: Boolean(subscription?.isActive && subscription.playerId === card.playerId),
+      isActive: Boolean(subscription?.isActive),
     });
   } catch (error) {
     console.error("Push subscription GET error:", error);
@@ -98,7 +104,12 @@ export async function POST(
     const device = inferDeviceLabel(userAgent);
 
     const existing = await prisma.pushSubscription.findUnique({
-      where: { endpoint: subscription.endpoint },
+      where: {
+        playerId_endpoint: {
+          playerId: card.playerId,
+          endpoint: subscription.endpoint,
+        },
+      },
       select: { playerId: true, isActive: true },
     });
 
@@ -109,8 +120,7 @@ export async function POST(
       device,
     });
 
-    const shouldNotifyAdmins =
-      !existing || !existing.isActive || existing.playerId !== card.playerId;
+    const shouldNotifyAdmins = !existing || !existing.isActive;
 
     if (shouldNotifyAdmins) {
       try {
@@ -170,8 +180,17 @@ export async function DELETE(
   }
 
   try {
-    await deactivatePushSubscription(endpoint.trim(), card.playerId);
-    return NextResponse.json({ success: true });
+    const normalizedEndpoint = endpoint.trim();
+    await deactivatePushSubscription(normalizedEndpoint, card.playerId);
+    const hasOtherActiveProfiles = await hasOtherActivePushSubscriptions(
+      normalizedEndpoint,
+      card.playerId
+    );
+
+    return NextResponse.json({
+      success: true,
+      shouldUnsubscribeBrowser: !hasOtherActiveProfiles,
+    });
   } catch (error) {
     console.error("Push subscription deactivate error:", error);
     return NextResponse.json(
