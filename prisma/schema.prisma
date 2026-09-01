@@ -467,6 +467,8 @@ model IrisPayment {
   rawStatusPayload Json?             @map("raw_status_payload")
   rawWebhookPayload Json?            @map("raw_webhook_payload")
   confirmedAt      DateTime?         @map("confirmed_at") @db.Timestamptz(6)
+  linkDeactivatedAt    DateTime?     @map("link_deactivated_at") @db.Timestamptz(6)
+  linkDeactivationError String?      @map("link_deactivation_error")
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 

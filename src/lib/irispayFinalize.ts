@@ -1,6 +1,11 @@
 import { type IrisPayment } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getIrisPaymentStatus, normalizeIrisStatus } from "@/lib/irispay";
+import {
+  deactivateIrisPayment,
+  getIrisPaymentStatus,
+  isReusableIrisCreatePayload,
+  normalizeIrisStatus,
+} from "@/lib/irispay";
 import {
   finalizeResolvedMemberPayment,
   publishPaymentUpdates,
@@ -12,6 +17,11 @@ type IrisPaymentWithPlayer = IrisPayment & {
     cards: Array<{ cardCode: string }>;
   };
 };
+
+type IrisPaymentForDeactivation = Pick<
+  IrisPayment,
+  "id" | "paymentHash" | "rawCreatePayload" | "linkDeactivatedAt"
+>;
 
 function buildPaidDates(payment: IrisPayment): Date[] {
   if (payment.paidThrough && payment.paidThrough.getTime() !== payment.paidFor.getTime()) {
@@ -25,6 +35,43 @@ function buildPaidDates(payment: IrisPayment): Date[] {
     return dates;
   }
   return [payment.paidFor];
+}
+
+function getSafeDeactivationError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "IRISPay link deactivation failed";
+  return message.replace(/\s+/g, " ").trim().slice(0, 1000) || "IRISPay link deactivation failed";
+}
+
+async function deactivateReusableIrisLink(payment: IrisPaymentForDeactivation) {
+  if (
+    !payment.paymentHash ||
+    payment.linkDeactivatedAt ||
+    !isReusableIrisCreatePayload(payment.rawCreatePayload)
+  ) {
+    return { attempted: false, succeeded: false };
+  }
+
+  try {
+    await deactivateIrisPayment(payment.paymentHash);
+    await prisma.irisPayment.update({
+      where: { id: payment.id },
+      data: {
+        linkDeactivatedAt: new Date(),
+        linkDeactivationError: null,
+      },
+    });
+    return { attempted: true, succeeded: true };
+  } catch (error) {
+    const safeError = getSafeDeactivationError(error);
+    console.error("IRISPay link deactivation failed:", safeError);
+    await prisma.irisPayment.update({
+      where: { id: payment.id },
+      data: { linkDeactivationError: safeError },
+    }).catch((updateError) => {
+      console.error("IRISPay link deactivation error persistence failed:", getSafeDeactivationError(updateError));
+    });
+    return { attempted: true, succeeded: false, error: safeError };
+  }
 }
 
 export async function verifyAndApplyIrisPayment(input: {
@@ -55,6 +102,7 @@ export async function verifyAndApplyIrisPayment(input: {
   }
 
   if (pendingPayment.status === "CONFIRMED" && pendingPayment.paymentLogId) {
+    await deactivateReusableIrisLink(pendingPayment);
     return {
       status: "CONFIRMED" as const,
       alreadyFinalized: true,
@@ -94,6 +142,8 @@ export async function verifyAndApplyIrisPayment(input: {
       irisPayment: updated,
     };
   }
+
+  await deactivateReusableIrisLink(pendingPayment);
 
   const paidDates = buildPaidDates(pendingPayment);
   const finalized = await prisma.$transaction(async (tx) => {

@@ -6,6 +6,7 @@ export type IrisCreatePaymentInput = {
   hookUrl: string;
   name?: string;
   orderId: string;
+  repayable?: boolean;
   redirectUrl: string;
 };
 
@@ -14,6 +15,12 @@ export type IrisCreatePaymentResponse = {
   paymentHash: string;
   paymentLink: string;
   shortPaymentLink?: string;
+};
+
+export type IrisStoredCreatePayload = IrisCreatePaymentResponse & {
+  createOptions: {
+    repayable: boolean;
+  };
 };
 
 export type IrisStatusResponse = {
@@ -27,6 +34,11 @@ export type IrisStatusResponse = {
   receiverIban?: string;
   status?: string;
   sum?: number;
+};
+
+type IrisErrorPayload = {
+  error?: unknown;
+  message?: unknown;
 };
 
 const DEFAULT_ALLOWED_CLUB_ID = "3600c653-f688-44eb-b63b-4e1c73385c01";
@@ -49,6 +61,38 @@ function requiredEnv(name: string): string {
 
 function getBaseUrl(): string {
   return (process.env.IRISPAY_BASE_URL?.trim() || "https://dev.paybyclick.irispay.bg").replace(/\/+$/, "");
+}
+
+export function getIrisPayRepayable(): boolean {
+  return process.env.IRISPAY_REPAYABLE?.trim().toLowerCase() !== "false";
+}
+
+export function isReusableIrisCreatePayload(rawCreatePayload: unknown): boolean {
+  if (!rawCreatePayload || typeof rawCreatePayload !== "object" || Array.isArray(rawCreatePayload)) {
+    return false;
+  }
+
+  const createOptions = (rawCreatePayload as Record<string, unknown>).createOptions;
+  return (
+    typeof createOptions === "object" &&
+    createOptions !== null &&
+    !Array.isArray(createOptions) &&
+    (createOptions as Record<string, unknown>).repayable === true
+  );
+}
+
+export function canReuseIrisPaymentLink(rawCreatePayload: unknown, repayable: boolean): boolean {
+  return !repayable || isReusableIrisCreatePayload(rawCreatePayload);
+}
+
+export function buildIrisStoredCreatePayload(
+  createPayload: IrisCreatePaymentResponse,
+  repayable: boolean,
+): IrisStoredCreatePayload {
+  return {
+    ...createPayload,
+    createOptions: { repayable },
+  };
 }
 
 function sanitizeIrisText(value: string, fallback: string, maxLength: number): string {
@@ -101,8 +145,38 @@ async function parseIrisJson<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
+function getIrisErrorMessage(payload: IrisErrorPayload, fallback: string): string {
+  if (typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message.trim();
+  }
+  if (typeof payload.error === "string" && payload.error.trim()) {
+    return payload.error.trim();
+  }
+  return fallback;
+}
+
+async function parseIrisOptionalJson<T>(response: Response, fallbackError: string): Promise<T | null> {
+  const text = await response.text();
+  let payload: IrisErrorPayload = {};
+
+  if (text) {
+    try {
+      payload = JSON.parse(text) as IrisErrorPayload;
+    } catch {
+      payload = {};
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(getIrisErrorMessage(payload, fallbackError));
+  }
+
+  return text ? (payload as T) : null;
+}
+
 export async function createIrisPayment(input: IrisCreatePaymentInput): Promise<IrisCreatePaymentResponse> {
   const key = requiredEnv("IRISPAY_MERCHANT_KEY");
+  const repayable = input.repayable ?? getIrisPayRepayable();
   const response = await fetch(`${getBaseUrl()}/backend/payment/external/${encodeURIComponent(key)}`, {
     method: "POST",
     headers: {
@@ -118,7 +192,7 @@ export async function createIrisPayment(input: IrisCreatePaymentInput): Promise<
       orderId: input.orderId,
       redirectUrl: input.redirectUrl,
       sum: Number(input.amount),
-      repayable: false,
+      repayable,
       requestShortLink: true,
     }),
     cache: "no-store",
@@ -138,6 +212,29 @@ export async function getIrisPaymentStatus(paymentHash: string): Promise<IrisSta
     cache: "no-store",
   });
   return parseIrisJson<IrisStatusResponse>(response);
+}
+
+export async function deactivateIrisPayment(paymentHash: string): Promise<unknown> {
+  const key = requiredEnv("IRISPAY_MERCHANT_KEY");
+  const normalizedPaymentHash = paymentHash.trim();
+  if (!normalizedPaymentHash) {
+    throw new Error("IRISPay payment hash is required for link deactivation");
+  }
+
+  const response = await fetch(`${getBaseUrl()}/backend/payment/inactive/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({ paymentHash: normalizedPaymentHash }),
+    cache: "no-store",
+  });
+
+  return parseIrisOptionalJson<unknown>(
+    response,
+    `IRISPay link deactivation failed with status ${response.status}`,
+  );
 }
 
 export async function getIrisQrImage(paymentHash: string): Promise<{ body: ArrayBuffer; contentType: string }> {

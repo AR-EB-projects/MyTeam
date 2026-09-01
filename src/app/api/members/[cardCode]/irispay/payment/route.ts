@@ -3,7 +3,10 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   buildAbsoluteAppUrl,
+  buildIrisStoredCreatePayload,
+  canReuseIrisPaymentLink,
   createIrisPayment,
+  getIrisPayRepayable,
   getIrisWebhookSecret,
   isIrisPayEnabledForClub,
 } from "@/lib/irispay";
@@ -110,6 +113,7 @@ export async function POST(
     }
 
     const totalAmount = unitAmount.mul(resolved.paidDates.length).toDecimalPlaces(2);
+    const repayable = getIrisPayRepayable();
     const existingPayment = await prisma.irisPayment.findFirst({
       where: {
         playerId: card.player.id,
@@ -121,7 +125,11 @@ export async function POST(
       orderBy: { createdAt: "desc" },
     });
 
-    if (existingPayment?.paymentHash && existingPayment.paymentLink) {
+    if (
+      existingPayment?.paymentHash &&
+      existingPayment.paymentLink &&
+      canReuseIrisPaymentLink(existingPayment.rawCreatePayload, repayable)
+    ) {
       return NextResponse.json({
         success: true,
         payment: {
@@ -165,6 +173,7 @@ export async function POST(
         name: card.player.club.name,
         hookUrl,
         orderId,
+        repayable,
         redirectUrl,
       });
 
@@ -175,7 +184,7 @@ export async function POST(
           paymentHash: createPayload.paymentHash,
           paymentLink: createPayload.paymentLink,
           shortPaymentLink: createPayload.shortPaymentLink ?? null,
-          rawCreatePayload: createPayload,
+          rawCreatePayload: buildIrisStoredCreatePayload(createPayload, repayable),
         },
       });
 

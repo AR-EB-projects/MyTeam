@@ -49,7 +49,7 @@ export async function GET(
       return NextResponse.json({ error: "Online payment is not enabled for this club" }, { status: 403 });
     }
 
-    if (payment.status === "WAITING") {
+    if (payment.status === "WAITING" || payment.status === "CONFIRMED") {
       const verified = await verifyAndApplyIrisPayment({ orderId: payment.orderId });
       return NextResponse.json({
         success: true,
@@ -61,7 +61,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       status: payment.status,
-      alreadyFinalized: payment.status === "CONFIRMED",
+      alreadyFinalized: false,
     });
   } catch (error) {
     console.error("IRISPay status check error:", error);
