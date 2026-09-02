@@ -98,8 +98,9 @@ export async function PATCH(
   const finalTime = (update.matchTime as string | undefined) ?? existing.matchTime;
   const finalDuration = (update.durationMinutes as number | undefined) ?? existing.durationMinutes;
   const finalTeamGroups = (update.teamGroups as number[] | undefined) ?? existing.teamGroups;
+  const finalCustomGroupId = (update.customGroupId as string | null | undefined) ?? existing.customGroupId;
   const finalIsHome = (update.isHome as boolean | undefined) ?? existing.isHome;
-  const conflict = await checkAwayMatchTrainingConflict({ clubId: id, matchDate: finalDate, matchTime: finalTime, durationMinutes: finalDuration, teamGroups: finalTeamGroups, isHome: finalIsHome, excludeMatchId: matchId });
+  const conflict = await checkAwayMatchTrainingConflict({ clubId: id, matchDate: finalDate, matchTime: finalTime, durationMinutes: finalDuration, teamGroups: finalTeamGroups, customGroupId: finalCustomGroupId, isHome: finalIsHome, excludeMatchId: matchId });
   if (conflict.blocking) return NextResponse.json({ error: conflict.blocking }, { status: 400 });
   matchConflictWarning = conflict.warning;
 

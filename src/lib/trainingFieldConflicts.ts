@@ -268,6 +268,25 @@ function matchTeamGroupsOverlap(a: number[], b: number[]): boolean {
   return a.length === 0 || b.length === 0 || a.some((teamGroup) => b.includes(teamGroup));
 }
 
+function matchScopesOverlap(input: {
+  nextTeamGroups: number[];
+  nextCustomGroupId?: string | null;
+  existingTeamGroups: number[];
+  existingCustomGroupId?: string | null;
+}): boolean {
+  const nextCustomGroupId = input.nextCustomGroupId ?? null;
+  const existingCustomGroupId = input.existingCustomGroupId ?? null;
+
+  if (nextCustomGroupId || existingCustomGroupId) {
+    if (nextCustomGroupId && existingCustomGroupId) {
+      return nextCustomGroupId === existingCustomGroupId;
+    }
+    return matchTeamGroupsOverlap(input.nextTeamGroups, input.existingTeamGroups);
+  }
+
+  return matchTeamGroupsOverlap(input.nextTeamGroups, input.existingTeamGroups);
+}
+
 function formatIsoDateForBgDisplay(isoDate: string): string {
   const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) {
@@ -807,6 +826,7 @@ export async function checkAwayMatchTrainingConflict(input: {
   matchTime: string;
   durationMinutes: number;
   teamGroups: number[];
+  customGroupId?: string | null;
   isHome?: boolean;
   excludeMatchId?: string;
 }): Promise<MatchConflictResult> {
@@ -843,7 +863,7 @@ export async function checkAwayMatchTrainingConflict(input: {
         matchDate,
         ...(input.excludeMatchId ? { id: { not: input.excludeMatchId } } : {}),
       },
-      select: { matchTime: true, durationMinutes: true, opponent: true, isHome: true, teamGroups: true },
+      select: { matchTime: true, durationMinutes: true, opponent: true, isHome: true, teamGroups: true, customGroupId: true },
     }),
   ]);
 
@@ -898,7 +918,12 @@ export async function checkAwayMatchTrainingConflict(input: {
     if (overlaps(matchStart, durationMinutes, existingStart, match.durationMinutes)) {
       const startTime = formatMinutesAsTime(existingStart);
       const endTime = formatMinutesAsTime(existingStart + match.durationMinutes);
-      if (matchTeamGroupsOverlap(teamGroups, match.teamGroups)) {
+      if (matchScopesOverlap({
+        nextTeamGroups: teamGroups,
+        nextCustomGroupId: input.customGroupId,
+        existingTeamGroups: match.teamGroups,
+        existingCustomGroupId: match.customGroupId,
+      })) {
         return {
           blocking: `Match overlaps with another match for the same team on ${formatIsoDateForBgDisplay(matchDate)} from ${startTime} to ${endTime} against ${match.opponent}.`,
           warning: null,

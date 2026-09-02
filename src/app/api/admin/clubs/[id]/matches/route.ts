@@ -102,7 +102,7 @@ export async function POST(
   const customGroupId = customGroupIdRaw || null;
 
   let matchConflictWarning: string | null = null;
-  const conflict = await checkAwayMatchTrainingConflict({ clubId: id, matchDate, matchTime, durationMinutes, teamGroups, isHome });
+  const conflict = await checkAwayMatchTrainingConflict({ clubId: id, matchDate, matchTime, durationMinutes, teamGroups, customGroupId, isHome });
   if (conflict.blocking) return NextResponse.json({ error: conflict.blocking }, { status: 400 });
   matchConflictWarning = conflict.warning;
 

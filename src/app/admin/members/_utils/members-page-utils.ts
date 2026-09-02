@@ -295,7 +295,7 @@ function buildCalendarMonths(dates: string[]) {
     new Set(
       dates.map((date) => {
         const [year, month] = date.split("-").map((value) => Number.parseInt(value ?? "", 10));
-        return `${year}-${month}`;
+        return `${year}-${String(month).padStart(2, "0")}`;
       }),
     ),
   );
