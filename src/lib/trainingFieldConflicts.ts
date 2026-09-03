@@ -929,12 +929,6 @@ export async function checkAwayMatchTrainingConflict(input: {
           warning: null,
         };
       }
-      if (isHome && match.isHome) {
-        return {
-          blocking: `Match overlaps with a home match on ${formatIsoDateForBgDisplay(matchDate)} from ${startTime} to ${endTime} against ${match.opponent}.`,
-          warning: null,
-        };
-      }
     }
   }
 
