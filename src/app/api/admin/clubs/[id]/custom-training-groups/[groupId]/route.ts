@@ -16,7 +16,6 @@ import {
 import {
   assertNoTrainingFieldConflict,
   assertNoTrainingTimeConflict,
-  checkTrainingAwayMatchConflict,
   pickTrainingConflictCheckInput,
 } from "@/lib/trainingFieldConflicts";
 import {
@@ -326,17 +325,6 @@ export async function PATCH(
           exclude: { type: "customGroup", id: groupId },
           ignoreFieldResourceSchedules: hasTrainingFields,
         });
-        const matchConflict = await checkTrainingAwayMatchConflict({
-          clubId,
-          trainingDates: conflictCheck.trainingDates,
-          trainingDateTimes: conflictCheck.trainingDateTimes,
-          durationMinutes: nextTrainingDurationMinutes,
-          teamGroups: [],
-          homeMatchesOnly: true,
-        });
-        if (matchConflict.blocking) {
-          throw new Error(matchConflict.blocking);
-        }
       } catch (error) {
         return NextResponse.json(
           { error: error instanceof Error ? error.message : "Invalid training field schedule." },

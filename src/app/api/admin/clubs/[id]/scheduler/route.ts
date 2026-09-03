@@ -17,7 +17,6 @@ import {
 import {
   assertNoTrainingFieldConflict,
   assertNoTrainingTimeConflict,
-  checkTrainingAwayMatchConflict,
   pickTrainingConflictCheckInput,
 } from "@/lib/trainingFieldConflicts";
 import {
@@ -448,7 +447,6 @@ export async function PUT(
       });
   let trainingDateTimes: Record<string, string> = {};
   let trainingFieldSelections: Record<string, { trainingFieldId: string | null; trainingFieldPieceIds: string[] }> = {};
-  let schedulerMatchWarning: string | null = null;
   if (trainingDates.length > 0) {
     if (hasTrainingFields && !trainingFieldSelection.trainingFieldId) {
       return NextResponse.json({ error: "Треньорът трябва да избере терен." }, { status: 400 });
@@ -520,15 +518,6 @@ export async function PUT(
         excludeTeamGroups: teamGroup === null ? [] : [teamGroup],
         ignoreFieldResourceSchedules: hasTrainingFields,
       });
-      const matchConflict = await checkTrainingAwayMatchConflict({
-        clubId: id,
-        trainingDates: conflictCheck.trainingDates,
-        trainingDateTimes: conflictCheck.trainingDateTimes,
-        durationMinutes: trainingDurationMinutes,
-        teamGroups: teamGroup !== null ? [teamGroup] : [],
-      });
-      if (matchConflict.blocking) return NextResponse.json({ error: matchConflict.blocking }, { status: 400 });
-      schedulerMatchWarning = matchConflict.warning;
     } catch (error) {
       return NextResponse.json(
         { error: error instanceof Error ? error.message : "Invalid training date times." },
@@ -708,7 +697,6 @@ export async function PUT(
       trainingFieldSelections,
       trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
       notifications,
-      ...(schedulerMatchWarning ? { warning: schedulerMatchWarning } : {}),
     });
   }
 
@@ -741,6 +729,5 @@ export async function PUT(
     trainingFieldPieceIds: trainingFieldSelection.trainingFieldPieceIds,
     trainingFieldSelections,
     trainingWindowDays: TRAINING_SELECTION_WINDOW_DAYS,
-    ...(schedulerMatchWarning ? { warning: schedulerMatchWarning } : {}),
   });
 }

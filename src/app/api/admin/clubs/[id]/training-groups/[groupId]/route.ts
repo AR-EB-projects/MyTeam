@@ -16,7 +16,6 @@ import {
 import {
   assertNoTrainingFieldConflict,
   assertNoTrainingTimeConflict,
-  checkTrainingAwayMatchConflict,
   pickTrainingConflictCheckInput,
 } from "@/lib/trainingFieldConflicts";
 import {
@@ -355,7 +354,6 @@ export async function PATCH(
     const fallbackTrainingTime: string | null = hasTrainingTimeField ? (nextTrainingTime ?? null) : (group.trainingTime ?? null);
     const rawTrainingDateTimes = hasTrainingDateTimesField ? payload.trainingDateTimes : group.trainingDateTimes;
     let finalTrainingDateTimes: Record<string, string> = {};
-    let trainingMatchWarning: string | null = null;
     if (finalTrainingDates.length > 0) {
       try {
         finalTrainingDateTimes = buildTrainingDateTimes({
@@ -402,15 +400,6 @@ export async function PATCH(
           excludeTeamGroups: nextTeamGroups,
           ignoreFieldResourceSchedules: hasTrainingFields,
         });
-        const matchConflict = await checkTrainingAwayMatchConflict({
-          clubId,
-          trainingDates: conflictCheck.trainingDates,
-          trainingDateTimes: conflictCheck.trainingDateTimes,
-          durationMinutes: nextTrainingDurationMinutes,
-          teamGroups: nextTeamGroups,
-        });
-        if (matchConflict.blocking) return NextResponse.json({ error: matchConflict.blocking }, { status: 400 });
-        trainingMatchWarning = matchConflict.warning;
       } catch (error) {
         return NextResponse.json(
           { error: error instanceof Error ? error.message : "Invalid training date times." },
@@ -519,7 +508,6 @@ export async function PATCH(
       ...updated,
       trainingDateTimes: normalizeStoredTrainingDateTimes(updated.trainingDateTimes, updated.trainingDates ?? []),
       notifications,
-      ...(trainingMatchWarning ? { warning: trainingMatchWarning } : {}),
     });
   } catch (error) {
     console.error("Training groups PATCH error:", error);

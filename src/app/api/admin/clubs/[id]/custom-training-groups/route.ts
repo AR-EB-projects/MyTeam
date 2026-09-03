@@ -13,7 +13,7 @@ import {
   sendTrainingScheduleNotifications,
   shouldNotifyForTrainingDatesChange,
 } from "@/lib/push/trainingScheduleNotifications";
-import { assertNoTrainingFieldConflict, assertNoTrainingTimeConflict, checkTrainingAwayMatchConflict } from "@/lib/trainingFieldConflicts";
+import { assertNoTrainingFieldConflict, assertNoTrainingTimeConflict } from "@/lib/trainingFieldConflicts";
 import {
   clubHasTrainingFields,
   parseTrainingFieldSelection,
@@ -306,10 +306,6 @@ export async function POST(
         trainingDurationMinutes,
         ignoreFieldResourceSchedules: hasTrainingFields,
       });
-      const matchConflict = await checkTrainingAwayMatchConflict({ clubId: id, trainingDates, trainingDateTimes, durationMinutes: trainingDurationMinutes, teamGroups: [], homeMatchesOnly: true });
-      if (matchConflict.blocking) {
-        throw new Error(matchConflict.blocking);
-      }
     }
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid training schedule." }, { status: 400 });
