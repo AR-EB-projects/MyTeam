@@ -30,4 +30,4 @@ jobs:
 
       - name: Deploy on VPS
         run: |
-          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "/root/deploy-my-team.sh"
+          ssh -A -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "/root/deploy-my-team.sh"
