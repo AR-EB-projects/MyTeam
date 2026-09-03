@@ -10,6 +10,9 @@ concurrency:
   group: myteam-prod-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -29,5 +32,19 @@ jobs:
           ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy on VPS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ssh -A -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "/root/deploy-my-team.sh"
+          TOKEN_B64="$(printf '%s' "$GH_TOKEN" | base64 -w0)"
+          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "GH_TOKEN_B64='$TOKEN_B64' bash -s" <<'EOF'
+          set -e
+          TOKEN="$(printf '%s' "$GH_TOKEN_B64" | base64 -d)"
+          cd /var/www/MyTeam
+          ORIGINAL_REMOTE="$(git remote get-url origin)"
+          restore_remote() {
+            git remote set-url origin "$ORIGINAL_REMOTE"
+          }
+          trap restore_remote EXIT
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/moozuk22/MyTeam.git"
+          /root/deploy-my-team.sh
+          EOF
