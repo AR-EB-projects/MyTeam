@@ -2140,15 +2140,17 @@ function AdminMembersPageContent() {
     void loadCoachGroups();
   }, [clubId, coachGroupId, router]);
 
+  const canViewInactiveMembers = isAdmin || isCoach;
+
   useEffect(() => {
-    if (!isAdmin) {
+    if (!canViewInactiveMembers) {
       setInactivePlayersOpen(false);
       setReactivatingMemberId(null);
       setDeletingPermanentMemberId(null);
       setMemberToPermanentDelete(null);
       setInactiveActionError("");
     }
-  }, [isAdmin]);
+  }, [canViewInactiveMembers]);
 
   useEffect(() => {
     setSelectedGroup("all");
@@ -5508,7 +5510,7 @@ function AdminMembersPageContent() {
               <span>Excel</span>
             </button>
           )}
-          {isAdmin && (
+          {canViewInactiveMembers && (
             <button
               className="amp-inactive-toggle-btn amp-btn--compact"
               onClick={async () => {
@@ -10155,7 +10157,7 @@ function AdminMembersPageContent() {
           </div>
         </div>
       )}
-      {inactivePlayersOpen && canManageMemberActions && (
+      {inactivePlayersOpen && canViewInactiveMembers && canManageMemberActions && (
         <InactivePlayersModal
           members={inactiveMembers}
           isReactivating={Boolean(reactivatingMemberId)}
